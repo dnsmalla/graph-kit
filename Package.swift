@@ -23,7 +23,10 @@ let package = Package(
         .testTarget(
             name: "GraphKitTests",
             dependencies: ["GraphKit"],
-            path: "Tests/GraphKitTests"
+            path: "Tests/GraphKitTests",
+            resources: [
+                .copy("Fixtures"),
+            ]
         ),
     ]
 )
