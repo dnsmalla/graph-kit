@@ -25,7 +25,7 @@ public struct ScanResult: Sendable {
     }
 
     /// A function/method calling another within the same file.
-    public struct CallRef: Equatable, Sendable {
+    public struct CallRef: Codable, Equatable, Sendable {
         public let caller: String
         public let callee: String
         public let line: Int
@@ -35,7 +35,7 @@ public struct ScanResult: Sendable {
     }
 
     /// A class that inherits from another class/struct.
-    public struct InheritRef: Equatable, Sendable {
+    public struct InheritRef: Codable, Equatable, Sendable {
         public let child: String
         public let parent: String
         public init(child: String, parent: String) {
@@ -44,7 +44,7 @@ public struct ScanResult: Sendable {
     }
 
     /// A class/struct that implements an interface/protocol.
-    public struct ImplementRef: Equatable, Sendable {
+    public struct ImplementRef: Codable, Equatable, Sendable {
         public let className: String
         public let interfaceName: String
         public init(className: String, interfaceName: String) {

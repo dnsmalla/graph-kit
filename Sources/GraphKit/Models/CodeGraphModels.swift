@@ -13,6 +13,12 @@ public enum CGNodeKind: String, Sendable, Hashable {
 }
 
 public extension CGNodeKind {
+    /// All atomic-note kinds, in display order.
+    static let atomicNoteKinds: [CGNodeKind] = [
+        .noteDecision, .noteTask, .noteQuestion, .noteFact,
+        .noteConcept, .notePlaybook, .noteHypothesis, .noteEvent, .noteSource
+    ]
+
     var displayName: String {
         switch self {
         case .file:           return "File"

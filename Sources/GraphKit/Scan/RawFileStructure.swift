@@ -1,6 +1,6 @@
 import Foundation
 
-public struct RawFileStructure: Equatable, Sendable {
+public struct RawFileStructure: Codable, Equatable, Sendable {
     public let path: String
     public let language: String
     public let loc: Int
@@ -22,7 +22,7 @@ public struct RawFileStructure: Equatable, Sendable {
     }
 }
 
-public struct RawImport: Equatable, Sendable {
+public struct RawImport: Codable, Equatable, Sendable {
     public let module: String
     public let name: String?
     public init(module: String, name: String? = nil) {
