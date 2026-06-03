@@ -187,7 +187,8 @@ public final class FileStructureExtractor {
         return parseFiles(paths: paths.sorted(), repoRoot: repoRoot)
     }
 
-    private func parseFiles(paths: [String], repoRoot: URL) -> [RawFileStructure] {
+    /// Parse a specific set of repo-relative paths (used by incremental scan).
+    func parseFiles(paths: [String], repoRoot: URL) -> [RawFileStructure] {
         paths.compactMap { path -> RawFileStructure? in
             let lang = Self.language(for: path)
             let url  = repoRoot.appendingPathComponent(path)
