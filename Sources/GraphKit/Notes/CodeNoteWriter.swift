@@ -168,8 +168,8 @@ public enum CodeNoteWriter {
         let byRole = Dictionary(grouping: codeFiles) { inferRole(path: $0.path, language: $0.language) }
         out.append("## Files by Role")
         out.append("")
-        for role in byRole.keys.sorted() {
-            let files = byRole[role]!.sorted { $0.path < $1.path }
+        for (role, roleFiles) in byRole.sorted(by: { $0.key < $1.key }) {
+            let files = roleFiles.sorted { $0.path < $1.path }
             out.append("### \(role) (\(files.count) files)")
             out.append("")
             for f in files {
