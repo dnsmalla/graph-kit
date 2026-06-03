@@ -3,10 +3,12 @@
 Shared graph engine for turning **code** and **text** into a structured node/edge graph.
 Extracted from InfiniteBrain + meet-notes so a single update propagates to every consumer.
 
-UI-free (no SwiftUI) — consumers supply their own rendering.
+UI-free (no SwiftUI) — consumers supply their own rendering. macOS 13+
+(PDF extraction uses PDFKit + Vision).
 
 ## What it does
 
+- **Document → text**: extract text from PDF (with Vision OCR fallback), EPUB, Markdown, and plain text through one dispatch point (`InputReader`), plus semantic chunking (`TextChunker`) and junk-region detection (`DocumentScanner`).
 - **Code → graph**: scans a repo (Python/TypeScript/JavaScript/Kotlin via tree-sitter, Swift via regex) and produces files, classes, functions, methods, and `imports`/`contains`/`calls`/`inherits`/`implements` edges with `EXTRACTED`/`INFERRED`/`AMBIGUOUS` confidence.
 - **Text → graph**: chunks markdown by heading and links chunks via wiki-links + tags (`MemoryGenerator`).
 - **Incremental cache**: content-hash based re-scan (`Fingerprint`, `ScanCache`).
