@@ -24,9 +24,6 @@ public struct SystemProcessLauncher: ProcessLauncher {
 
     public func run(executable: URL, arguments: [String], currentDirectory: URL?,
                     environment: [String: String]?) async throws -> (Int32, Data, Data) {
-        // Box that's safe to capture into the cancellation handler. The Process
-        // is created inside the continuation; we publish it through the box so
-        // the cancellation handler can terminate it from another task.
         final class ProcBox: @unchecked Sendable {
             let lock = NSLock()
             var proc: Process?
@@ -44,31 +41,60 @@ public struct SystemProcessLauncher: ProcessLauncher {
                 let outPipe = Pipe(); let errPipe = Pipe()
                 proc.standardOutput = outPipe
                 proc.standardError = errPipe
+
+                // Drain both pipes concurrently BEFORE the process exits.
+                // Reading inside terminationHandler (after exit) deadlocks
+                // when the child writes >64KB — the pipe buffer fills, the
+                // child blocks on write, and it never exits.
+                var outData = Data()
+                var errData = Data()
+                let readGroup = DispatchGroup()
+                readGroup.enter()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+                    readGroup.leave()
+                }
+                readGroup.enter()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+                    readGroup.leave()
+                }
+
+                let lock = NSLock()
+                var resumed = false
+                func finish(_ result: Result<(Int32, Data, Data), Error>) {
+                    lock.lock(); defer { lock.unlock() }
+                    if resumed { return }
+                    resumed = true
+                    cont.resume(with: result)
+                }
+
                 proc.terminationHandler = { p in
-                    let out = ((try? outPipe.fileHandleForReading.readToEnd()) ?? nil) ?? Data()
-                    let err = ((try? errPipe.fileHandleForReading.readToEnd()) ?? nil) ?? Data()
+                    // Wait for both readers to drain any remaining bytes.
+                    readGroup.wait()
+
                     box.lock.lock()
                     let wasCancelled = box.cancelled
                     box.lock.unlock()
                     if wasCancelled {
-                        cont.resume(throwing: CancellationError())
+                        finish(.failure(CancellationError()))
                     } else {
-                        cont.resume(returning: (p.terminationStatus, out, err))
+                        finish(.success((p.terminationStatus, outData, errData)))
                     }
                 }
+
                 box.lock.lock()
                 box.proc = proc
                 let alreadyCancelled = box.cancelled
                 box.lock.unlock()
                 if alreadyCancelled {
-                    // Cancellation arrived between handler-install and run; bail out.
-                    cont.resume(throwing: CancellationError())
+                    finish(.failure(CancellationError()))
                     return
                 }
                 do {
                     try proc.run()
                 } catch {
-                    cont.resume(throwing: error)
+                    finish(.failure(error))
                 }
             }
         } onCancel: {
