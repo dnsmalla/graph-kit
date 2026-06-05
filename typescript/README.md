@@ -70,7 +70,8 @@ Swift library.
 | Skill/agent linking (`scanSkills`/`scanAgents`/`mergeCapabilities`) | ✅ |
 | CLI (`memory` / `update` / `watch` / `index` / `validate`) | ✅ |
 | Local-only `.graphkit/` artifacts (self-gitignored) | ✅ |
-| Code → graph (TS/JS via the TypeScript compiler API) | ⏳ next |
+| Code → graph (TS/JS via the TypeScript compiler API: files, imports, symbols, inherits/implements) | ✅ |
+| Code → graph **call** edges | ⏳ next |
 
 ## Development
 

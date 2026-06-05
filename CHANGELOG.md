@@ -4,7 +4,17 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 (`typescript/`) share one canonical graph schema (`schema/SCHEMA.md`); the schema's
 `schemaVersion` is versioned independently of the package tags.
 
-## [Unreleased] — multi-language platform
+## [Unreleased]
+
+### Added
+- **TypeScript code → graph scanner** (`scanCode`, `graph-kit code <dir>`, `update --code <dir>`):
+  TS/JS via the TypeScript compiler API — file/symbol nodes (functions, classes, methods,
+  interfaces, arrow-function consts) with `contains` / `imports` (resolved relative imports) /
+  `inherits` / `implements` edges. Deterministic output. `mergeGraphs` unions a code graph
+  into the memory index. 4 tests (22 total). (`typescript` promoted to a runtime dependency.)
+  Call-edge extraction remains a follow-up.
+
+## [1.3.0] — 2026-06-05 — multi-language platform
 
 ### Added
 - **Canonical schema** (`schema/SCHEMA.md` + `schema/graph.schema.json`, `schemaVersion: 1`):

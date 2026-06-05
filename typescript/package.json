@@ -18,10 +18,10 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "typescript": "^5.4.0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
     "@types/node": "^20.11.0"
   }
 }

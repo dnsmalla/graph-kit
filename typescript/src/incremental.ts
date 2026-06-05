@@ -18,8 +18,9 @@ import {
   type DocMeta,
 } from "./text/memoryGenerator.js";
 import { generateIndex } from "./indexGenerator.js";
-import { serializeDocument, toDocument } from "./models.js";
+import { serializeDocument, toDocument, mergeGraphs } from "./models.js";
 import { scanSkills, scanAgents, mergeCapabilities } from "./skills/skillScanner.js";
+import { scanCode } from "./code/tsScanner.js";
 
 /** Default artifact directory, relative to the scanned source root. */
 export const DEFAULT_OUT_DIR = ".graphkit";
@@ -52,7 +53,7 @@ export interface UpdateReport {
  */
 export function updateMemory(
   srcDir: string,
-  opts: { outDir?: string; skillsDir?: string; agentsDir?: string } = {},
+  opts: { outDir?: string; skillsDir?: string; agentsDir?: string; codeDir?: string } = {},
 ): UpdateReport {
   const outDir = opts.outDir ?? join(srcDir, DEFAULT_OUT_DIR);
   const cachePath = join(outDir, "cache.json");
@@ -100,6 +101,9 @@ export function updateMemory(
     ...(opts.agentsDir ? scanAgents(opts.agentsDir) : []),
   ];
   graph = mergeCapabilities(graph, capabilities);
+
+  // Fold in a code→graph when requested, into the same index.
+  if (opts.codeDir) graph = mergeGraphs(graph, scanCode(opts.codeDir));
 
   report.nodes = graph.nodes.length;
   report.edges = graph.edges.length;

@@ -14,6 +14,7 @@ import { generateFromDir } from "./text/memoryGenerator.js";
 import { generateIndex } from "./indexGenerator.js";
 import { parseDocumentString, serializeDocument, toDocument, toGraph } from "./models.js";
 import { updateMemory, type UpdateReport } from "./incremental.js";
+import { scanCode } from "./code/tsScanner.js";
 
 function fail(msg: string): never {
   process.stderr.write(`graph-kit: ${msg}\n`);
@@ -54,15 +55,33 @@ function reportLine(r: UpdateReport): string {
   return `graph-kit: +${r.added.length} ~${r.updated.length} =${r.unchanged.length} -${r.removed.length} → ${r.nodes} nodes, ${r.edges} edges (${r.outDir})`;
 }
 
-function updateOpts(args: string[]): { outDir?: string; skillsDir?: string; agentsDir?: string } {
-  const o: { outDir?: string; skillsDir?: string; agentsDir?: string } = {};
+function updateOpts(args: string[]): {
+  outDir?: string;
+  skillsDir?: string;
+  agentsDir?: string;
+  codeDir?: string;
+} {
+  const o: { outDir?: string; skillsDir?: string; agentsDir?: string; codeDir?: string } = {};
   const out = optValue(args, "--out");
   const skills = optValue(args, "--skills");
   const agents = optValue(args, "--agents");
+  const code = optValue(args, "--code");
   if (out) o.outDir = out;
   if (skills) o.skillsDir = skills;
   if (agents) o.agentsDir = agents;
+  if (code) o.codeDir = code;
   return o;
+}
+
+function cmdCode(args: string[]): void {
+  const dir = args[0];
+  if (!dir || dir.startsWith("--")) fail("usage: graph-kit code <dir> [--out <graph.json>]");
+  const doc = toDocument(scanCode(dir));
+  const out = optValue(args, "--out");
+  const json = serializeDocument(doc);
+  if (out) writeFileSync(out, json);
+  else process.stdout.write(json);
+  process.stderr.write(`graph-kit: ${doc.nodes.length} nodes, ${doc.edges.length} edges\n`);
 }
 
 function cmdUpdate(args: string[]): void {
@@ -109,10 +128,11 @@ function main(argv: string[]): void {
     case "memory": return cmdMemory(rest);
     case "update": return cmdUpdate(rest);
     case "watch": return cmdWatch(rest);
+    case "code": return cmdCode(rest);
     case "index": return cmdIndex(rest);
     case "validate": return cmdValidate(rest);
     default:
-      fail(`unknown command '${cmd ?? ""}'. Use: memory | update | watch | index | validate`);
+      fail(`unknown command '${cmd ?? ""}'. Use: memory | update | watch | code | index | validate`);
   }
 }
 

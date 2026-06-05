@@ -116,6 +116,21 @@ export class GraphSchemaError extends Error {
   }
 }
 
+/** Union two graphs: nodes deduped by id (first wins), edges by (from,to,kind). */
+export function mergeGraphs(a: CGData, b: CGData): CGData {
+  const nodes = [...a.nodes];
+  const haveNode = new Set(nodes.map((n) => n.id));
+  for (const n of b.nodes) if (!haveNode.has(n.id)) { haveNode.add(n.id); nodes.push(n); }
+
+  const edges = [...a.edges];
+  const haveEdge = new Set(edges.map((e) => `${e.fromId}→${e.toId}:${e.kind}`));
+  for (const e of b.edges) {
+    const k = `${e.fromId}→${e.toId}:${e.kind}`;
+    if (!haveEdge.has(k)) { haveEdge.add(k); edges.push(e); }
+  }
+  return { nodes, edges, layers: [...a.layers, ...b.layers], tour: [...a.tour, ...b.tour] };
+}
+
 /** Wrap a CGData in a versioned GraphDocument. */
 export function toDocument(graph: CGData, schemaVersion = CURRENT_SCHEMA_VERSION): GraphDocument {
   return { schemaVersion, ...graph };

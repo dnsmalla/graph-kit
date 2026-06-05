@@ -19,5 +19,6 @@ export {
   type DocMeta,
 } from "./text/memoryGenerator.js";
 export { generateIndex, type IndexOptions } from "./indexGenerator.js";
+export { scanCode } from "./code/tsScanner.js";
 export { updateMemory, DEFAULT_OUT_DIR, type UpdateReport } from "./incremental.js";
 export { scanSkills, scanAgents, mergeCapabilities } from "./skills/skillScanner.js";
