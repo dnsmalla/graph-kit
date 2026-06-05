@@ -1,10 +1,26 @@
 # GraphKit
 
-Shared graph engine for turning **code** and **text** into a structured node/edge graph.
-Extracted from InfiniteBrain + meet-notes so a single update propagates to every consumer.
+Shared, **multi-language** graph engine for turning **code** and **text** into a structured
+node/edge graph. Extracted from InfiniteBrain + meet-notes so a single update propagates to
+every consumer.
 
 UI-free (no SwiftUI) — consumers supply their own rendering. macOS 13+
 (PDF extraction uses PDFKit + Vision).
+
+## Implementations
+
+All implementations conform to one **canonical graph schema** — the language-neutral JSON
+contract in [`schema/SCHEMA.md`](schema/SCHEMA.md) (validated by `schema/graph.schema.json`,
+with shared conformance fixtures in `schema/fixtures/`). A graph produced in one language is
+readable in another.
+
+| Language | Location | Status |
+|---|---|---|
+| Swift (SwiftPM) | repo root (`Sources/GraphKit`) | code→graph, text→graph, extraction, cache, UA import |
+| TypeScript (npm `@dnsmalla/graph-kit`) | [`typescript/`](typescript/) | text→graph, index, schema validation, CLI (code→graph: next) |
+
+The Swift docs below describe the Swift package; see [`typescript/README.md`](typescript/README.md)
+for the TypeScript package and the `graph-kit` CLI.
 
 ## What it does
 
@@ -17,7 +33,7 @@ UI-free (no SwiftUI) — consumers supply their own rendering. macOS 13+
 ## Install
 
 ```swift
-.package(url: "https://github.com/dnsmalla/GraphKit.git", from: "1.0.0")
+.package(url: "https://github.com/dnsmalla/graph-kit.git", from: "1.0.0")
 ```
 
 Then add `"GraphKit"` to your target's dependencies and `import GraphKit`.

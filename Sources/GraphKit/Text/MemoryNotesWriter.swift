@@ -358,7 +358,9 @@ public enum MemoryNotesWriter {
     private static func childSymbols(of parent: CGNode, in data: CGData) -> [CGNode] {
         let nodes = Dictionary(uniqueKeysWithValues: data.nodes.map { ($0.id, $0) })
         return data.edges
-            .filter { $0.fromId == parent.id && $0.kind == .defines }
+            // Code scanners emit `.contains` for file/module→symbol ownership; the
+            // knowledge/UA graph uses `.defines`. Accept both. See schema/SCHEMA.md.
+            .filter { $0.fromId == parent.id && ($0.kind == .defines || $0.kind == .contains) }
             .compactMap { nodes[$0.toId] }
             .filter { $0.kind == .symbol }
             .sorted { $0.title.lowercased() < $1.title.lowercased() }

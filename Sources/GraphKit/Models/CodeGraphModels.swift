@@ -1,7 +1,7 @@
 import Foundation
 import CoreGraphics
 
-public enum CGNodeKind: String, Sendable, Hashable {
+public enum CGNodeKind: String, Sendable, Hashable, Codable {
     case file, symbol, module, docPage
     case memoryDoc, memoryChunk
     case noteDecision, noteTask, noteQuestion, noteFact
@@ -9,6 +9,7 @@ public enum CGNodeKind: String, Sendable, Hashable {
     case function, classType, config, service, table, endpoint
     case pipeline, schemaNode, resource, domain, flow, step
     case article, entity, topic, claim
+    case skill, agent
     case other
 }
 
@@ -52,6 +53,8 @@ public extension CGNodeKind {
         case .entity:         return "Entity"
         case .topic:          return "Topic"
         case .claim:          return "Claim"
+        case .skill:          return "Skill"
+        case .agent:          return "Agent"
         case .other:          return "Other"
         }
     }
@@ -93,7 +96,7 @@ public extension CGNodeKind {
     ]
 }
 
-public enum CGEdgeKind: String, Sendable, Hashable {
+public enum CGEdgeKind: String, Sendable, Hashable, Codable {
     case imports, exports, contains, inherits, implements
     case calls, subscribes, publishes, middleware
     case readsFrom, writesTo, transforms, validates
@@ -106,7 +109,7 @@ public enum CGEdgeKind: String, Sendable, Hashable {
     case defines, references
 }
 
-public struct CGNode: Identifiable, Equatable, Sendable {
+public struct CGNode: Identifiable, Equatable, Sendable, Codable {
     public let id: String
     public let title: String
     public let kind: CGNodeKind
@@ -119,9 +122,38 @@ public struct CGNode: Identifiable, Equatable, Sendable {
         self.id = id; self.title = title; self.kind = kind
         self.position = position; self.metadata = metadata
     }
+
+    // Custom Codable so `position` serializes as the canonical { "x", "y" } object
+    // (CGPoint's synthesized form is platform-specific) and `position`/`metadata`
+    // are tolerated as absent on decode. See schema/SCHEMA.md.
+    private enum CodingKeys: String, CodingKey { case id, title, kind, position, metadata }
+    private struct Point: Codable { var x: Double; var y: Double }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        kind = try c.decode(CGNodeKind.self, forKey: .kind)
+        let p = try c.decodeIfPresent(Point.self, forKey: .position)
+        position = p.map { CGPoint(x: $0.x, y: $0.y) } ?? .zero
+        metadata = try c.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(kind, forKey: .kind)
+        // Omit a zero position so output matches producers that carry no layout
+        // (e.g. text→graph, the TS impl). `position` is a layout hint only.
+        if position != .zero {
+            try c.encode(Point(x: Double(position.x), y: Double(position.y)), forKey: .position)
+        }
+        try c.encode(metadata, forKey: .metadata)
+    }
 }
 
-public enum CGEdgeConfidence: String, Sendable, Hashable {
+public enum CGEdgeConfidence: String, Sendable, Hashable, Codable {
     /// Explicitly stated in source code — 100% reliable.
     case extracted = "EXTRACTED"
     /// Reasonably deduced (e.g. call sites) — ~80% reliable.
@@ -130,7 +162,7 @@ public enum CGEdgeConfidence: String, Sendable, Hashable {
     case ambiguous = "AMBIGUOUS"
 }
 
-public struct CGEdge: Equatable, Sendable {
+public struct CGEdge: Equatable, Sendable, Codable {
     public let fromId: String
     public let toId: String
     public let kind: CGEdgeKind
@@ -143,7 +175,7 @@ public struct CGEdge: Equatable, Sendable {
     }
 }
 
-public struct UALayer: Equatable, Sendable {
+public struct UALayer: Equatable, Sendable, Codable {
     public let id: String
     public let name: String
     public let nodeIds: [String]
@@ -153,7 +185,7 @@ public struct UALayer: Equatable, Sendable {
     }
 }
 
-public struct UATourStep: Equatable, Sendable {
+public struct UATourStep: Equatable, Sendable, Codable {
     public let nodeId: String
     public let title: String
     public let body: String
@@ -163,7 +195,7 @@ public struct UATourStep: Equatable, Sendable {
     }
 }
 
-public struct CGData: Equatable, Sendable {
+public struct CGData: Equatable, Sendable, Codable {
     public let nodes: [CGNode]
     public let edges: [CGEdge]
     public let layers: [UALayer]
