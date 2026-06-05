@@ -7,12 +7,19 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 ## [Unreleased]
 
 ### Added
+- **Code → graph call edges** (TypeScript scanner): `scanCode` now emits `calls` edges
+  (symbol → symbol) from function/method/arrow-const bodies, resolved by name — unique
+  match → `INFERRED`, ambiguous → `AMBIGUOUS`, no in-repo match → dropped. Completes
+  code-graph parity with the Swift scanner. +1 test (23 total).
+
+## [1.4.0] — 2026-06-05
+
+### Added
 - **TypeScript code → graph scanner** (`scanCode`, `graph-kit code <dir>`, `update --code <dir>`):
   TS/JS via the TypeScript compiler API — file/symbol nodes (functions, classes, methods,
   interfaces, arrow-function consts) with `contains` / `imports` (resolved relative imports) /
   `inherits` / `implements` edges. Deterministic output. `mergeGraphs` unions a code graph
-  into the memory index. 4 tests (22 total). (`typescript` promoted to a runtime dependency.)
-  Call-edge extraction remains a follow-up.
+  into the memory index. (`typescript` promoted to a runtime dependency.)
 
 ## [1.3.0] — 2026-06-05 — multi-language platform
 

@@ -73,6 +73,32 @@ test("class extends / implements produce inherits / implements edges", () => {
   }
 });
 
+test("call expressions produce calls edges between symbols", () => {
+  const dir = repo({
+    "svc.ts":
+      "export function helper() { return 1; }\n" +
+      "export function run() { return helper(); }\n" +
+      "export class C {\n  go() { return run(); }\n}\n",
+  });
+  try {
+    const g = scanCode(dir);
+    // run() calls helper() — unique name → INFERRED
+    assert.ok(
+      g.edges.some((e) => e.fromId === "symbol:svc.ts#run" && e.toId === "symbol:svc.ts#helper" && e.kind === "calls" && e.confidence === "INFERRED"),
+      "run → calls → helper",
+    );
+    // C.go() calls run()
+    assert.ok(
+      g.edges.some((e) => e.fromId === "symbol:svc.ts#C.go" && e.toId === "symbol:svc.ts#run" && e.kind === "calls"),
+      "C.go → calls → run",
+    );
+    // no call edge to a name with no in-repo symbol
+    assert.ok(!g.edges.some((e) => e.kind === "calls" && e.toId.includes("#return")));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("output is deterministic across runs", () => {
   const dir = repo({ "a.ts": "export function f(){}\nexport class C { m(){} }\n" });
   try {

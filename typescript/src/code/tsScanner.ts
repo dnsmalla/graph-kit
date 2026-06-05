@@ -35,6 +35,7 @@ export function scanCode(root: string, opts: { maxFiles?: number; maxFileBytes?:
   const edges: CGEdge[] = [];
   const symbolIdsByName = new Map<string, string[]>(); // name → ids (for heritage resolution)
   const heritages: Heritage[] = [];
+  const callSites: Array<{ fromId: string; name: string }> = [];
   const seenEdge = new Set<string>();
 
   const addEdge = (fromId: string, toId: string, kind: CGEdge["kind"], confidence: CGEdge["confidence"]) => {
@@ -71,6 +72,17 @@ export function scanCode(root: string, opts: { maxFiles?: number; maxFileBytes?:
       }
       emitDeclaration(stmt, fileId, rel, nodes, addEdge, addSymbolName, heritages);
     }
+    collectCalls(sf, rel, callSites);
+  }
+
+  // Resolve call sites against collected symbol names (name-based, no type info):
+  // a unique name match → INFERRED; an ambiguous (multi-match) name → AMBIGUOUS.
+  // Calls to names with no in-repo symbol (library/builtins) are dropped.
+  for (const c of callSites) {
+    const targets = symbolIdsByName.get(c.name);
+    if (!targets || targets.length === 0) continue;
+    const confidence = targets.length === 1 ? "INFERRED" : "AMBIGUOUS";
+    for (const id of targets) addEdge(c.fromId, id, "calls", confidence);
   }
 
   // Resolve heritage names against collected symbol names (name-based → inferred).
@@ -142,6 +154,47 @@ function emitDeclaration(
       }
     }
   }
+}
+
+/** The called name from a CallExpression target: `foo()`→"foo", `o.bar()`→"bar". */
+function calleeName(expr: ts.Expression): string | null {
+  if (ts.isIdentifier(expr)) return expr.text;
+  if (ts.isPropertyAccessExpression(expr)) return expr.name.text;
+  return null;
+}
+
+/**
+ * Walk a file collecting (enclosing-symbol-id, called-name) for every call inside a
+ * function/method/arrow-const body. The enclosing id mirrors the ids emitDeclaration
+ * assigns, so resolution can link symbol→symbol `calls` edges.
+ */
+function collectCalls(
+  sf: ts.SourceFile,
+  rel: string,
+  out: Array<{ fromId: string; name: string }>,
+): void {
+  const visit = (node: ts.Node, enclosing: string | null): void => {
+    let next = enclosing;
+    if (ts.isFunctionDeclaration(node) && node.name) {
+      next = `symbol:${rel}#${node.name.text}`;
+    } else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
+      const cls = ts.isClassDeclaration(node.parent) && node.parent.name ? node.parent.name.text : "";
+      next = cls ? `symbol:${rel}#${cls}.${node.name.text}` : enclosing;
+    } else if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))
+    ) {
+      next = `symbol:${rel}#${node.name.text}`;
+    }
+    if (ts.isCallExpression(node) && enclosing) {
+      const name = calleeName(node.expression);
+      if (name) out.push({ fromId: enclosing, name });
+    }
+    ts.forEachChild(node, (child) => visit(child, next));
+  };
+  visit(sf, null);
 }
 
 /** Resolve a relative import specifier to a repo-relative file path, or null. */
