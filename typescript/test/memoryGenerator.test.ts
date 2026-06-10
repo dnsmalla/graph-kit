@@ -98,3 +98,24 @@ test("generateIndex renders stats and containers", () => {
     assert.match(md, /## Containers/);
   });
 });
+
+test("skips vendor and build directories (node_modules, dist, build, vendor, coverage)", () => {
+  withTempVault(
+    {
+      "real.md": "# Real\nproject doc\n",
+      "node_modules/pkg/README.md": "# Vendor\nshould not be indexed\n",
+      "apps/web/node_modules/lib/CHANGELOG.md": "# Vendor nested\nskip me\n",
+      "dist/out.md": "# Dist\nskip\n",
+      "build/notes.md": "# Build\nskip\n",
+      "vendor/doc.md": "# Vendored\nskip\n",
+      "coverage/report.md": "# Coverage\nskip\n",
+      "docs/guide.md": "# Guide\nkeep me\n",
+    },
+    (dir) => {
+      const { graph, docCount } = generateFromDir(dir);
+      assert.equal(docCount, 2);
+      const titles = graph.nodes.filter((n) => n.kind === "memoryDoc").map((n) => n.title).sort();
+      assert.deepEqual(titles, ["guide", "real"]);
+    },
+  );
+});

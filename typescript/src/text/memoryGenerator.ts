@@ -428,6 +428,20 @@ function isRegularFile(p: string): boolean {
   }
 }
 
+/** Directory names that hold third-party or generated content, never memory. */
+const EXCLUDED_DIRS = new Set([
+  "node_modules",
+  "dist",
+  "build",
+  "out",
+  "vendor",
+  "coverage",
+  "target",
+  "Pods",
+  "DerivedData",
+  "__pycache__",
+]);
+
 function collectDocs(root: string, maxFiles: number, maxFileBytes: number): string[] {
   const out: string[] = [];
   const walk = (dir: string) => {
@@ -441,6 +455,7 @@ function collectDocs(root: string, maxFiles: number, maxFileBytes: number): stri
     for (const name of entries) {
       if (out.length >= maxFiles) return;
       if (name.startsWith(".")) continue; // skip hidden
+      if (EXCLUDED_DIRS.has(name)) continue;
       const full = join(dir, name);
       let st;
       try {
