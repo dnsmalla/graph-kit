@@ -107,3 +107,22 @@ test("output is deterministic across runs", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("skips the same vendor/build dirs as the text walker (vendor, out, target, Pods)", () => {
+  const dir = repo({
+    "real.ts": "export function real() {}\n",
+    "vendor/lib.ts": "export function vendored() {}\n",
+    "out/gen.ts": "export function generated() {}\n",
+    "target/t.ts": "export function compiled() {}\n",
+    "Pods/p.ts": "export function pod() {}\n",
+    "DerivedData/d.ts": "export function derived() {}\n",
+    "__pycache__/c.ts": "export function cached() {}\n",
+  });
+  try {
+    const g = scanCode(dir);
+    const files = g.nodes.filter((n) => n.id.startsWith("file:")).map((n) => n.id);
+    assert.deepEqual(files, ["file:real.ts"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

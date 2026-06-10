@@ -6,6 +6,7 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, statSync, readdirSync } from "node:fs";
+import { EXCLUDED_DIRS } from "../exclusions.js";
 import { join, extname, basename, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CGData, CGEdge, CGNode, CGNodeKind } from "../models.js";
@@ -427,20 +428,6 @@ function isRegularFile(p: string): boolean {
     return false;
   }
 }
-
-/** Directory names that hold third-party or generated content, never memory. */
-const EXCLUDED_DIRS = new Set([
-  "node_modules",
-  "dist",
-  "build",
-  "out",
-  "vendor",
-  "coverage",
-  "target",
-  "Pods",
-  "DerivedData",
-  "__pycache__",
-]);
 
 function collectDocs(root: string, maxFiles: number, maxFileBytes: number): string[] {
   const out: string[] = [];

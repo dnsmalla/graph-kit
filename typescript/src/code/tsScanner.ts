@@ -13,9 +13,11 @@ import ts from "typescript";
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, relative, resolve, dirname } from "node:path";
 import type { CGData, CGEdge, CGNode, CGNodeKind } from "../models.js";
+import { EXCLUDED_DIRS } from "../exclusions.js";
 
 const CODE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".cts"]);
-const SKIP_DIRS = new Set(["node_modules", "dist", "build", ".git", ".graphkit", "coverage"]);
+// Dotted dirs (.git, .graphkit) are covered by the walk's startsWith(".") check.
+const SKIP_DIRS = EXCLUDED_DIRS;
 const RESOLVE_EXTS = [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts"];
 
 interface Heritage {
