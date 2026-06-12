@@ -17,7 +17,7 @@ readable in another.
 | Language | Location | Status |
 |---|---|---|
 | Swift (SwiftPM) | repo root (`Sources/GraphKit`) | code→graph, text→graph, extraction, cache, UA import |
-| TypeScript (npm `@dnsmalla/graph-kit`) | [`typescript/`](typescript/) | text→graph, index, schema validation, CLI (code→graph: next) |
+| TypeScript (npm `@dnsmalla/graph-kit`) | [`typescript/`](typescript/) | code→graph (TS/JS, call edges), text→graph, index, schema validation, CLI |
 
 The Swift docs below describe the Swift package; see [`typescript/README.md`](typescript/README.md)
 for the TypeScript package and the `graph-kit` CLI.
