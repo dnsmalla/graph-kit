@@ -5,9 +5,9 @@ and **text** into a typed node/edge graph. Schema-compatible with the Swift pack
 read and write the same [canonical JSON](../schema/SCHEMA.md), so a Swift app and a
 Node/TS tool can exchange graphs.
 
-> Status: **text → graph**, **index generation**, **schema validation**, and a **CLI**
-> are implemented and tested. A TypeScript/JavaScript **code → graph** scanner is the next
-> milestone (see [CHANGELOG](../CHANGELOG.md)).
+> Status: **code → graph** (TS/JS scanner with call edges), **text → graph**,
+> **index generation**, **schema validation**, and a **CLI** are implemented and
+> tested (see [CHANGELOG](../CHANGELOG.md)).
 
 ## Install
 

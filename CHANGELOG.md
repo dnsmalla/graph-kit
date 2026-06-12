@@ -4,7 +4,18 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 (`typescript/`) share one canonical graph schema (`schema/SCHEMA.md`); the schema's
 `schemaVersion` is versioned independently of the package tags.
 
-## [Unreleased]
+## [1.5.1] — 2026-06-12
+
+### Fixed
+- **Vendor/build dirs excluded from the text walker** (TypeScript): node_modules,
+  dist, .build and friends no longer leak into text graphs; one shared exclusion
+  set now serves both the code and text walkers.
+
+### Changed
+- TypeScript `package.json` version re-synced with git tags (was stuck at 1.1.0).
+- Added a root `LICENSE` file (MIT) matching the package metadata.
+
+## [1.5.0] — 2026-06-05
 
 ### Added
 - **Code → graph call edges** (TypeScript scanner): `scanCode` now emits `calls` edges

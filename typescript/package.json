@@ -1,6 +1,6 @@
 {
   "name": "@dnsmalla/graph-kit",
-  "version": "1.1.0",
+  "version": "1.5.1",
   "description": "TypeScript implementation of the GraphKit canonical graph engine — code/text → typed node/edge graph. Schema-compatible with the Swift package.",
   "type": "module",
   "license": "MIT",
