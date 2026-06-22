@@ -129,15 +129,36 @@ public enum MemoryGenerator {
             }
         }
 
-        // (3) Fallback whole-word title match for chunks lacking explicit links
-        let titleByID = Dictionary(uniqueKeysWithValues: allChunks.map { ($0.id, $0.title) })
+        // (3) Fallback whole-word title match for chunks lacking explicit links.
+        //
+        // A title can only whole-word-match a body if its *leading* word also
+        // appears (as a whole word) in that body. So index titles by their first
+        // word and, for each chunk, test only the titles whose first word is one
+        // of the body's words — instead of every title. The final
+        // `containsWholeWord` check is unchanged, so the emitted edge set is
+        // identical; this only prunes which candidates we bother testing,
+        // turning the old O(chunks² × body length) scan (minutes on a few
+        // thousand chunks) into ~O(chunks × body words + matches).
+        func wordTokens(_ s: String) -> [String] {
+            s.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        }
+        var titlesByFirstWord: [String: [(id: String, needle: String)]] = [:]
+        for chunk in allChunks {
+            let needle = chunk.title.lowercased()
+            guard needle.count >= 5, let first = wordTokens(needle).first else { continue }
+            titlesByFirstWord[first, default: []].append((chunk.id, needle))
+        }
+        // Each title sits in exactly one first-word bucket and each distinct body
+        // word is visited once, so every candidate is tested at most once per
+        // chunk — no extra de-dupe needed (and `emit` de-dupes edge keys anyway).
         for chunk in allChunks where chunk.wikiLinks.isEmpty {
             let body = chunk.body.lowercased()
-            for (otherID, otherTitle) in titleByID where otherID != chunk.id {
-                let needle = otherTitle.lowercased()
-                guard needle.count >= 5 else { continue }   // tighter than v1 to cut noise
-                if Self.containsWholeWord(body, needle: needle) {
-                    emit(from: chunk.id, to: otherID, kind: .relatedTo)
+            for word in Set(wordTokens(body)) {
+                guard let candidates = titlesByFirstWord[word] else { continue }
+                for cand in candidates where cand.id != chunk.id {
+                    if Self.containsWholeWord(body, needle: cand.needle) {
+                        emit(from: chunk.id, to: cand.id, kind: .relatedTo)
+                    }
                 }
             }
         }
