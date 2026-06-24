@@ -4,6 +4,17 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 (`typescript/`) share one canonical graph schema (`schema/SCHEMA.md`); the schema's
 `schemaVersion` is versioned independently of the package tags.
 
+## [1.5.3] — 2026-06-24
+
+### Fixed
+- **Generated-knowledge dirs excluded from the doc walker** (Swift): the text
+  walker (`MemoryGenerator.collectDocs`) now skips `system`, `graphify-out`,
+  `.code-notes`, `.understand-anything`, and the usual vendor/build dirs. It was
+  indexing the indexer's *own* regenerated markdown (per-file code notes and
+  duplicate `repo.md`/`index.md` summaries), which double-counted content and
+  flooded the doc graph with duplicate nodes — e.g. a 175-doc project produced
+  904 nodes / 19k edges, dropping to 32 real docs / 298 nodes once skipped.
+
 ## [1.5.1] — 2026-06-12
 
 ### Fixed
