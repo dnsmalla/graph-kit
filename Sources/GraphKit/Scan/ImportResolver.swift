@@ -8,7 +8,7 @@ public enum ImportResolver {
                                language: String, files: Set<String>,
                                aliases: [String: String] = [:]) -> String? {
         switch language {
-        case "python":                   return resolvePython(imp, files: files)
+        case "python":                   return resolvePython(imp, fromFile: fromFile, files: files)
         case "typescript", "javascript": return resolveJS(imp, fromFile: fromFile,
                                                           files: files, aliases: aliases)
         default:                         return nil
@@ -48,16 +48,44 @@ public enum ImportResolver {
 
     // MARK: - Private
 
-    private static func resolvePython(_ imp: RawImport, files: Set<String>) -> String? {
+    private static func resolvePython(_ imp: RawImport, fromFile: String,
+                                      files: Set<String>) -> String? {
         var dotted = [String]()
         if let name = imp.name, !name.isEmpty {
             dotted.append(imp.module.isEmpty ? name : imp.module + "." + name)
         }
         if !imp.module.isEmpty { dotted.append(imp.module) }
+
+        // Python imports are resolved against a *source root* on `sys.path`
+        // (e.g. `app/backend/`), which is the importing file's directory or an
+        // ancestor of it — NOT necessarily the repo root. Resolving only at the
+        // repo root dropped essentially every intra-repo import in projects
+        // that aren't laid out as a flat top-level package (the common case:
+        // `from schema.user_schema import X` inside `app/backend/...` points at
+        // `app/backend/schema/user_schema.py`, and a sibling `import
+        // base_controller` points at the same directory).
+        //
+        // Search the importing file's directory and every ancestor up to the
+        // repo root, deepest first, so the closest match wins (mirrors how
+        // Python prefers the nearest package / earliest sys.path entry). A
+        // genuinely external module (stdlib / third-party) matches no in-repo
+        // file and correctly resolves to nil.
+        var searchDirs = [String]()
+        var dir = (fromFile as NSString).deletingLastPathComponent
+        while true {
+            searchDirs.append(dir)
+            if dir.isEmpty { break }
+            dir = (dir as NSString).deletingLastPathComponent
+        }
+
         for d in dotted {
             let base = d.split(separator: ".").joined(separator: "/")
-            for cand in ["\(base).py", "\(base)/__init__.py"] where files.contains(cand) {
-                return cand
+            for searchDir in searchDirs {
+                let prefix = searchDir.isEmpty ? "" : searchDir + "/"
+                for cand in ["\(prefix)\(base).py", "\(prefix)\(base)/__init__.py"]
+                where files.contains(cand) {
+                    return cand
+                }
             }
         }
         return nil

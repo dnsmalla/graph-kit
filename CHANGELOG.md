@@ -4,6 +4,20 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 (`typescript/`) share one canonical graph schema (`schema/SCHEMA.md`); the schema's
 `schemaVersion` is versioned independently of the package tags.
 
+## [1.5.4] — 2026-06-29
+
+### Fixed
+- **Python imports now resolve against source roots** (Swift): `ImportResolver`
+  matched dotted modules only relative to the repo root, so projects laid out
+  under a source root on `sys.path` (e.g. `app/backend/`) had essentially every
+  intra-repo Python import dropped — `from schema.user import X` looked for
+  `schema/user.py` at the repo root instead of `app/backend/schema/user.py`.
+  Resolution now walks the importing file's directory and every ancestor up to
+  the repo root (deepest first, closest match wins), so source-root-relative and
+  sibling imports both resolve while stdlib/third-party correctly stay unlinked.
+  On a 2,049-file Python repo this took the code graph from 15 edges to 6,527.
+  +4 tests.
+
 ## [1.5.3] — 2026-06-24
 
 ### Fixed
