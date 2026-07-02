@@ -127,13 +127,17 @@ public enum MemoryGenerator {
             }
         }
 
-        // (2) Tag co-occurrence (capped)
+        // (2) Tag co-occurrence (capped). Tags spread across more than
+        // `genericTagThreshold` chunks are organizational noise ("#api",
+        // "#docs") — a clique over an arbitrary 6 of them relates nothing,
+        // so generic tags are skipped entirely rather than truncated.
         let tagCap = 6
+        let genericTagThreshold = 12
         var byTag: [String: [String]] = [:]
         for chunk in allChunks {
             for t in chunk.tags { byTag[t, default: []].append(chunk.id) }
         }
-        for (_, ids) in byTag where ids.count > 1 {
+        for (_, ids) in byTag where ids.count > 1 && ids.count <= genericTagThreshold {
             // Connect first `tagCap` chunks pairwise to bound edges per tag.
             let head = Array(ids.prefix(tagCap))
             for i in 0..<head.count {
@@ -159,7 +163,12 @@ public enum MemoryGenerator {
         var titlesByFirstWord: [String: [(id: String, needle: String)]] = [:]
         for chunk in allChunks {
             let needle = chunk.title.lowercased()
-            guard needle.count >= 5, let first = wordTokens(needle).first else { continue }
+            let toks = wordTokens(needle)
+            // Single-word titles ("Config", "Setup", "Main") whole-word-match
+            // half the corpus — the documented source of a historical
+            // 702k-edge hairball in a downstream consumer. Two-plus-word
+            // titles are specific enough to keep.
+            guard needle.count >= 5, toks.count >= 2, let first = toks.first else { continue }
             titlesByFirstWord[first, default: []].append((chunk.id, needle))
         }
         // Each title sits in exactly one first-word bucket and each distinct body
