@@ -472,6 +472,15 @@ public enum MemoryGenerator {
     /// title scanning never reads code as prose. Chunk bodies keep their
     /// fences — this is applied only to the text handed to the extractors.
     /// An unclosed fence swallows to end-of-text (same as markdown renderers).
+    ///
+    /// Known limitations (acceptable — this is a heuristic scanner, not a
+    /// full CommonMark parser): fence toggling matches by PRESENCE of a
+    /// marker only, not by matching character/length, so a mismatched
+    /// marker inside a real fence (e.g. a stray `~~~` line inside a ```
+    /// fence) can desync the toggle for the rest of the document. Also,
+    /// indentation is not considered — a fence marker indented 4+ spaces
+    /// (which in strict CommonMark is literal text inside an already-
+    /// indented code block, not a real fence) is still treated as a toggle.
     static func strippingFencedBlocks(_ body: String) -> String {
         var out: [String] = []
         var inFence = false
