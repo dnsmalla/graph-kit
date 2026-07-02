@@ -152,7 +152,7 @@ public enum MemoryGenerator {
         // word is visited once, so every candidate is tested at most once per
         // chunk — no extra de-dupe needed (and `emit` de-dupes edge keys anyway).
         for chunk in allChunks where chunk.wikiLinks.isEmpty {
-            let body = chunk.body.lowercased()
+            let body = Self.strippingFencedBlocks(chunk.body).lowercased()
             for word in Set(wordTokens(body)) {
                 guard let candidates = titlesByFirstWord[word] else { continue }
                 for cand in candidates where cand.id != chunk.id {
@@ -242,9 +242,10 @@ public enum MemoryGenerator {
             // Heading heuristic wins over frontmatter default.
             let kind = Self.classify(heading: headingStack.last, body: bounded)
                        ?? defaultKind
-            let bodyTags = Self.extractHashtags(bounded)
+            let scanText = Self.strippingFencedBlocks(bounded)
+            let bodyTags = Self.extractHashtags(scanText)
             let mergedTags = Self.mergeTags(frontmatterTags, bodyTags)
-            let wikiLinks = Self.extractWikiLinks(bounded)
+            let wikiLinks = Self.extractWikiLinks(scanText)
             chunks.append(MemoryChunk(
                 id: id,
                 docURL: doc,
@@ -258,8 +259,15 @@ public enum MemoryGenerator {
             bodyBuf.removeAll(keepingCapacity: true)
         }
 
+        var inFence = false
         for line in lines {
-            if let (level, text) = parseHeading(line) {
+            let fenceMark = line.trimmingCharacters(in: .whitespaces)
+            if fenceMark.hasPrefix("```") || fenceMark.hasPrefix("~~~") {
+                inFence.toggle()
+                bodyBuf.append(line)
+                continue
+            }
+            if !inFence, let (level, text) = parseHeading(line) {
                 flush()
                 while let lastLevel = headingLevels.last, lastLevel >= level {
                     headingStack.removeLast()
@@ -412,8 +420,8 @@ public enum MemoryGenerator {
         return nil
     }
 
-    /// Returns (level, text) for ATX headings like `## Foo`. Skips fenced
-    /// code blocks would be nice but markdown awareness is out of scope.
+    /// Returns (level, text) for ATX headings like `## Foo`. Fence awareness
+    /// is handled by the caller's `inFence` state in `chunk()`.
     private static func parseHeading(_ line: String) -> (Int, String)? {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         guard trimmed.hasPrefix("#") else { return nil }
@@ -458,6 +466,21 @@ public enum MemoryGenerator {
             seen.insert(t); out.append(t)
         }
         return out
+    }
+
+    /// Remove fenced code blocks (``` / ~~~ delimited) so tag / wikilink /
+    /// title scanning never reads code as prose. Chunk bodies keep their
+    /// fences — this is applied only to the text handed to the extractors.
+    /// An unclosed fence swallows to end-of-text (same as markdown renderers).
+    static func strippingFencedBlocks(_ body: String) -> String {
+        var out: [String] = []
+        var inFence = false
+        for line in body.split(separator: "\n", omittingEmptySubsequences: false) {
+            let t = line.trimmingCharacters(in: .whitespaces)
+            if t.hasPrefix("```") || t.hasPrefix("~~~") { inFence.toggle(); continue }
+            if !inFence { out.append(String(line)) }
+        }
+        return out.joined(separator: "\n")
     }
 
     /// SHA-256 prefix. Chunk IDs are used as graph node IDs and as keys
