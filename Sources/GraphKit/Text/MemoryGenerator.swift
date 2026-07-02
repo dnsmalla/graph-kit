@@ -131,6 +131,13 @@ public enum MemoryGenerator {
         // `genericTagThreshold` chunks are organizational noise ("#api",
         // "#docs") — a clique over an arbitrary 6 of them relates nothing,
         // so generic tags are skipped entirely rather than truncated.
+        //
+        // Known plateau: any tag with 6-12 occurrences always emits the
+        // same C(6,2)=15 pairwise edges (head always takes exactly 6 when
+        // ≥6 candidates exist) — the threshold only changes behavior ABOVE
+        // 12, it does not graduate edge volume within [6, 12]. Acceptable
+        // for now: bounded, cheap to reason about. Revisit if that plateau
+        // itself proves noisy in practice.
         let tagCap = 6
         let genericTagThreshold = 12
         var byTag: [String: [String]] = [:]
