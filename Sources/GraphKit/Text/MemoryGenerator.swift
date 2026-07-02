@@ -24,6 +24,20 @@ public struct MemoryChunk: Identifiable, Sendable, Hashable {
     public let kind: CGNodeKind        // typed via frontmatter or heading heuristics
     public let tags: [String]          // lowercased, from #hashtags + frontmatter `tags:`
     public let wikiLinks: [String]     // raw target titles from [[Title]] (case as-written)
+    public let graphOnly: Bool         // frontmatter `graph-only: true` — consumers keep
+                                       // this doc out of agent memory artifacts
+    public let relatedModules: [String] // frontmatter `related-modules:` — declared code
+                                        // module affinity, case preserved (paths)
+
+    public init(id: String, docURL: URL, docTitle: String, headingPath: [String],
+                body: String, kind: CGNodeKind, tags: [String], wikiLinks: [String],
+                graphOnly: Bool = false, relatedModules: [String] = []) {
+        self.id = id; self.docURL = docURL; self.docTitle = docTitle
+        self.headingPath = headingPath; self.body = body; self.kind = kind
+        self.tags = tags; self.wikiLinks = wikiLinks
+        self.graphOnly = graphOnly; self.relatedModules = relatedModules
+    }
+
     public var title: String {
         headingPath.last ?? docTitle
     }
@@ -217,10 +231,10 @@ public enum MemoryGenerator {
         // 1. Strip + parse YAML frontmatter (`---\n…\n---`). Sets a default
         //    type for every chunk in this doc unless a heading overrides.
         //    Frontmatter `tags:` applies to every chunk in the doc.
-        let frontmatterType: CGNodeKind?
-        let frontmatterTags: [String]
-        (text, frontmatterType, frontmatterTags) = Self.stripFrontmatterType(text)
-        let defaultKind: CGNodeKind = frontmatterType ?? .memoryChunk
+        let fm = Self.parseFrontmatter(text)
+        text = fm.text
+        let frontmatterTags = fm.tags
+        let defaultKind: CGNodeKind = fm.kind ?? .memoryChunk
 
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
 
@@ -254,7 +268,9 @@ public enum MemoryGenerator {
                 body: bounded,
                 kind: kind,
                 tags: mergedTags,
-                wikiLinks: wikiLinks
+                wikiLinks: wikiLinks,
+                graphOnly: fm.graphOnly,
+                relatedModules: fm.relatedModules
             ))
             bodyBuf.removeAll(keepingCapacity: true)
         }
@@ -283,24 +299,42 @@ public enum MemoryGenerator {
         return chunks
     }
 
-    /// Strip a leading YAML frontmatter block (`---\n…\n---\n`) and pull
-    /// out a recognized `type` and a `tags` list. Returns the remaining
-    /// text plus the type kind (nil if no frontmatter or unmapped) and
-    /// the tag array (lowercased, deduped, empty when absent). Tolerant
-    /// — bad YAML is silently dropped rather than failing the whole doc.
-    static func stripFrontmatterType(_ text: String) -> (String, CGNodeKind?, [String]) {
-        guard text.hasPrefix("---\n") else { return (text, nil, []) }
+    struct ParsedFrontmatter {
+        var text: String
+        var kind: CGNodeKind?
+        var tags: [String]
+        var graphOnly: Bool
+        var relatedModules: [String]
+    }
+
+    /// Strip a leading YAML frontmatter block and pull out `type`/`kind`,
+    /// `tags`, `graph-only` (or `graphOnly`), and `related-modules` (or
+    /// `relatedModules`). Tolerant — bad YAML is silently dropped.
+    static func parseFrontmatter(_ text: String) -> ParsedFrontmatter {
+        guard text.hasPrefix("---\n") else {
+            return ParsedFrontmatter(text: text, kind: nil, tags: [], graphOnly: false, relatedModules: [])
+        }
         let afterFirst = text.index(text.startIndex, offsetBy: 4)
-        guard let endRange = text.range(of: "\n---\n", range: afterFirst..<text.endIndex)
-        else { return (text, nil, []) }
+        guard let endRange = text.range(of: "\n---\n", range: afterFirst..<text.endIndex) else {
+            return ParsedFrontmatter(text: text, kind: nil, tags: [], graphOnly: false, relatedModules: [])
+        }
         let yamlBlock = String(text[afterFirst..<endRange.lowerBound])
         let remaining = String(text[endRange.upperBound...])
         guard let yaml = try? Yams.load(yaml: yamlBlock) as? [String: Any] else {
-            return (remaining, nil, [])
+            return ParsedFrontmatter(text: remaining, kind: nil, tags: [], graphOnly: false, relatedModules: [])
         }
         let rawType = (yaml["type"] as? String) ?? (yaml["kind"] as? String) ?? ""
         let tags = parseFrontmatterTags(yaml["tags"])
-        return (remaining, kindFromTypeString(rawType), tags)
+        let graphOnly = (yaml["graph-only"] as? Bool) ?? (yaml["graphOnly"] as? Bool) ?? false
+        let relatedModules = parseModuleList(yaml["related-modules"] ?? yaml["relatedModules"])
+        return ParsedFrontmatter(text: remaining, kind: kindFromTypeString(rawType),
+                                 tags: tags, graphOnly: graphOnly, relatedModules: relatedModules)
+    }
+
+    /// Backward-compatible shim for the old 3-tuple call shape.
+    static func stripFrontmatterType(_ text: String) -> (String, CGNodeKind?, [String]) {
+        let fm = parseFrontmatter(text)
+        return (fm.text, fm.kind, fm.tags)
     }
 
     /// Accept either YAML array (`tags: [foo, bar]`) or comma/space string
@@ -322,6 +356,28 @@ public enum MemoryGenerator {
             let cleaned = p.trimmingCharacters(in: .whitespaces)
                 .trimmingCharacters(in: CharacterSet(charactersIn: "#"))
                 .lowercased()
+            guard !cleaned.isEmpty, !seen.contains(cleaned) else { continue }
+            seen.insert(cleaned); out.append(cleaned)
+        }
+        return out
+    }
+
+    /// Module paths: accept YAML array or comma/space string. Trimmed,
+    /// deduped, case PRESERVED (unlike tags — these are file paths).
+    static func parseModuleList(_ raw: Any?) -> [String] {
+        let parts: [String]
+        switch raw {
+        case let array as [Any]:
+            parts = array.compactMap { ($0 as? String) ?? ($0 as? CustomStringConvertible).map { "\($0)" } }
+        case let s as String:
+            parts = s.split(whereSeparator: { $0.isWhitespace || $0 == "," }).map(String.init)
+        default:
+            return []
+        }
+        var seen = Set<String>()
+        var out: [String] = []
+        for p in parts {
+            let cleaned = p.trimmingCharacters(in: .whitespaces)
             guard !cleaned.isEmpty, !seen.contains(cleaned) else { continue }
             seen.insert(cleaned); out.append(cleaned)
         }
