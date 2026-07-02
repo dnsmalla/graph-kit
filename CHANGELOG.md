@@ -4,6 +4,36 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 (`typescript/`) share one canonical graph schema (`schema/SCHEMA.md`); the schema's
 `schemaVersion` is versioned independently of the package tags.
 
+## [1.6.0] — 2026-07-02
+
+### Added
+- **`DocCodeLinker`** (Swift, text): resolves backtick-quoted doc mentions (e.g.
+  `` `kb/db.mjs` ``, `` `backupTo` ``) against a caller-supplied code-symbol
+  inventory, producing scored doc→code link candidates. Replaces wikilink-only
+  doc→code linking, which real-world docs essentially never use.
+- **`graphOnly` / `relatedModules` on `MemoryChunk`** (Swift, text): populated from
+  new `graph-only` / `related-modules` YAML frontmatter keys, letting a downstream
+  consumer route a doc into the graph without also surfacing it as agent-facing
+  memory, and declare which code modules a doc is about.
+
+### Fixed
+- **Re-export lines now captured as import edges** (Swift, scan):
+  `FileStructureExtractor.importSpecifier` previously only recognized `import`,
+  `require`, and dynamic `import()` — files using `export { X } from './m'`,
+  `export * from './m'`, `export type { X } from './m'`, or a multi-line block's
+  closing `} from './m';` had those dependency edges silently dropped, leaving
+  re-export-heavy files with incomplete graphs.
+- **Fence-aware markdown parsing** (Swift, text): headings, `#hashtags`, and
+  `[[wikilinks]]` inside fenced code blocks (```` ``` ````/`~~~`) are no longer
+  misread as real document content; the fallback title-match linker now ignores
+  fenced content too. Chunk bodies still preserve fences for display.
+- **Edge-noise reduction in doc-graph cross-chunk linking** (Swift, text): the
+  title-match fallback now requires 2+ word tokens, so a single-word title like
+  "Config" no longer whole-word-matches large swaths of a corpus; tags spread
+  across more than 12 chunks are now skipped entirely as too generic to be a
+  relatedness signal (previously truncated to an arbitrary clique of 6 regardless
+  of how generic the tag was).
+
 ## [1.5.4] — 2026-06-29
 
 ### Fixed
