@@ -27,4 +27,20 @@ final class ReExportImportTests: XCTestCase {
         XCTAssertEqual(spec("const m = await import('./kb/db.mjs');"), "./kb/db.mjs")
         XCTAssertNil(spec("// just a comment about exporting"))
     }
+
+    func testMultiLineReExportClosingLineIsCaptured() {
+        // The opening line has no specifier yet — must return nil.
+        XCTAssertNil(spec("export {"))
+        // The closing line carries the specifier and must be captured.
+        XCTAssertEqual(spec("} from './meetings.mjs';"), "./meetings.mjs")
+    }
+
+    func testTypeOnlyReExportIsCaptured() {
+        XCTAssertEqual(spec("export type { UserRow } from './types.mjs';"), "./types.mjs")
+    }
+
+    func testPlainClosingBraceWithoutFromStillReturnsNil() {
+        XCTAssertNil(spec("}"))
+        XCTAssertNil(spec("  } // end of function"))
+    }
 }

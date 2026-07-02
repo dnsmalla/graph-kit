@@ -62,15 +62,26 @@ public final class FileStructureExtractor {
         case "typescript", "javascript":
             if let r = firstQuoted(in: line),
                line.contains("import") || line.contains("require") { return r }
-            // Re-exports (`export { X } from './m'`, `export * from './m'`)
-            // are imports too — the module is a real dependency even though
-            // the line never says `import`. Anchor on the line actually
-            // *starting* with `export {` / `export *` (not merely containing
-            // the word "export" somewhere) so a local variable named `from`
-            // (e.g. `export const from = '…';`, which also contains the
-            // literal substring " from ") can't false-positive.
+            // Re-exports (`export { X } from './m'`, `export * from './m'`,
+            // `export type { X } from './m'`) are imports too. Anchor on the
+            // TRIMMED line prefix (not `contains("export")`) — a bare
+            // `contains` check false-positives on `export const from = '…'`
+            // (a variable literally named `from` makes the line contain the
+            // substring " from "). Multi-line re-export blocks —
+            //   export {
+            //     a, b, c
+            //   } from './m';
+            // — are common (Prettier's default wrapping for long named-export
+            // lists) and are caught for free here: `importSpecifier` runs
+            // per-line, so the OPENING `export {` line correctly returns nil
+            // (no `from` on it yet), and the CLOSING `} from './m';` line is
+            // caught by the bare `}` prefix below. This is a heuristic, not a
+            // parser: a closing brace from unrelated code immediately
+            // followed by literal " from " text would false-positive, but
+            // that shape is vanishingly rare in real source.
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("export {") || trimmed.hasPrefix("export *"),
+            if trimmed.hasPrefix("export {") || trimmed.hasPrefix("export *")
+                || trimmed.hasPrefix("export type {") || trimmed.hasPrefix("}"),
                let fromRange = line.range(of: " from "),
                let r = firstQuoted(in: String(line[fromRange.upperBound...])) { return r }
             return nil
