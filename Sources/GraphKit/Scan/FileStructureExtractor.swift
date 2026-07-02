@@ -62,6 +62,17 @@ public final class FileStructureExtractor {
         case "typescript", "javascript":
             if let r = firstQuoted(in: line),
                line.contains("import") || line.contains("require") { return r }
+            // Re-exports (`export { X } from './m'`, `export * from './m'`)
+            // are imports too — the module is a real dependency even though
+            // the line never says `import`. Anchor on the line actually
+            // *starting* with `export {` / `export *` (not merely containing
+            // the word "export" somewhere) so a local variable named `from`
+            // (e.g. `export const from = '…';`, which also contains the
+            // literal substring " from ") can't false-positive.
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("export {") || trimmed.hasPrefix("export *"),
+               let fromRange = line.range(of: " from "),
+               let r = firstQuoted(in: String(line[fromRange.upperBound...])) { return r }
             return nil
         case "swift":
             let trimmed = line.trimmingCharacters(in: .whitespaces)
