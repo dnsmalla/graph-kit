@@ -310,6 +310,11 @@ public enum MemoryGenerator {
     /// Strip a leading YAML frontmatter block and pull out `type`/`kind`,
     /// `tags`, `graph-only` (or `graphOnly`), and `related-modules` (or
     /// `relatedModules`). Tolerant — bad YAML is silently dropped.
+    ///
+    /// `graphOnly`/`relatedModules` exist so a downstream memory-curation
+    /// consumer can route a doc into the code graph without also surfacing
+    /// it as agent-facing memory — graph-kit itself has no opinion on that
+    /// policy, it only parses and carries the metadata.
     static func parseFrontmatter(_ text: String) -> ParsedFrontmatter {
         guard text.hasPrefix("---\n") else {
             return ParsedFrontmatter(text: text, kind: nil, tags: [], graphOnly: false, relatedModules: [])
@@ -329,12 +334,6 @@ public enum MemoryGenerator {
         let relatedModules = parseModuleList(yaml["related-modules"] ?? yaml["relatedModules"])
         return ParsedFrontmatter(text: remaining, kind: kindFromTypeString(rawType),
                                  tags: tags, graphOnly: graphOnly, relatedModules: relatedModules)
-    }
-
-    /// Backward-compatible shim for the old 3-tuple call shape.
-    static func stripFrontmatterType(_ text: String) -> (String, CGNodeKind?, [String]) {
-        let fm = parseFrontmatter(text)
-        return (fm.text, fm.kind, fm.tags)
     }
 
     /// Accept either YAML array (`tags: [foo, bar]`) or comma/space string
