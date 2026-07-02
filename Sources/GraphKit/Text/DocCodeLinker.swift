@@ -14,11 +14,16 @@ import Foundation
 /// Pure + Sendable: the caller (llm-ide's KnowledgeGraphService) builds
 /// the inventory from its code graph and merges the returned links.
 public enum DocCodeLinker {
-    public struct Link: Sendable, Hashable {
+    public struct Link: Sendable, Hashable, Codable {
         public let chunkID: String
         public let codeNodeID: String
         public let mention: String     // as written in the doc
         public let confidence: Double  // 0.9 path-shaped, 0.7 symbol-shaped
+        // Note: "." is a cheap proxy for path/file-extension shape, not a
+        // true path check — a dotted symbol reference (`self.foo`) or a
+        // version string would also score 0.9. This only affects RANKING
+        // (which confidence tier a link gets), never WHETHER a link is
+        // emitted — the inventory lookup is the sole gate on that.
 
         public init(chunkID: String, codeNodeID: String, mention: String, confidence: Double) {
             self.chunkID = chunkID
