@@ -128,13 +128,26 @@ export function loadScipIndex(scipPath: string): Promise<unknown> {
     const child = spawn("scip", ["print", "--json", scipPath], { stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     let err = "";
-    child.stdout.on("data", (c) => { out += c; });
-    child.stderr.on("data", (c) => { err += c; });
-    child.on("error", (e) => reject(new Error(`scip CLI not available: ${e.message}`)));
+    let settled = false;
+
+    const settle = (fn: () => void) => {
+      if (!settled) {
+        settled = true;
+        fn();
+      }
+    };
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (c: string) => { out += c; });
+    child.stderr.on("data", (c: string) => { err += c; });
+    child.on("error", (e) => settle(() => reject(new Error(`scip CLI not available: ${e.message}`))));
     child.on("close", (code) => {
-      if (code !== 0) return reject(new Error(`scip print exited ${code}: ${err}`));
-      try { resolve(JSON.parse(out)); }
-      catch (e) { reject(new Error(`scip print emitted invalid JSON: ${(e as Error).message}`)); }
+      settle(() => {
+        if (code !== 0) return reject(new Error(`scip print exited ${code}: ${err}`));
+        try { resolve(JSON.parse(out)); }
+        catch (e) { reject(new Error(`scip print emitted invalid JSON: ${(e as Error).message}`)); }
+      });
     });
   });
 }
