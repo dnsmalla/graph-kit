@@ -64,7 +64,7 @@ graph-kit update . --code ./src --scip index.scip --out .graphkit
 ```
 
 SCIP edges are emitted with confidence `EXTRACTED` and `file:line` provenance.
-Languages without a SCIP indexer fall back to the built-in tree-sitter scanner.
+TypeScript/JavaScript fall back to the built-in TypeScript-compiler-API scanner; other languages produce no code graph without a SCIP index.
 
 `update` is the workhorse: wire it to a git post-commit hook or a watcher so memory
 refreshes in the background as code changes, cheaply (unchanged files are never re-read).

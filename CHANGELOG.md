@@ -7,7 +7,7 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 ## [Unreleased]
 
 ### Added
-- `update --scip <path>`: consume a Sourcegraph SCIP index for precise,
+- **update --scip** (TypeScript, code): consume a Sourcegraph SCIP index for precise,
   compiler-derived code graphs (TS/JS, Python, Go, Java/Kotlin, Rust, …).
   New `typescript/src/code/scipScanner.ts`.
 
