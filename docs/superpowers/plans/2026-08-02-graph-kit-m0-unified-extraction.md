@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add compiler-grade, SCIP-driven code-graph extraction to graph-kit's TypeScript CLI, with the existing tree-sitter `tsScanner` as the zero-config fallback, so one `graph-kit update` pass can consume a `.scip` index for precise def/ref/implements edges across ~10 languages.
+**Goal:** Add compiler-grade, SCIP-driven code-graph extraction to graph-kit's TypeScript CLI, with the existing TypeScript-compiler-API-based `tsScanner` as the zero-config fallback, so one `graph-kit update` pass can consume a `.scip` index for precise def/ref/implements edges across ~10 languages.
 
 **Architecture:** A new pure `scipScanner` maps `scip print --json` output to the canonical `CGData` — definition nodes (from definition-role occurrences, `EXTRACTED`, with `file:line` provenance), reference edges (from non-definition occurrences, resolved to their enclosing definition via range containment), and relationship edges (`is_implementation`→`implements`, etc.). `scanCode` gains an optional `scipIndex`; when set it prefers SCIP, else falls back to `tsScanner`. The `update` CLI gains `--scip <path>`.
 
