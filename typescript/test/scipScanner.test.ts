@@ -22,3 +22,14 @@ test("parseScipJson emits one definition node per symbol with provenance", () =>
   assert.equal(add.metadata.language, "TypeScript");
   assert.equal(graph.nodes.length, 2);
 });
+
+test("parseScipJson emits a reference edge from enclosing def to the referenced symbol", () => {
+  const graph = parseScipJson(fixture);
+  const ref = graph.edges.find(
+    (e) => e.fromId === "scip-typescript npm src app main()" &&
+           e.toId === "scip-typescript npm src app add()",
+  );
+  assert.ok(ref, "main references add");
+  assert.equal(ref.kind, "references");
+  assert.equal(ref.confidence, "EXTRACTED");
+});

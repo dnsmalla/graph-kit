@@ -1,4 +1,4 @@
-import type { CGData, CGNode, CGNodeKind } from "../models.js";
+import type { CGData, CGNode, CGNodeKind, CGEdge, CGEdgeKind } from "../models.js";
 
 /** Read a foreign-JSON field tolerating snake_case or camelCase. */
 function field<T = unknown>(o: Record<string, unknown> | undefined, snake: string, camel: string): T | undefined {
@@ -37,7 +37,16 @@ export function parseScipJson(index: unknown): CGData {
   const idx = index as Record<string, unknown>;
   const documents = (field<unknown[]>(idx, "documents", "documents") ?? []) as Record<string, unknown>[];
   const nodes: CGNode[] = [];
+  const edges: CGEdge[] = [];
   const seenDef = new Set<string>();
+  const seenEdge = new Set<string>();
+
+  const addEdge = (fromId: string, toId: string, kind: CGEdgeKind) => {
+    const key = `${fromId}${toId}${kind}`;
+    if (fromId === toId || seenEdge.has(key)) return;
+    seenEdge.add(key);
+    edges.push({ fromId, toId, kind, confidence: "EXTRACTED" });
+  };
 
   for (const doc of documents) {
     const sourceFile = field<string>(doc, "relative_path", "relativePath") ?? "";
@@ -45,6 +54,7 @@ export function parseScipJson(index: unknown): CGData {
     const symbols = (field<unknown[]>(doc, "symbols", "symbols") ?? []) as Record<string, unknown>[];
     const occurrences = (field<unknown[]>(doc, "occurrences", "occurrences") ?? []) as Record<string, unknown>[];
 
+    // Definition nodes (as in Task 1) …
     for (const sym of symbols) {
       const symbolId = field<string>(sym, "symbol", "symbol") ?? "";
       const displayName = field<string>(sym, "display_name", "displayName");
@@ -57,23 +67,45 @@ export function parseScipJson(index: unknown): CGData {
         return field<string>(o, "symbol", "symbol") === symbolId && (roles & 0x1) !== 0;
       });
       const lines = def ? occLines(def) : { startLine: 0, endLine: 0 };
-      if (seenDef.has(symbolId)) continue;
-      seenDef.add(symbolId);
-      nodes.push({
-        id: symbolId,
-        title: displayName ?? symbolId.split(" ").pop() ?? symbolId,
-        kind: kindFromScip(kind),
-        metadata: {
-          source_file: sourceFile,
-          fileURL: `file://${sourceFile}`,
-          line: `L${lines.startLine}`,
-          language,
-          ...(documentation?.length ? { doc: documentation.join("\n") } : {}),
-          extracted_by: "scip",
-        },
+      if (!seenDef.has(symbolId)) {
+        seenDef.add(symbolId);
+        nodes.push({
+          id: symbolId,
+          title: displayName ?? symbolId.split(" ").pop() ?? symbolId,
+          kind: kindFromScip(kind),
+          metadata: {
+            source_file: sourceFile,
+            fileURL: `file://${sourceFile}`,
+            line: `L${lines.startLine}`,
+            language,
+            ...(documentation?.length ? { doc: documentation.join("\n") } : {}),
+            extracted_by: "scip",
+          },
+        });
+      }
+      // Record this symbol's definition range for enclosure matching
+      (sym as Record<string, unknown> & { __defLines?: { startLine: number; endLine: number } }).__defLines = lines;
+    }
+
+    // Reference edges: each non-definition occurrence → enclosing definition
+    for (const occ of occurrences) {
+      const roles = field<number>(occ, "symbol_roles", "symbolRoles") ?? 0;
+      if ((roles & 0x1) !== 0) continue; // skip definitions
+      const target = field<string>(occ, "symbol", "symbol");
+      if (!target) continue;
+      const occRange = occLines(occ);
+      // Find the symbol whose definition range encloses this occurrence (line containment)
+      const enclosing = symbols.find((s) => {
+        const dl = (s as Record<string, unknown> & { __defLines?: { startLine: number; endLine: number } }).__defLines;
+        const symbolId = field<string>(s, "symbol", "symbol");
+        return dl && occRange.startLine >= dl.startLine && occRange.startLine <= dl.endLine && symbolId !== target;
       });
+      if (!enclosing) continue;
+      const enclosingId = field<string>(enclosing, "symbol", "symbol") ?? "";
+      const edgeKind: CGEdgeKind = (roles & 0x2) !== 0 ? "imports" : "references";
+      addEdge(enclosingId, target, edgeKind);
     }
   }
 
-  return { nodes, edges: [], layers: [], tour: [] };
+  return { nodes, edges, layers: [], tour: [] };
 }
