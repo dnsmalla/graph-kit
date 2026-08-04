@@ -14,6 +14,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, relative, resolve, dirname } from "node:path";
 import type { CGData, CGEdge, CGNode, CGNodeKind } from "../models.js";
 import { EXCLUDED_DIRS } from "../exclusions.js";
+import { loadScipIndex, parseScipJson } from "./scipScanner.js";
 
 const CODE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".cts"]);
 // Dotted dirs (.git, .graphkit) are covered by the walk's startsWith(".") check.
@@ -26,8 +27,20 @@ interface Heritage {
   implementsNames: string[];
 }
 
-/** Scan a directory tree of TS/JS into a code graph. */
-export function scanCode(root: string, opts: { maxFiles?: number; maxFileBytes?: number } = {}): CGData {
+/**
+ * Scan `root` into a code graph. When `opts.scipIndex` is set, prefer the
+ * higher-fidelity SCIP index (parsed via `parseScipJson`/`loadScipIndex`) over the
+ * tree-sitter walk; otherwise fall back to the existing TypeScript-compiler-API scan.
+ */
+export async function scanCode(
+  root: string,
+  opts: { maxFiles?: number; maxFileBytes?: number; scipIndex?: string } = {},
+): Promise<CGData> {
+  if (opts.scipIndex) {
+    const json = await loadScipIndex(opts.scipIndex);
+    return parseScipJson(json);
+  }
+
   const maxFiles = opts.maxFiles ?? 2000;
   const maxFileBytes = opts.maxFileBytes ?? 1_000_000;
   const rootAbs = resolve(root);

@@ -73,10 +73,10 @@ function updateOpts(args: string[]): {
   return o;
 }
 
-function cmdCode(args: string[]): void {
+async function cmdCode(args: string[]): Promise<void> {
   const dir = args[0];
   if (!dir || dir.startsWith("--")) fail("usage: graph-kit code <dir> [--out <graph.json>]");
-  const doc = toDocument(scanCode(dir));
+  const doc = toDocument(await scanCode(dir));
   const out = optValue(args, "--out");
   const json = serializeDocument(doc);
   if (out) writeFileSync(out, json);
@@ -84,12 +84,12 @@ function cmdCode(args: string[]): void {
   process.stderr.write(`graph-kit: ${doc.nodes.length} nodes, ${doc.edges.length} edges\n`);
 }
 
-function cmdUpdate(args: string[]): void {
+async function cmdUpdate(args: string[]): Promise<void> {
   const dir = args[0];
   if (!dir || dir.startsWith("--")) {
     fail("usage: graph-kit update <dir> [--out <artifact-dir>] [--skills <dir>] [--agents <dir>]");
   }
-  process.stderr.write(reportLine(updateMemory(dir, updateOpts(args))) + "\n");
+  process.stderr.write(reportLine(await updateMemory(dir, updateOpts(args))) + "\n");
 }
 
 function cmdWatch(args: string[]): void {
@@ -98,7 +98,11 @@ function cmdWatch(args: string[]): void {
     fail("usage: graph-kit watch <dir> [--out <artifact-dir>] [--skills <dir>] [--agents <dir>]");
   }
   const opts = updateOpts(args);
-  const run = () => process.stderr.write(reportLine(updateMemory(dir, opts)) + "\n");
+  const run = () => {
+    updateMemory(dir, opts)
+      .then((r) => process.stderr.write(reportLine(r) + "\n"))
+      .catch((err: unknown) => process.stderr.write(`graph-kit: update failed: ${(err as Error).message}\n`));
+  };
   run(); // initial build
   process.stderr.write(`graph-kit: watching ${dir} (Ctrl-C to stop)\n`);
   let timer: NodeJS.Timeout | null = null;
@@ -122,7 +126,7 @@ function cmdValidate(args: string[]): void {
   }
 }
 
-function main(argv: string[]): void {
+async function main(argv: string[]): Promise<void> {
   const [cmd, ...rest] = argv;
   switch (cmd) {
     case "memory": return cmdMemory(rest);
@@ -136,4 +140,7 @@ function main(argv: string[]): void {
   }
 }
 
-main(process.argv.slice(2));
+main(process.argv.slice(2)).catch((err: unknown) => {
+  process.stderr.write(`graph-kit: ${(err as Error).message}\n`);
+  process.exit(1);
+});

@@ -51,10 +51,10 @@ export interface UpdateReport {
  * Writes graph.json + index.md + cache.json into the artifact dir and returns a
  * report of what changed. Idempotent: a second run with no edits changes nothing.
  */
-export function updateMemory(
+export async function updateMemory(
   srcDir: string,
   opts: { outDir?: string; skillsDir?: string; agentsDir?: string; codeDir?: string } = {},
-): UpdateReport {
+): Promise<UpdateReport> {
   const outDir = opts.outDir ?? join(srcDir, DEFAULT_OUT_DIR);
   const cachePath = join(outDir, "cache.json");
   const prev = loadCache(cachePath);
@@ -103,7 +103,7 @@ export function updateMemory(
   graph = mergeCapabilities(graph, capabilities);
 
   // Fold in a code→graph when requested, into the same index.
-  if (opts.codeDir) graph = mergeGraphs(graph, scanCode(opts.codeDir));
+  if (opts.codeDir) graph = mergeGraphs(graph, await scanCode(opts.codeDir));
 
   report.nodes = graph.nodes.length;
   report.edges = graph.edges.length;

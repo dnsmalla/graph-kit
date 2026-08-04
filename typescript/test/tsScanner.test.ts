@@ -15,13 +15,13 @@ function repo(files: Record<string, string>): string {
   return dir;
 }
 
-test("extracts files, functions, classes, methods with contains edges", () => {
+test("extracts files, functions, classes, methods with contains edges", async () => {
   const dir = repo({
     "util.ts": "export function helper() { return 1; }\nexport const arrow = () => 2;\n",
     "service.ts": "export class Service {\n  run() {}\n  stop() {}\n}\n",
   });
   try {
-    const g = scanCode(dir);
+    const g = await scanCode(dir);
     const ids = new Set(g.nodes.map((n) => n.id));
     assert.ok(ids.has("file:util.ts"));
     assert.ok(ids.has("symbol:util.ts#helper"));
@@ -37,13 +37,13 @@ test("extracts files, functions, classes, methods with contains edges", () => {
   }
 });
 
-test("resolves relative imports to file→file edges", () => {
+test("resolves relative imports to file→file edges", async () => {
   const dir = repo({
     "a.ts": "import { helper } from './b';\nexport const x = helper();\n",
     "b.ts": "export function helper() { return 1; }\n",
   });
   try {
-    const g = scanCode(dir);
+    const g = await scanCode(dir);
     assert.ok(
       g.edges.some((e) => e.fromId === "file:a.ts" && e.toId === "file:b.ts" && e.kind === "imports" && e.confidence === "EXTRACTED"),
       "relative import './b' resolves to file:b.ts",
@@ -53,13 +53,13 @@ test("resolves relative imports to file→file edges", () => {
   }
 });
 
-test("class extends / implements produce inherits / implements edges", () => {
+test("class extends / implements produce inherits / implements edges", async () => {
   const dir = repo({
     "base.ts": "export class Base {}\nexport interface Runnable {}\n",
     "child.ts": "import { Base, Runnable } from './base';\nexport class Child extends Base implements Runnable {}\n",
   });
   try {
-    const g = scanCode(dir);
+    const g = await scanCode(dir);
     assert.ok(
       g.edges.some((e) => e.fromId === "symbol:child.ts#Child" && e.toId === "symbol:base.ts#Base" && e.kind === "inherits"),
       "Child inherits Base",
@@ -73,7 +73,7 @@ test("class extends / implements produce inherits / implements edges", () => {
   }
 });
 
-test("call expressions produce calls edges between symbols", () => {
+test("call expressions produce calls edges between symbols", async () => {
   const dir = repo({
     "svc.ts":
       "export function helper() { return 1; }\n" +
@@ -81,7 +81,7 @@ test("call expressions produce calls edges between symbols", () => {
       "export class C {\n  go() { return run(); }\n}\n",
   });
   try {
-    const g = scanCode(dir);
+    const g = await scanCode(dir);
     // run() calls helper() — unique name → INFERRED
     assert.ok(
       g.edges.some((e) => e.fromId === "symbol:svc.ts#run" && e.toId === "symbol:svc.ts#helper" && e.kind === "calls" && e.confidence === "INFERRED"),
@@ -99,16 +99,16 @@ test("call expressions produce calls edges between symbols", () => {
   }
 });
 
-test("output is deterministic across runs", () => {
+test("output is deterministic across runs", async () => {
   const dir = repo({ "a.ts": "export function f(){}\nexport class C { m(){} }\n" });
   try {
-    assert.deepEqual(scanCode(dir), scanCode(dir));
+    assert.deepEqual(await scanCode(dir), await scanCode(dir));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test("skips the same vendor/build dirs as the text walker (vendor, out, target, Pods)", () => {
+test("skips the same vendor/build dirs as the text walker (vendor, out, target, Pods)", async () => {
   const dir = repo({
     "real.ts": "export function real() {}\n",
     "vendor/lib.ts": "export function vendored() {}\n",
@@ -119,7 +119,7 @@ test("skips the same vendor/build dirs as the text walker (vendor, out, target, 
     "__pycache__/c.ts": "export function cached() {}\n",
   });
   try {
-    const g = scanCode(dir);
+    const g = await scanCode(dir);
     const files = g.nodes.filter((n) => n.id.startsWith("file:")).map((n) => n.id);
     assert.deepEqual(files, ["file:real.ts"]);
   } finally {
