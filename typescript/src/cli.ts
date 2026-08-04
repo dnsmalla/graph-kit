@@ -60,16 +60,19 @@ function updateOpts(args: string[]): {
   skillsDir?: string;
   agentsDir?: string;
   codeDir?: string;
+  scipIndex?: string;
 } {
-  const o: { outDir?: string; skillsDir?: string; agentsDir?: string; codeDir?: string } = {};
+  const o: { outDir?: string; skillsDir?: string; agentsDir?: string; codeDir?: string; scipIndex?: string } = {};
   const out = optValue(args, "--out");
   const skills = optValue(args, "--skills");
   const agents = optValue(args, "--agents");
   const code = optValue(args, "--code");
+  const scip = optValue(args, "--scip");
   if (out) o.outDir = out;
   if (skills) o.skillsDir = skills;
   if (agents) o.agentsDir = agents;
   if (code) o.codeDir = code;
+  if (scip) o.scipIndex = scip;
   return o;
 }
 

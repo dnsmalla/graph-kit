@@ -53,7 +53,7 @@ export interface UpdateReport {
  */
 export async function updateMemory(
   srcDir: string,
-  opts: { outDir?: string; skillsDir?: string; agentsDir?: string; codeDir?: string } = {},
+  opts: { outDir?: string; skillsDir?: string; agentsDir?: string; codeDir?: string; scipIndex?: string } = {},
 ): Promise<UpdateReport> {
   const outDir = opts.outDir ?? join(srcDir, DEFAULT_OUT_DIR);
   const cachePath = join(outDir, "cache.json");
@@ -103,7 +103,7 @@ export async function updateMemory(
   graph = mergeCapabilities(graph, capabilities);
 
   // Fold in a code→graph when requested, into the same index.
-  if (opts.codeDir) graph = mergeGraphs(graph, await scanCode(opts.codeDir));
+  if (opts.codeDir) graph = mergeGraphs(graph, await scanCode(opts.codeDir, { scipIndex: opts.scipIndex }));
 
   report.nodes = graph.nodes.length;
   report.edges = graph.edges.length;
