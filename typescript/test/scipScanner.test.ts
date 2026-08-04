@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import type { CGNode } from "../src/models.js";
-import { parseScipJson } from "../src/code/scipScanner.js";
+import { parseScipJson, loadScipIndex } from "../src/code/scipScanner.js";
 
 // dist/test/scipScanner.test.js → root is two levels up
 const here = dirname(fileURLToPath(import.meta.url));
@@ -54,4 +54,14 @@ test("parseScipJson maps relationships to typed edges", () => {
   assert.ok(impl);
   assert.equal(impl.kind, "implements");
   assert.equal(impl.confidence, "EXTRACTED");
+});
+
+test("loadScipIndex rejects when the scip binary is unavailable", async () => {
+  const originalPath = process.env.PATH;
+  process.env.PATH = "/nonexistent";
+  try {
+    await assert.rejects(() => loadScipIndex("ignored.scip"), /scip/);
+  } finally {
+    process.env.PATH = originalPath;
+  }
 });

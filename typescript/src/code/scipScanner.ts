@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import type { CGData, CGNode, CGNodeKind, CGEdge, CGEdgeKind } from "../models.js";
 
 /** Read a foreign-JSON field tolerating snake_case or camelCase. */
@@ -120,4 +121,20 @@ export function parseScipJson(index: unknown): CGData {
   }
 
   return { nodes, edges, layers: [], tour: [] };
+}
+
+export function loadScipIndex(scipPath: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("scip", ["print", "--json", scipPath], { stdio: ["ignore", "pipe", "pipe"] });
+    let out = "";
+    let err = "";
+    child.stdout.on("data", (c) => { out += c; });
+    child.stderr.on("data", (c) => { err += c; });
+    child.on("error", (e) => reject(new Error(`scip CLI not available: ${e.message}`)));
+    child.on("close", (code) => {
+      if (code !== 0) return reject(new Error(`scip print exited ${code}: ${err}`));
+      try { resolve(JSON.parse(out)); }
+      catch (e) { reject(new Error(`scip print emitted invalid JSON: ${(e as Error).message}`)); }
+    });
+  });
 }
