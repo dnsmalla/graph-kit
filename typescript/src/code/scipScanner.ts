@@ -85,6 +85,18 @@ export function parseScipJson(index: unknown): CGData {
       }
       // Record this symbol's definition range for enclosure matching
       (sym as Record<string, unknown> & { __defLines?: { startLine: number; endLine: number } }).__defLines = lines;
+
+      // Relationship edges (implements / references)
+      const relationships = field<unknown[]>(sym, "relationships", "relationships") ?? [];
+      for (const rel of relationships) {
+        const r = rel as Record<string, unknown>;
+        const relKind: CGEdgeKind = r.is_implementation || r.isImplementation ? "implements"
+          : "references";
+        const relTarget = field<string>(r, "symbol", "symbol") ?? "";
+        if (relTarget) {
+          addEdge(symbolId, relTarget, relKind);
+        }
+      }
     }
 
     // Reference edges: each non-definition occurrence → enclosing definition

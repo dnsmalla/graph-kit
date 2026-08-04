@@ -33,3 +33,25 @@ test("parseScipJson emits a reference edge from enclosing def to the referenced 
   assert.equal(ref.kind, "references");
   assert.equal(ref.confidence, "EXTRACTED");
 });
+
+test("parseScipJson maps relationships to typed edges", () => {
+  const graph = parseScipJson({
+    documents: [{
+      relative_path: "src/impl.ts",
+      language: "TypeScript",
+      symbols: [
+        { symbol: "s Widget", display_name: "Widget", kind: 7, relationships: [] },
+        { symbol: "s Button", display_name: "Button", kind: 7,
+          relationships: [{ symbol: "s Widget", is_implementation: true }] },
+      ],
+      occurrences: [
+        { symbol: "s Widget", symbol_roles: 1, range: [1, 0, 5, 0] },
+        { symbol: "s Button", symbol_roles: 1, range: [7, 0, 10, 0] },
+      ],
+    }],
+  });
+  const impl = graph.edges.find((e) => e.fromId === "s Button" && e.toId === "s Widget");
+  assert.ok(impl);
+  assert.equal(impl.kind, "implements");
+  assert.equal(impl.confidence, "EXTRACTED");
+});
