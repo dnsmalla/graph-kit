@@ -4,6 +4,13 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 (`typescript/`) share one canonical graph schema (`schema/SCHEMA.md`); the schema's
 `schemaVersion` is versioned independently of the package tags.
 
+## [Unreleased]
+
+### Added
+- `update --scip <path>`: consume a Sourcegraph SCIP index for precise,
+  compiler-derived code graphs (TS/JS, Python, Go, Java/Kotlin, Rust, …).
+  New `typescript/src/code/scipScanner.ts`.
+
 ## [1.6.0] — 2026-07-02
 
 ### Added

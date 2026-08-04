@@ -52,6 +52,20 @@ graph-kit index graph.json --out INDEX.md
 graph-kit validate graph.json
 ```
 
+### SCIP-backed code graphs (precise, multi-language)
+
+For compiler-grade cross-file resolution (definitions, references, implementations),
+generate a SCIP index with the relevant indexer (e.g. `npx scip-typescript`,
+`scip-python`, `scip-java`) and pass it to `update`:
+
+```bash
+npx scip-typescript index --out index.scip
+graph-kit update . --code ./src --scip index.scip --out .graphkit
+```
+
+SCIP edges are emitted with confidence `EXTRACTED` and `file:line` provenance.
+Languages without a SCIP indexer fall back to the built-in tree-sitter scanner.
+
 `update` is the workhorse: wire it to a git post-commit hook or a watcher so memory
 refreshes in the background as code changes, cheaply (unchanged files are never re-read).
 
