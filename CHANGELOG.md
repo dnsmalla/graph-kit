@@ -11,6 +11,10 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
   compiler-derived code graphs (TS/JS, Python, Go, Java/Kotlin, Rust, …).
   New `typescript/src/code/scipScanner.ts`.
 
+### Changed
+- **BREAKING:** `scanCode` and `updateMemory` are now `async` (return `Promise`);
+  callers must `await` them.
+
 ## [1.6.0] — 2026-07-02
 
 ### Added

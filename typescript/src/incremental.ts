@@ -102,8 +102,12 @@ export async function updateMemory(
   ];
   graph = mergeCapabilities(graph, capabilities);
 
-  // Fold in a code→graph when requested, into the same index.
-  if (opts.codeDir) graph = mergeGraphs(graph, await scanCode(opts.codeDir, { scipIndex: opts.scipIndex }));
+  // Fold in a code→graph when requested, into the same index. `--scip` alone is
+  // sufficient to trigger this: scanCode's SCIP branch reads only from `scipIndex`
+  // and never touches `root`, so passing a falsy `codeDir` alongside it is harmless.
+  if (opts.codeDir || opts.scipIndex) {
+    graph = mergeGraphs(graph, await scanCode(opts.codeDir ?? "", { scipIndex: opts.scipIndex }));
+  }
 
   report.nodes = graph.nodes.length;
   report.edges = graph.edges.length;
