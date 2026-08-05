@@ -202,20 +202,6 @@ public enum MemoryGenerator {
 
     // MARK: - Internals
 
-    /// Directories the text walker must never descend into. Beyond the usual
-    /// vendor/build noise, this excludes generated-knowledge output —
-    /// `.code-notes`, `.understand-anything`, `graphify-out`, and `system`
-    /// (i.e. `system/graph/…`). Those hold the indexer's *own* regenerated
-    /// markdown (per-file code notes with boilerplate "Functions"/"Types"
-    /// headings, plus duplicate `repo.md` / `index.md` summaries). Walking them
-    /// double-counts content and floods the doc graph with duplicate nodes, so
-    /// they are skipped — the same set `.gitignore` treats as regen output.
-    static let excludedDocDirs: Set<String> = [
-        ".git", "node_modules", ".build", "dist", "build",
-        ".venv", "venv", "__pycache__", ".mypy_cache",
-        ".code-notes", ".understand-anything", "graphify-out", "system",
-    ]
-
     private static func collectDocs(root: URL, maxFiles: Int, maxFileBytes: Int) -> [URL] {
         let fm = FileManager.default
         guard let enumerator = fm.enumerator(
@@ -227,7 +213,7 @@ public enum MemoryGenerator {
         for case let url as URL in enumerator {
             if result.count >= maxFiles { break }
             // Don't descend into vendor/build or generated-knowledge dirs.
-            if let name = url.pathComponents.last, excludedDocDirs.contains(name) {
+            if let name = url.pathComponents.last, ExcludedDirs.names.contains(name) {
                 enumerator.skipDescendants(); continue
             }
             let ext = url.pathExtension.lowercased()

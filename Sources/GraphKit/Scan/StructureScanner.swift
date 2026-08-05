@@ -127,11 +127,9 @@ public final class StructureScanner {
         guard let en = fm.enumerator(at: repoRoot, includingPropertiesForKeys: nil,
                                      options: [.skipsHiddenFiles, .skipsPackageDescendants])
         else { return [] }
-        let skip: Set<String> = [".git", "node_modules", ".build", "dist", "build",
-                                 ".venv", "venv", "__pycache__", ".code-notes", ".mypy_cache"]
         var paths: [String] = []
         for case let url as URL in en {
-            if let n = url.pathComponents.last, skip.contains(n) { en.skipDescendants(); continue }
+            if let n = url.pathComponents.last, ExcludedDirs.names.contains(n) { en.skipDescendants(); continue }
             guard exts.contains(url.pathExtension.lowercased()) else { continue }
             let rel = url.path.hasPrefix(repoRoot.path + "/")
                 ? String(url.path.dropFirst(repoRoot.path.count + 1)) : url.path

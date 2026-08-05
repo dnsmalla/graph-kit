@@ -191,12 +191,9 @@ public final class FileStructureExtractor {
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else { return [] }
 
-        let skipDirs: Set<String> = [".git", "node_modules", ".build", "dist", "build",
-                                     ".venv", "venv", "__pycache__", ".code-notes",
-                                     ".understand-anything", ".mypy_cache"]
         var paths: [String] = []
         for case let url as URL in enumerator {
-            if let name = url.pathComponents.last, skipDirs.contains(name) {
+            if let name = url.pathComponents.last, ExcludedDirs.names.contains(name) {
                 enumerator.skipDescendants(); continue
             }
             let ext = url.pathExtension.lowercased()
