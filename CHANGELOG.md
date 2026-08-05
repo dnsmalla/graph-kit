@@ -6,6 +6,8 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 
 ## [Unreleased]
 
+## [1.6.1] — 2026-08-05
+
 ### Added
 - **update --scip** (TypeScript, code): consume a Sourcegraph SCIP index for precise,
   compiler-derived code graphs (TS/JS, Python, Go, Java/Kotlin, Rust, …).
@@ -14,6 +16,18 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 ### Changed
 - **BREAKING:** `scanCode` and `updateMemory` are now `async` (return `Promise`);
   callers must `await` them.
+
+### Fixed
+- `StructureScanner.fallbackList` and `FileStructureExtractor.fallbackEnumerate`
+  (the non-git fallback file listers, used whenever a project has no `.git`) were
+  each missing `graphify-out` and `system` from their skip-directory list — present
+  only in `MemoryGenerator.excludedDocDirs`, a third near-identical copy. On a
+  non-git project, this meant every re-scan re-discovered the indexer's own
+  previous `system/graph/` output as new input and mirrored it one level deeper —
+  unbounded self-referential nesting (confirmed in the field at 22 levels deep,
+  644 files), which then floods every consumer of repo-memory context (e.g. the
+  LLM-IDE Code Assistant's injected prompt) without bound. Consolidated all three
+  copies into one shared `ExcludedDirs.names`.
 
 ## [1.6.0] — 2026-07-02
 
