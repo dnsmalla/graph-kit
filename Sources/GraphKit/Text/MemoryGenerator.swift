@@ -7,7 +7,6 @@
 
 import Foundation
 import CryptoKit
-import Yams
 
 public struct GeneratedMemory: Sendable {
     public let graph: CGData
@@ -313,10 +312,11 @@ public enum MemoryGenerator {
     /// `tags`, `graph-only` (or `graphOnly`), and `related-modules` (or
     /// `relatedModules`). Tolerant — bad YAML is silently dropped.
     ///
-    /// `graphOnly`/`relatedModules` exist so a downstream memory-curation
-    /// consumer can route a doc into the code graph without also surfacing
-    /// it as agent-facing memory — graph-kit itself has no opinion on that
-    /// policy, it only parses and carries the metadata.
+    /// Uses a small line parser instead of `Yams.load` for the frontmatter
+    /// block: agent skill/tool files often carry long single-line
+    /// `description:` values with unquoted colons, and nested `schema:`
+    /// mappings — `Yams.load` can trap on some of those inputs even inside
+    /// `try?`, taking down the host process during background graph builds.
     static func parseFrontmatter(_ text: String) -> ParsedFrontmatter {
         guard text.hasPrefix("---\n") else {
             return ParsedFrontmatter(text: text, kind: nil, tags: [], graphOnly: false, relatedModules: [])
@@ -326,16 +326,102 @@ public enum MemoryGenerator {
             return ParsedFrontmatter(text: text, kind: nil, tags: [], graphOnly: false, relatedModules: [])
         }
         let yamlBlock = String(text[afterFirst..<endRange.lowerBound])
+        // The closing fence's trailing newline belongs to the fence, not the
+        // body: trim it so the body always starts at its first content
+        // character (the frontmatter tests pin this contract).
         let remaining = String(text[endRange.upperBound...])
-        guard let yaml = try? Yams.load(yaml: yamlBlock) as? [String: Any] else {
-            return ParsedFrontmatter(text: remaining, kind: nil, tags: [], graphOnly: false, relatedModules: [])
-        }
-        let rawType = (yaml["type"] as? String) ?? (yaml["kind"] as? String) ?? ""
-        let tags = parseFrontmatterTags(yaml["tags"])
-        let graphOnly = (yaml["graph-only"] as? Bool) ?? (yaml["graphOnly"] as? Bool) ?? false
-        let relatedModules = parseModuleList(yaml["related-modules"] ?? yaml["relatedModules"])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let yaml = parseSimpleFrontmatterMapping(yamlBlock)
+        let rawType = unquote(yaml["type"] ?? yaml["kind"] ?? "")
+        let tags = parseFrontmatterTags(normalizeFrontmatterList(yaml["tags"]))
+        let graphOnly = parseBool(yaml["graph-only"] ?? yaml["graphOnly"]) ?? false
+        let relatedModules = parseModuleList(
+            normalizeFrontmatterList(yaml["related-modules"] ?? yaml["relatedModules"]))
         return ParsedFrontmatter(text: remaining, kind: kindFromTypeString(rawType),
                                  tags: tags, graphOnly: graphOnly, relatedModules: relatedModules)
+    }
+
+    /// Minimal YAML-ish frontmatter parser for the few keys MemoryGenerator
+    /// cares about. Only reads top-level `key: value` lines; everything after
+    /// the first colon on a line is kept verbatim (so descriptions may contain
+    /// colons). Indented continuation lines are appended to the current value.
+    static func parseSimpleFrontmatterMapping(_ block: String) -> [String: String] {
+        var out: [String: String] = [:]
+        var currentKey: String?
+        var currentValue = ""
+        func flush() {
+            if let key = currentKey {
+                out[key] = currentValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            currentKey = nil
+            currentValue = ""
+        }
+        for lineSub in block.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(lineSub)
+            if line.hasPrefix(" ") || line.hasPrefix("\t") {
+                if currentKey != nil {
+                    if !currentValue.isEmpty { currentValue.append("\n") }
+                    currentValue.append(line.trimmingCharacters(in: .whitespaces))
+                }
+                continue
+            }
+            flush()
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            let key = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+            guard !key.isEmpty else { continue }
+            let value = String(line[line.index(after: colon)...])
+            currentKey = key
+            currentValue = value
+        }
+        flush()
+        return out
+    }
+
+    static func parseBool(_ raw: String?) -> Bool? {
+        guard let raw else { return nil }
+        switch unquote(raw).lowercased() {
+        case "true", "yes", "1": return true
+        case "false", "no", "0": return false
+        default: return nil
+        }
+    }
+
+    /// Strip surrounding single/double quotes from a scalar.
+    static func unquote(_ raw: String) -> String {
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard s.count >= 2 else { return s }
+        for q in ["\"", "'"] where s.hasPrefix(q) && s.hasSuffix(q) {
+            return String(s.dropFirst().dropLast())
+        }
+        return s
+    }
+
+    /// Bridge the line parser's raw string values back to the shapes
+    /// `parseFrontmatterTags`/`parseModuleList` expect. Yams used to hand those
+    /// a real `[Any]` for `tags: [a, b]` and block lists; the line parser only
+    /// produces strings, so tokenize sequences here and pass plain scalars
+    /// through unchanged (their comma/space splitting still applies).
+    /// Returns `nil` for an absent key so the callers' "no value" path stands.
+    static func normalizeFrontmatterList(_ raw: String?) -> Any? {
+        guard let raw else { return nil }
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !s.isEmpty else { return nil }
+        // Block sequence: the line parser joined `- item` lines with newlines.
+        if s.hasPrefix("- ") || s.hasPrefix("-\n") || s.contains("\n- ") {
+            return s.split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { $0.hasPrefix("-") }
+                .map { unquote(String($0.dropFirst())) }
+                .filter { !$0.isEmpty }
+        }
+        // Flow sequence: [a, b] / ["a", "b"].
+        if s.hasPrefix("[") && s.hasSuffix("]") {
+            let inner = String(s.dropFirst().dropLast())
+            return inner.split(separator: ",")
+                .map { unquote(String($0)) }
+                .filter { !$0.isEmpty }
+        }
+        return unquote(s)
     }
 
     /// Accept either YAML array (`tags: [foo, bar]`) or comma/space string

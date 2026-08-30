@@ -51,4 +51,67 @@ final class MemoryGeneratorTests: XCTestCase {
         XCTAssertTrue(titles.contains("Real Doc"))
         XCTAssertFalse(titles.contains("Module (69 files)"), "generated dirs must be skipped")
     }
+
+    /// Agent skill frontmatter often has unquoted colons inside `description:`
+    /// (e.g. `Triggers: "…"`) and nested `schema:` blocks. Parsing must not
+    /// call Yams in a way that traps the host process.
+    func testParseFrontmatterToleratesSkillDescriptionColons() {
+        let md = """
+        ---
+        name: use-memory
+        description: Read and write memory. Triggers: "what do we know", start of any task.
+        ---
+
+        # Body
+        """
+        let parsed = MemoryGenerator.parseFrontmatter(md)
+        XCTAssertTrue(parsed.text.hasPrefix("# Body"))
+        XCTAssertEqual(parsed.tags, [])
+    }
+
+    /// These three shapes make `Yams.load` force-unwrap nil at
+    /// Constructor.swift:435 (`String.construct(from: $0.key)!`) when a nested
+    /// mapping has a non-scalar key. That is a trap, not a thrown error, so
+    /// `try?` cannot contain it and the host process dies. Parsing must survive.
+    func testParseFrontmatterSurvivesNonScalarMappingKeys() {
+        let traps = [
+            "---\nschema:\n  [a, b]: c\n---\n\n# Body",
+            "---\nschema:\n  {x: y}: z\n---\n\n# Body",
+            "---\nschema:\n  ?\n  : c\n---\n\n# Body",
+        ]
+        for md in traps {
+            let parsed = MemoryGenerator.parseFrontmatter(md)
+            XCTAssertTrue(parsed.text.hasPrefix("# Body"), "body lost for: \(md)")
+            XCTAssertEqual(parsed.tags, [])
+        }
+    }
+
+    /// Yams handed `tags:` back as a real array for flow/block sequences; the
+    /// line parser only produces strings, so sequence tokenization has to be
+    /// done by hand. All four spellings must land on the same tags.
+    func testParseFrontmatterTagSequenceForms() {
+        let forms = [
+            "tags: [Memory, agent]",
+            "tags: [\"memory\", 'Agent']",
+            "tags:\n  - memory\n  - Agent",
+            "tags: memory, agent",
+            "tags: [#memory, #agent]",
+        ]
+        for form in forms {
+            let parsed = MemoryGenerator.parseFrontmatter("---\n\(form)\n---\n\n# Body")
+            XCTAssertEqual(parsed.tags, ["memory", "agent"], "wrong tags for: \(form)")
+        }
+    }
+
+    func testParseFrontmatterRelatedModulesPreservesCaseAndSequences() {
+        let parsed = MemoryGenerator.parseFrontmatter(
+            "---\nrelated-modules: [Sources/Foo.swift, Sources/Bar.swift]\n---\n\n# Body")
+        XCTAssertEqual(parsed.relatedModules, ["Sources/Foo.swift", "Sources/Bar.swift"])
+    }
+
+    func testParseFrontmatterGraphOnlyAcceptsQuotedBool() {
+        XCTAssertTrue(MemoryGenerator.parseFrontmatter("---\ngraph-only: \"true\"\n---\n\n# B").graphOnly)
+        XCTAssertTrue(MemoryGenerator.parseFrontmatter("---\ngraphOnly: yes\n---\n\n# B").graphOnly)
+        XCTAssertFalse(MemoryGenerator.parseFrontmatter("---\ngraph-only: false\n---\n\n# B").graphOnly)
+    }
 }
