@@ -1,52 +1,19 @@
 // Walks a folder of .md / .txt / .mdx files and generates "memory chunks"
 // — heading-bounded sections of text. Each chunk becomes a graph node;
-// chunks within the same doc are linked via `partOf` to a doc node;
+// a doc node `contains` each of its chunks (parent→child, as the code
+// track does file→symbol);
 // chunks that whole-word mention another chunk's title are linked via
 // `references`. Intended as a lightweight, dependency-free first pass at
 // an InfiniteBrain-style memory layer. v1: no LLM, no embeddings.
 
 import Foundation
+import GraphCore
 import CryptoKit
 
-public struct GeneratedMemory: Sendable {
-    public let graph: CGData
-    public let chunks: [MemoryChunk]   // flat, ordered (doc → its chunks)
-    public let docCount: Int
-}
-
-public struct MemoryChunk: Identifiable, Sendable, Hashable {
-    public let id: String              // stable: <sha256 short of path + heading-path>
-    public let docURL: URL
-    public let docTitle: String        // file name minus extension
-    public let headingPath: [String]   // ["Section", "Subsection"]
-    public let body: String            // accumulated lines until next heading at <= level
-    public let kind: CGNodeKind        // typed via frontmatter or heading heuristics
-    public let tags: [String]          // lowercased, from #hashtags + frontmatter `tags:`
-    public let wikiLinks: [String]     // raw target titles from [[Title]] (case as-written)
-    public let graphOnly: Bool         // frontmatter `graph-only: true` — consumers keep
-                                       // this doc out of agent memory artifacts
-    public let relatedModules: [String] // frontmatter `related-modules:` — declared code
-                                        // module affinity, case preserved (paths)
-
-    public init(id: String, docURL: URL, docTitle: String, headingPath: [String],
-                body: String, kind: CGNodeKind, tags: [String], wikiLinks: [String],
-                graphOnly: Bool = false, relatedModules: [String] = []) {
-        self.id = id; self.docURL = docURL; self.docTitle = docTitle
-        self.headingPath = headingPath; self.body = body; self.kind = kind
-        self.tags = tags; self.wikiLinks = wikiLinks
-        self.graphOnly = graphOnly; self.relatedModules = relatedModules
-    }
-
-    public var title: String {
-        headingPath.last ?? docTitle
-    }
-    public var displayHeading: String {
-        headingPath.isEmpty ? "(preamble)" : headingPath.joined(separator: " › ")
-    }
-}
-
 public enum MemoryGenerator {
-    public static let supportedExtensions: Set<String> = ["md", "mdx", "markdown", "txt"]
+    /// Sourced from `GraphCore` so the app's file routing, this generator, and
+    /// any change-detection fingerprint cover exactly the same set.
+    public static let supportedExtensions: Set<String> = DocExtensions.markdownAndText
     public static let maxChunkBodyChars = 4000
 
     /// Generate from an explicit list of files. The caller (usually backed
@@ -59,6 +26,52 @@ public enum MemoryGenerator {
         }
         .sorted { $0.path < $1.path }
         return generate(docs: docs)
+    }
+
+    /// Walk several roots and union the results.
+    ///
+    /// Every part of the union is deduplicated, not just nodes. The first
+    /// version deduped nodes only, so passing the same root twice — or two
+    /// overlapping roots, a parent directory and its child — kept the node set
+    /// correct while silently doubling every `.contains` edge (double spring
+    /// weight, doubled degree and PageRank), every `MemoryChunk` record, and
+    /// the reported `docCount`. Roots are deduped by standardised path first;
+    /// edges and chunks are deduped by key as the backstop for the overlap
+    /// case, where the walks genuinely revisit the same documents.
+    public static func generate(roots: [URL]) -> GeneratedMemory {
+        var nodes: [CGNode] = []
+        var edges: [CGEdge] = []
+        var chunks: [MemoryChunk] = []
+        var docCount = 0
+        var seenNodes = Set<String>()
+        var seenEdges = Set<String>()
+        var seenChunks = Set<String>()
+        var seenRoots = Set<String>()
+        let fm = FileManager.default
+        for root in roots {
+            guard seenRoots.insert(root.standardizedFileURL.path).inserted else { continue }
+            var isDirectory: ObjCBool = false
+            guard fm.fileExists(atPath: root.path, isDirectory: &isDirectory),
+                  isDirectory.boolValue else { continue }
+            let memory = generate(from: root)
+            var newDocs = 0
+            for node in memory.graph.nodes where seenNodes.insert(node.id).inserted {
+                nodes.append(node)
+                if node.kind == .memoryDoc { newDocs += 1 }
+            }
+            for edge in memory.graph.edges {
+                let key = "\(edge.fromId)\u{1}\(edge.toId)\u{1}\(edge.kind.rawValue)"
+                if seenEdges.insert(key).inserted { edges.append(edge) }
+            }
+            for chunk in memory.chunks where seenChunks.insert(chunk.id).inserted {
+                chunks.append(chunk)
+            }
+            // Count only documents this root newly contributed, so overlapping
+            // roots do not inflate the total.
+            docCount += newDocs
+        }
+        return GeneratedMemory(graph: CGData(nodes: nodes, edges: edges),
+                               chunks: chunks, docCount: docCount)
     }
 
     /// Convenience: walk a folder and build a memory graph.
@@ -98,7 +111,21 @@ public enum MemoryGenerator {
                         "type": chunk.kind.displayName
                     ]
                 ))
-                edges.append(CGEdge(fromId: chunk.id, toId: docID, kind: .relatedTo))
+                // Containment, typed as containment and pointing parent→child —
+                // matching `StructureGraphBuilder`'s file→symbol convention (and
+                // the direction `FileClassifier.strippingDocNodes` assumes).
+                //
+                // This was `chunk → doc` with kind `.relatedTo`, which was wrong
+                // three ways: it inverted the hierarchy relative to the code
+                // track, and it made a document's backbone indistinguishable
+                // from the noisy title-match guesses that share that kind — so
+                // any consumer ranking or filtering edges by strength dropped
+                // the one edge that says which document a section belongs to,
+                // shattering the doc graph into isolated chunks. The header
+                // comment always claimed `partOf`; nothing consumed the old
+                // kind or direction.
+                edges.append(CGEdge(fromId: docID, toId: chunk.id,
+                                    kind: .contains, confidence: .extracted))
             }
         }
 
@@ -111,11 +138,13 @@ public enum MemoryGenerator {
         //      that aren't yet wiki-linked but still co-reference.
         let chunksByLowerTitle = Dictionary(grouping: allChunks) { $0.title.lowercased() }
         var emittedEdgeKeys = Set<String>()   // "from→to:kind", de-dupes
-        func emit(from: String, to: String, kind: CGEdgeKind) {
+        func emit(from: String, to: String, kind: CGEdgeKind,
+                  confidence: CGEdgeConfidence = .extracted) {
             let key = "\(from)→\(to):\(kind.rawValue)"
             guard !emittedEdgeKeys.contains(key), from != to else { return }
             emittedEdgeKeys.insert(key)
-            edges.append(CGEdge(fromId: from, toId: to, kind: kind))
+            edges.append(CGEdge(fromId: from, toId: to, kind: kind,
+                                confidence: confidence))
         }
 
         // (1) Wiki-links
@@ -148,7 +177,8 @@ public enum MemoryGenerator {
             let head = Array(ids.prefix(tagCap))
             for i in 0..<head.count {
                 for j in (i+1)..<head.count {
-                    emit(from: head[i], to: head[j], kind: .relatedTo)
+                    emit(from: head[i], to: head[j], kind: .relatedTo,
+                         confidence: .inferred)
                 }
             }
         }
@@ -186,7 +216,8 @@ public enum MemoryGenerator {
                 guard let candidates = titlesByFirstWord[word] else { continue }
                 for cand in candidates where cand.id != chunk.id {
                     if Self.containsWholeWord(body, needle: cand.needle) {
-                        emit(from: chunk.id, to: cand.id, kind: .relatedTo)
+                        emit(from: chunk.id, to: cand.id, kind: .relatedTo,
+                             confidence: .ambiguous)
                     }
                 }
             }

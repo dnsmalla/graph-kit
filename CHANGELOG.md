@@ -6,6 +6,81 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 
 ## [Unreleased]
 
+### Added
+- **Committed single-file CLI bundle** at `bin/graph-kit.js` (esbuild, minified,
+  dependencies included — the TypeScript compiler API accounts for most of its
+  size). `graph-engine.json` points at it, so the repository is installable as a
+  graph-engine plugin with **no install step**: a fresh clone with neither
+  `node_modules/` nor `dist/` passes the manifest gate. Regenerate after any
+  `typescript/src` change with `cd typescript && npm run bundle`.
+
+### Fixed
+- **TypeScript code scanner skipped `.mjs`/`.cjs`.** `tsScanner`'s discovery set
+  omitted both extensions while its `language()` mapping already claimed them,
+  so any ESM-only tree scanned to **0 nodes**. Import resolution
+  (`RESOLVE_EXTS`) had the same gap. Measured on a Node server tree:
+  `0 → 65/26/194` nodes for three packages that previously produced nothing;
+  TypeScript trees are unchanged.
+
+### Removed
+**Breaking (Swift, GraphKit product).** Nine unreferenced public types — no
+consumer in this repository called any of them, and none appears in the
+`graph-engine.json` command contract. `GraphCore` is untouched.
+
+- **Document → text pipeline**: `InputReader`, `PDFExtractor`, `EPUBExtractor`,
+  `TextChunker`, `DocumentScanner`. GraphKit no longer extracts text from PDF or
+  EPUB, and no longer depends on PDFKit/Vision.
+- **Understand-Anything import**: `UAParser`, `UAStore`, `UAError`.
+- **`CodeNoteWriter`**.
+
+Text→graph (`MemoryGenerator`), code→graph (`StructureScanner`,
+`StructureGraphBuilder`), the merge (`GraphMerger`) and the cache (`ScanCache`)
+are unaffected.
+
+## [1.7.0] - 2026-09-02
+
+One repository, two products. The package now exports **GraphCore** (canonical
+model + JSON contract + 2D/3D layout + memory-artifact rendering — everything a
+consumer needs to *read and draw* a graph, always linked) alongside **GraphKit**
+(the producers — everything that *creates* one, designed to be unpluggable or
+supplied by a plugin). Layout, previously a consumer concern, is now part of the
+package via GraphCore.
+
+### Added
+- **GraphCore product**: `CGData`/`CGNode`/`CGEdge` model, `GraphDocument` JSON
+  contract, `MemoryChunk`/`GeneratedMemory`/`ScanResult`/`CodeScan` boundary
+  DTOs, the deterministic cluster-aware layout engine (`GraphLayoutEngine`,
+  Louvain communities, Barnes-Hut with ground-truth audits, quality metrics),
+  `CGSimulation3D`, `MemoryArtifactRenderer` (graph-notes.md / doc-notes.md),
+  `DocSetFingerprint`, `DocExtensions`, `EdgeWeight` (semantic edge weighting).
+- **GraphMerger** (GraphKit): the code+doc join with doc→code cross-links —
+  wikilinks (EXTRACTED), backtick mentions (INFERRED), and **declared
+  `related-modules:` affinities (documents/EXTRACTED)**, which previously
+  produced no edges at all. Fan-out capped per module, fan-in per file;
+  authoring forms `./x`, `x/`, `x/*`, `x/**` normalised.
+- **`MemoryGenerator.generate(roots:)`** multi-root walk.
+- **Verification gates**: `graph-layout-lab` (layout vs exact N² ground truth,
+  Louvain reference values, quality metrics) and `graph-engine-lab`
+  (generation invariants) — plain executables so they run on toolchains
+  without XCTest.
+- TypeScript CLI: `memory` now emits `chunks` + `docCount` alongside the
+  canonical document.
+
+### Changed
+- **Doc containment is `doc → chunk`, kind `contains`, EXTRACTED** in both
+  implementations (was `chunk → doc` as `relatedTo`, which made a document's
+  backbone indistinguishable from title-match noise; a real 13-doc folder
+  shattered into 209 single-node components). Conformance fixture updated.
+- Wikilink doc→code cross-links are `EXTRACTED` (author-asserted), no longer
+  `INFERRED`.
+
+### Removed
+- `MemoryNotesWriter` — dead since the `.understand-anything/` layout was
+  retired; every section it rendered was empty (it queried a node kind and
+  metadata keys no producer emits). `MemoryArtifactRenderer` is the live
+  replacement.
+
+
 ## [1.6.2] — 2026-08-30
 
 ### Changed
