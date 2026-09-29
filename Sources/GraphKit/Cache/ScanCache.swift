@@ -14,11 +14,17 @@ public struct ScanCache: Codable, Equatable, Sendable {
         }
     }
 
+    /// Bump whenever the extractor's OUTPUT changes (new fields, new kinds,
+    /// new edges): a cache written by an older extractor is then discarded
+    /// instead of serving stale structures for every unchanged file.
+    /// "2": declarations kept, methods parent-qualified, call refs emitted.
+    public static let currentVersion = "2"
+
     public var version: String
     /// relative path -> cached entry
     public var entries: [String: Entry]
 
-    public init(version: String = "1", entries: [String: Entry] = [:]) {
+    public init(version: String = ScanCache.currentVersion, entries: [String: Entry] = [:]) {
         self.version = version
         self.entries = entries
     }
@@ -33,7 +39,7 @@ public struct ScanCache: Codable, Equatable, Sendable {
         let url = Self.url(forRepo: repoRoot)
         guard let data = try? Data(contentsOf: url),
               let cache = try? AppJSON.decoder.decode(ScanCache.self, from: data),
-              cache.version == "1"
+              cache.version == Self.currentVersion
         else { return ScanCache() }
         return cache
     }
