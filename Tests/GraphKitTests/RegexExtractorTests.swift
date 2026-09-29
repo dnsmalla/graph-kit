@@ -25,4 +25,23 @@ final class RegexExtractorTests: XCTestCase {
         XCTAssertEqual(sym.declaration, "func rotatePin(for id: String) -> Bool")
         XCTAssertEqual(sym.line, 1)
     }
+
+    func testFunctionsInsideATypeBecomeMethodsOfIt() throws {
+        let src = """
+        struct Alpha {
+            func load() {}
+        }
+        struct Beta {
+            func load() {}
+        }
+        func free() {}
+        """
+        let syms = try XCTUnwrap(try parse(["f.swift": src]).first?.symbols)
+        let loads = syms.filter { $0.name == "load" }
+        XCTAssertEqual(loads.map(\.kind), ["method", "method"])
+        XCTAssertEqual(loads.map(\.parent), ["Alpha", "Beta"])
+        let free = try XCTUnwrap(syms.first { $0.name == "free" })
+        XCTAssertEqual(free.kind, "function")
+        XCTAssertNil(free.parent)
+    }
 }

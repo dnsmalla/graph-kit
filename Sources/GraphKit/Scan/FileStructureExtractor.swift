@@ -216,6 +216,18 @@ public final class FileStructureExtractor {
             var imports: [RawImport] = []
             var symbols: [ScanResult.Symbol] = []
             var loc = 0
+            // Enclosing-type tracking by indentation (the regex extractor has no
+            // scope information). A function declared deeper than the nearest open
+            // type declaration is that type's method. Conventional formatting is
+            // enough for Swift/Kotlin/TS; a mis-indented file just yields
+            // top-level functions, which is today's behaviour.
+            let typeKinds: Set<String> = ["class", "struct", "enum", "protocol", "extension", "interface"]
+            var typeStack: [(indent: Int, name: String)] = []
+            func indentOf(_ s: String) -> Int {
+                var n = 0
+                for ch in s { if ch == " " { n += 1 } else if ch == "\t" { n += 4 } else { break } }
+                return n
+            }
             for (idx, raw) in content.split(separator: "\n",
                                              omittingEmptySubsequences: false).enumerated() {
                 let line = String(raw)
@@ -229,11 +241,19 @@ public final class FileStructureExtractor {
                         imports.append(RawImport(module: spec))
                     }
                     if let found = Self.symbol(fromLine: line, language: lang) {
+                        let indent = indentOf(line)
+                        while let top = typeStack.last, top.indent >= indent { typeStack.removeLast() }
+                        var kind = found.kind
+                        var parent: String? = nil
+                        if kind == "function", let top = typeStack.last {
+                            kind = "method"
+                            parent = top.name
+                        }
                         // Keep the declaration: it is the signature the server
                         // uploads as `doc`, so the model can skip opening the file.
-                        symbols.append(ScanResult.Symbol(name: found.name, kind: found.kind,
-                                                         line: idx + 1,
-                                                         declaration: found.declaration))
+                        symbols.append(ScanResult.Symbol(name: found.name, kind: kind, line: idx + 1,
+                                                         declaration: found.declaration, parent: parent))
+                        if typeKinds.contains(found.kind) { typeStack.append((indent, found.name)) }
                     }
                 }
             }

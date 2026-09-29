@@ -34,7 +34,10 @@ public enum StructureGraphBuilder {
 
             for sym in scan.symbols[f.path] ?? [] {
                 let (kind, prefix) = nodeKindAndPrefix(for: sym.kind)
-                let id = "\(prefix):\(f.path):\(sym.name)"
+                // Methods are qualified by their parent so two types in one file
+                // can both have a `load()`; everything else keeps its old id.
+                let qualified = sym.kind == "method" && sym.parent != nil ? "\(sym.parent!).\(sym.name)" : sym.name
+                let id = "\(prefix):\(f.path):\(qualified)"
                 guard !nodeIds.contains(id) else { continue }
                 nodeIds.insert(id)
                 nameToId[sym.name] = id
