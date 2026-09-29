@@ -57,4 +57,10 @@ final class RegexExtractorTests: XCTestCase {
         XCTAssertTrue(calls.contains { $0.caller == "run" && $0.callee == "helper" })
         XCTAssertFalse(calls.contains { $0.callee == "if" }, "keywords are not calls")
     }
+
+    func testCallOnTheDeclarationLineIsKept() throws {
+        let src = "func helper() {}\nfunc run() { helper() }\n"
+        let calls = try XCTUnwrap(try parse(["a.swift": src]).first?.calls)
+        XCTAssertTrue(calls.contains { $0.caller == "run" && $0.callee == "helper" })
+    }
 }

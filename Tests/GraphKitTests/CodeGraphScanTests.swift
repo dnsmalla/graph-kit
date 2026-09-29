@@ -115,6 +115,24 @@ final class CodeGraphScanTests: XCTestCase {
 
     func testCallsEdgeIsInferred() {
         let symbols: [ScanResult.Symbol] = [
+            .init(name: "Parser",      kind: "class", line: 1),
+            .init(name: "UserService", kind: "class", line: 10),
+        ]
+        let scan = ScanResult(
+            files: [.init(path: "src/s.ts", language: "typescript", loc: 20)],
+            imports: [:],
+            symbols: ["src/s.ts": symbols],
+            calls: ["src/s.ts": [.init(caller: "UserService", callee: "Parser", line: 15)]]
+        )
+        let data = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/repo"))
+
+        let edge = data.edges.first { $0.kind == .calls }
+        XCTAssertNotNil(edge, "calls edge must exist")
+        XCTAssertEqual(edge?.confidence, .inferred)
+    }
+
+    func testCallsEdgeFunctionToFunctionIsInferred() {
+        let symbols: [ScanResult.Symbol] = [
             .init(name: "parse", kind: "function", line: 1),
             .init(name: "serve", kind: "function", line: 10),
         ]
@@ -125,9 +143,22 @@ final class CodeGraphScanTests: XCTestCase {
             calls: ["src/s.ts": [.init(caller: "serve", callee: "parse", line: 15)]]
         )
         let data = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/repo"))
-
         let edge = data.edges.first { $0.kind == .calls }
-        XCTAssertNotNil(edge, "calls edge must exist")
+        XCTAssertEqual(edge?.confidence, .inferred)
+    }
+
+    func testClassCallerResolvesToFunctionInSameFile() {
+        let scan = ScanResult(
+            files: [.init(path: "m.py", language: "python", loc: 10)],
+            imports: [:],
+            symbols: ["m.py": [.init(name: "Svc", kind: "class", line: 1),
+                               .init(name: "helper", kind: "function", line: 8)]],
+            calls: ["m.py": [.init(caller: "Svc", callee: "helper", line: 3)]]
+        )
+        let data = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/repo"))
+        let edge = data.edges.first { $0.kind == .calls }
+        XCTAssertEqual(edge?.fromId, "class:m.py:Svc")
+        XCTAssertEqual(edge?.toId, "function:m.py:helper")
         XCTAssertEqual(edge?.confidence, .inferred)
     }
 

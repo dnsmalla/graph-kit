@@ -272,7 +272,8 @@ public final class FileStructureExtractor {
                         if last.kind == "function" { currentCallable = last.name }
                         else if last.kind == "method", let p = last.parent { currentCallable = "\(p).\(last.name)" }
                         else { currentCallable = nil }
-                    } else if let caller = currentCallable, calls.count < Self.maxCallsPerFile {
+                    }
+                    if let caller = currentCallable, calls.count < Self.maxCallsPerFile {
                         // Strip a trailing line comment; strings are not stripped (cheap heuristic,
                         // unresolvable names are dropped by the builder anyway).
                         let code = line.components(separatedBy: "//").first ?? line

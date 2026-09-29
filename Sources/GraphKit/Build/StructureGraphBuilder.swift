@@ -110,7 +110,7 @@ public enum StructureGraphBuilder {
         // is worse than a missing one.
         var idsByFileName: [String: [String: [String]]] = [:]
         var idsByName: [String: [String]] = [:]
-        for n in nodes where n.kind == .function {
+        for n in nodes where n.kind == .function || n.kind == .classType {
             guard let path = n.metadata["source_file"] else { continue }
             let key = n.id.split(separator: ":", omittingEmptySubsequences: false).dropFirst(2).joined(separator: ":")   // "name" or "Parent.name"
             let plain = String(key.split(separator: ".").last ?? Substring(key))
