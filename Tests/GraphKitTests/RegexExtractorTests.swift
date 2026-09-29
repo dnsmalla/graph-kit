@@ -71,4 +71,13 @@ final class RegexExtractorTests: XCTestCase {
         XCTAssertEqual(calls.first { $0.callee == "sorted" }?.isMember, true)
         XCTAssertEqual(calls.first { $0.callee == "helper" }?.isMember, false)
     }
+
+    func testNestedDeclarationDoesNotStealCallAttribution() throws {
+        let src = "func outer() {\n    let x = inner()\n    func local() {}\n    helper()\n}\nfunc next() {\n    other()\n}\n"
+        let calls = try XCTUnwrap(try parse(["a.swift": src]).first?.calls)
+        XCTAssertTrue(calls.contains { $0.caller == "outer" && $0.callee == "helper" })
+        XCTAssertFalse(calls.contains { $0.caller == "local" })
+        XCTAssertFalse(calls.contains { $0.caller == "outer" && $0.callee == "local" }, "the declared name is not a call")
+        XCTAssertTrue(calls.contains { $0.caller == "next" && $0.callee == "other" }, "a shallower declaration still replaces")
+    }
 }

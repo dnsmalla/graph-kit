@@ -243,6 +243,7 @@ public final class FileStructureExtractor {
             var calls: [ScanResult.CallRef] = []
             var seenCalls = Set<String>()
             var currentCallable: String? = nil
+            var callableIndent = 0
             var loc = 0
             // Enclosing-type tracking by indentation (the regex extractor has no
             // scope information). A function declared deeper than the nearest open
@@ -285,8 +286,14 @@ public final class FileStructureExtractor {
                     }
                     if let last = symbols.last, last.line == idx + 1 {
                         // A declaration line opens a new callable (or a type, which closes the current one).
-                        if last.kind == "function" { currentCallable = last.name }
-                        else if last.kind == "method", let p = last.parent { currentCallable = "\(p).\(last.name)" }
+                        // A function/method declared DEEPER than the current callable is nested in
+                        // it (local func, closure-bound const): it does not steal attribution.
+                        let declIndent = indentOf(line)
+                        let isCallable = last.kind == "function" || (last.kind == "method" && last.parent != nil)
+                        if isCallable, currentCallable != nil, declIndent > callableIndent {
+                            // keep the outer callable
+                        } else if last.kind == "function" { currentCallable = last.name; callableIndent = declIndent }
+                        else if last.kind == "method", let p = last.parent { currentCallable = "\(p).\(last.name)"; callableIndent = declIndent }
                         else { currentCallable = nil }
                     }
                     if let caller = currentCallable, calls.count < Self.maxCallsPerFile {
@@ -299,6 +306,7 @@ public final class FileStructureExtractor {
                             guard !Self.nonCallKeywords.contains(name) else { continue }
                             let calleeLast = caller.split(separator: ".").last.map(String.init) ?? caller
                             guard name != calleeLast else { continue }        // no self-recursion edges
+                            if let last = symbols.last, last.line == idx + 1, last.name == name { continue }   // the declared name
                             let member = Self.isMemberCall(ns, nameStart: m.range(at: 1).location)
                             if seenCalls.insert("\(caller)>\(name)>\(member)").inserted {
                                 calls.append(ScanResult.CallRef(caller: caller, callee: name, line: idx + 1,
