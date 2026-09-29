@@ -36,7 +36,11 @@ public enum StructureGraphBuilder {
                 let (kind, prefix) = nodeKindAndPrefix(for: sym.kind)
                 // Methods are qualified by their parent so two types in one file
                 // can both have a `load()`; everything else keeps its old id.
-                let qualified = sym.kind == "method" && sym.parent != nil ? "\(sym.parent!).\(sym.name)" : sym.name
+                // The AST/tree-sitter scanners already emit `Cls.meth`; don't re-prefix those.
+                var qualified = sym.name
+                if sym.kind == "method", let parent = sym.parent, !sym.name.hasPrefix("\(parent).") {
+                    qualified = "\(parent).\(sym.name)"
+                }
                 let id = "\(prefix):\(f.path):\(qualified)"
                 guard !nodeIds.contains(id) else { continue }
                 nodeIds.insert(id)

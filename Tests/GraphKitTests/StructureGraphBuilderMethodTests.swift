@@ -20,4 +20,18 @@ final class StructureGraphBuilderMethodTests: XCTestCase {
         XCTAssertTrue(ids.contains("method:f.swift:Beta.load"))
         XCTAssertTrue(graph.edges.contains { $0.fromId == "class:f.swift:Alpha" && $0.toId == "method:f.swift:Alpha.load" && $0.kind == .contains })
     }
+
+    /// The Python AST / tree-sitter scanners already emit `Cls.meth` with parent `Cls`.
+    func testAlreadyQualifiedMethodNamesAreNotQualifiedTwice() {
+        let syms: [ScanResult.Symbol] = [
+            .init(name: "Alpha", kind: "struct", line: 1),
+            .init(name: "Alpha.load", kind: "method", line: 2, parent: "Alpha"),
+        ]
+        let scan = ScanResult(files: [.init(path: "f.swift", language: "swift", loc: 3)],
+                              imports: [:], symbols: ["f.swift": syms])
+        let graph = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/r"))
+        let ids = Set(graph.nodes.map(\.id))
+        XCTAssertTrue(ids.contains("method:f.swift:Alpha.load"))
+        XCTAssertFalse(ids.contains("method:f.swift:Alpha.Alpha.load"))
+    }
 }
