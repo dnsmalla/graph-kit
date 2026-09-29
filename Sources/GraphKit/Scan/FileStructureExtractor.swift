@@ -228,9 +228,12 @@ public final class FileStructureExtractor {
                     if let spec = Self.importSpecifier(fromLine: line, language: lang) {
                         imports.append(RawImport(module: spec))
                     }
-                    if var sym = Self.symbol(fromLine: line, language: lang) {
-                        sym = ScanResult.Symbol(name: sym.name, kind: sym.kind, line: idx + 1)
-                        symbols.append(sym)
+                    if let found = Self.symbol(fromLine: line, language: lang) {
+                        // Keep the declaration: it is the signature the server
+                        // uploads as `doc`, so the model can skip opening the file.
+                        symbols.append(ScanResult.Symbol(name: found.name, kind: found.kind,
+                                                         line: idx + 1,
+                                                         declaration: found.declaration))
                     }
                 }
             }
