@@ -415,6 +415,44 @@ check(citeRefs.contains { $0.toId == "method:kb/db.mjs:Store.open" },
       "Parent.name resolves a method", "\(citeRefs)")
 check(citeRefs.count == 3, "ambiguous / unknown / absolute / URL / short emit nothing", "\(citeRefs)")
 
+// Citation forms that used to yield no edge.
+let formScan = ScanResult(
+    files: [.init(path: "docs/forms.md", language: "markdown", loc: 5),
+            .init(path: "mac/Loop/LoopStage.swift", language: "swift", loc: 9),
+            .init(path: "mac/Loop/LoopStage+Keys.swift", language: "swift", loc: 9),
+            .init(path: "x/Dup.swift", language: "swift", loc: 1),
+            .init(path: "y/Dup.swift", language: "swift", loc: 1),
+            .init(path: "p/Pair.swift", language: "swift", loc: 1),
+            .init(path: "q/Pair.swift", language: "swift", loc: 1)],
+    imports: [:],
+    symbols: ["mac/Loop/LoopStage.swift": [.init(name: "LoopStage", kind: "struct", line: 1),
+                                           .init(name: "runStage", kind: "function", line: 5)],
+              "mac/Loop/LoopStage+Keys.swift": [.init(name: "LoopStage", kind: "extension", line: 1)],
+              "p/Pair.swift": [.init(name: "PairType", kind: "class", line: 1)],
+              "q/Pair.swift": [.init(name: "PairType", kind: "class", line: 1)]],
+    citations: ["docs/forms.md": [
+        .init(text: "runStage()", line: 1),
+        .init(text: "mac/Loop/LoopStage.swift:12:5", line: 2),
+        .init(text: "LoopStage", line: 3),
+        .init(text: "LoopStage+Keys.swift", line: 4),
+        .init(text: "Dup.swift", line: 4),
+        .init(text: "PairType", line: 5)]])
+let formRefs = StructureGraphBuilder.build(formScan, repoRoot: URL(fileURLWithPath: "/tmp/x"))
+    .edges.filter { $0.kind == .references }
+check(formRefs.contains { $0.toId == "function:mac/Loop/LoopStage.swift:runStage" },
+      "trailing () is stripped from a symbol citation", "\(formRefs)")
+check(formRefs.contains { $0.toId == "file:mac/Loop/LoopStage.swift" && $0.confidence == .extracted },
+      "trailing :line:col is stripped from a path citation", "\(formRefs)")
+check(formRefs.contains { $0.toId == "class:mac/Loop/LoopStage.swift:LoopStage" }
+        && !formRefs.contains { $0.toId == "class:mac/Loop/LoopStage+Keys.swift:LoopStage" },
+      "a type plus its extension resolves to the declaration", "\(formRefs)")
+check(formRefs.contains { $0.toId == "file:mac/Loop/LoopStage+Keys.swift" },
+      "a unique bare filename resolves to its file", "\(formRefs)")
+check(!formRefs.contains { $0.toId.hasSuffix("Dup.swift") }
+        && !formRefs.contains { $0.toId.hasSuffix(":PairType") },
+      "a shared basename / two declarations stay ambiguous", "\(formRefs)")
+check(formRefs.count == 4, "exactly the four resolvable forms emit edges", "\(formRefs)")
+
 // MARK: - Verdict
 
 print("")

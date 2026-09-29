@@ -150,7 +150,8 @@ public enum StructureGraphBuilder {
         FileStructureExtractor.codeExtensions.union(["py"])
     private static let symbolCitation = try! NSRegularExpression(
         pattern: #"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$"#)
-    private static let lineSuffix = try! NSRegularExpression(pattern: #":\d+(-\d+)?$"#)
+    /// `:N`, `:N-M` or `:N:M` (line:col) — stripped before a path is resolved.
+    private static let lineSuffix = try! NSRegularExpression(pattern: #":\d+(-\d+|:\d+)?$"#)
 
     /// `references` edges from a markdown doc to the files (EXTRACTED) and symbols
     /// (INFERRED) it cites. Unknown or ambiguous names emit nothing.
@@ -160,6 +161,14 @@ public enum StructureGraphBuilder {
         // "name" / "Parent.name" → ids, and plain last component → ids.
         var byKey: [String: [String]] = [:]
         var byPlain: [String: [String]] = [:]
+        // Type declarations vs `extension`s (both map to `.classType`).
+        var extensionIds = Set<String>()
+        for n in nodes where n.kind == .classType && n.metadata["kind"] == "extension" {
+            extensionIds.insert(n.id)
+        }
+        // A bare filename resolves when exactly one scanned file has that basename.
+        var byBasename: [String: [String]] = [:]
+        for p in filePaths { byBasename[(p as NSString).lastPathComponent, default: []].append(p) }
         for n in nodes where n.kind == .function || n.kind == .classType {
             let key = n.id.split(separator: ":", omittingEmptySubsequences: false)
                 .dropFirst(2).joined(separator: ":")
@@ -186,6 +195,7 @@ public enum StructureGraphBuilder {
             if let p = norm(t), filePaths.contains(p) { return p }
             let dir = (docPath as NSString).deletingLastPathComponent
             if let p = norm(dir.isEmpty ? t : dir + "/" + t), filePaths.contains(p) { return p }
+            if !t.contains("/"), let hits = byBasename[t], hits.count == 1 { return hits[0] }
             return nil
         }
         var out: [CGEdge] = []
@@ -202,12 +212,19 @@ public enum StructureGraphBuilder {
                     }
                     continue
                 }
-                let ns = c.text as NSString
+                // `name()` cites the same symbol as `name`.
+                let sym = c.text.hasSuffix("()") ? String(c.text.dropLast(2)) : c.text
+                let ns = sym as NSString
                 guard ns.length >= 4,
-                      symbolCitation.firstMatch(in: c.text, range: NSRange(location: 0, length: ns.length)) != nil
+                      symbolCitation.firstMatch(in: sym, range: NSRange(location: 0, length: ns.length)) != nil
                 else { continue }
-                let ids = c.text.contains(".") ? byKey[c.text] : byPlain[c.text]
-                guard let ids, ids.count == 1 else { continue }
+                guard var ids = sym.contains(".") ? byKey[sym] : byPlain[sym] else { continue }
+                if ids.count > 1, ids.allSatisfy({ $0.hasPrefix("class:") }) {
+                    // A type plus its extensions: prefer the one declaration.
+                    let decls = ids.filter { !extensionIds.contains($0) }
+                    if decls.count == 1 { ids = decls }
+                }
+                guard ids.count == 1 else { continue }
                 if seen.insert("\(docId)>\(ids[0])").inserted {
                     out.append(CGEdge(fromId: docId, toId: ids[0], kind: .references, confidence: .inferred))
                 }
