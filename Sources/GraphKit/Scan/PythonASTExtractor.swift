@@ -34,12 +34,41 @@ public final class PythonASTExtractor {
     }
 
     public static func bundledRichScriptURL() -> URL? {
-        Bundle.module.url(forResource: "code_graph_scan", withExtension: "py")
+        resourceBundle?.url(forResource: "code_graph_scan", withExtension: "py")
     }
 
     public static func bundledFallbackURL() -> URL? {
-        Bundle.module.url(forResource: "code_ast_scan", withExtension: "py")
+        resourceBundle?.url(forResource: "code_ast_scan", withExtension: "py")
     }
+
+    /// This target's SwiftPM resource bundle, or nil when it cannot be found.
+    ///
+    /// Deliberately NOT `Bundle.module`: the generated accessor calls
+    /// `fatalError` unless the bundle sits directly beside the host `.app`
+    /// (outside `Contents/`, where codesign refuses it) or at the absolute
+    /// `.build` path baked in at compile time. So a shipped app crashed on its
+    /// first code scan on every machine except the one that built it — and
+    /// because these run as default arguments of `init`, even for repos with
+    /// no Python in them. A missing script degrades to "no Python structure".
+    static let resourceBundle: Bundle? = {
+        let names = ["GraphKit_GraphKit.bundle", "graph-kit_GraphKit.bundle"]
+        let owning = Bundle(for: BundleLocator.self)
+        var roots: [URL] = []
+        if let r = Bundle.main.resourceURL { roots.append(r) }   // app: Contents/Resources
+        if let r = owning.resourceURL { roots.append(r) }
+        for base in [Bundle.main.bundleURL, owning.bundleURL] {
+            roots.append(base)                                  // `swift run`: .build/<config>/
+            roots.append(base.deletingLastPathComponent())      // `swift test`: beside the .xctest
+        }
+        for root in roots {
+            for name in names {
+                if let bundle = Bundle(url: root.appendingPathComponent(name)) { return bundle }
+            }
+        }
+        return nil
+    }()
+
+    private final class BundleLocator {}
 
     public func run(repoRoot: URL) async -> [RawFileStructure] {
         guard let python = pythonURL else { return [] }

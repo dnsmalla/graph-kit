@@ -50,7 +50,9 @@ public final class CGSimulation3D: @unchecked Sendable {
     }
 
     public func positions() -> [String: SIMD3<Float>] {
-        Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0.position) })
+        // First wins: `uniqueKeysWithValues:` traps on a repeated node id,
+        // which a graph from a plugin engine or an old cache can carry.
+        Dictionary(nodes.map { ($0.id, $0.position) }, uniquingKeysWith: { first, _ in first })
     }
 
     private func tick() {
@@ -65,7 +67,7 @@ public final class CGSimulation3D: @unchecked Sendable {
         let maxV:        Float = 250
 
         // Spring attraction along edges.
-        let idxById = Dictionary(uniqueKeysWithValues: nodes.enumerated().map { ($1.id, $0) })
+        let idxById = Dictionary(nodes.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
         for e in edges {
             guard let i = idxById[e.fromId], let j = idxById[e.toId] else { continue }
             let delta = nodes[j].position - nodes[i].position
