@@ -3,7 +3,8 @@
 // when GraphView migrated to CGData.
 import XCTest
 import CoreGraphics
-import GraphKit
+@testable import GraphKit
+import GraphCore
 
 final class GraphNodeMetadataTests: XCTestCase {
 

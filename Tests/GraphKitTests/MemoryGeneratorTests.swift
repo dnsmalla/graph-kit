@@ -1,5 +1,6 @@
 import XCTest
 @testable import GraphKit
+import GraphCore
 
 final class MemoryGeneratorTests: XCTestCase {
     func testGeneratesChunksFromMarkdownHeadings() throws {

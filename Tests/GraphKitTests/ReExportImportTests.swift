@@ -1,5 +1,6 @@
 import XCTest
 @testable import GraphKit
+import GraphCore
 
 final class ReExportImportTests: XCTestCase {
     private func spec(_ line: String) -> String? {

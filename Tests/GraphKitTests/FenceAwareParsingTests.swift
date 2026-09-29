@@ -1,5 +1,6 @@
 import XCTest
 @testable import GraphKit
+import GraphCore
 
 final class FenceAwareParsingTests: XCTestCase {
     private func writeTempDoc(_ content: String) throws -> URL {

@@ -1,5 +1,6 @@
 import XCTest
-import GraphKit
+@testable import GraphKit
+import GraphCore
 
 final class CodeGraphScanTests: XCTestCase {
 

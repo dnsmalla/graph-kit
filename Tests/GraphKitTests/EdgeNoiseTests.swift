@@ -1,5 +1,6 @@
 import XCTest
 @testable import GraphKit
+import GraphCore
 
 final class EdgeNoiseTests: XCTestCase {
     private func writeTempDocs(_ docs: [String: String]) throws -> [URL] {

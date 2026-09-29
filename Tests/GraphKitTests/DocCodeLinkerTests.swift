@@ -1,5 +1,6 @@
 import XCTest
 @testable import GraphKit
+import GraphCore
 
 final class DocCodeLinkerTests: XCTestCase {
     private func chunk(id: String, body: String) -> MemoryChunk {

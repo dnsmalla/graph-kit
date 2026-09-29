@@ -1,5 +1,6 @@
 import XCTest
-import GraphKit
+@testable import GraphKit
+import GraphCore
 
 /// Regression coverage for the fallback (non-git) file-listing path used by
 /// `StructureScanner.scanIncremental` and `FileStructureExtractor.run` —

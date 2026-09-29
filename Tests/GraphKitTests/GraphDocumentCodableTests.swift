@@ -1,5 +1,6 @@
 import XCTest
 @testable import GraphKit
+import GraphCore
 
 /// Conformance tests for the canonical GraphDocument JSON contract. These load the
 /// shared fixtures under `schema/fixtures/` — the SAME files the TypeScript binding
