@@ -104,14 +104,37 @@ public enum StructureGraphBuilder {
         }
 
         // ── Calls edges (symbol → symbol, INFERRED) ───────────────────────────
+        // Resolution order: a symbol of that name in the SAME file, then in files
+        // this file imports, then a name defined exactly once in the repo. A name
+        // that is ambiguous at the stage that finds it is skipped — a wrong edge
+        // is worse than a missing one.
+        var idsByFileName: [String: [String: [String]]] = [:]
+        var idsByName: [String: [String]] = [:]
+        for n in nodes where n.kind == .function {
+            guard let path = n.metadata["source_file"] else { continue }
+            let key = n.id.split(separator: ":", omittingEmptySubsequences: false).dropFirst(2).joined(separator: ":")   // "name" or "Parent.name"
+            let plain = String(key.split(separator: ".").last ?? Substring(key))
+            for k in Set([key, plain]) { idsByFileName[path, default: [:]][k, default: []].append(n.id) }
+            idsByName[plain, default: []].append(n.id)
+        }
+        var seenCallEdges = Set<String>()
         for (filePath, refs) in scan.calls {
             for ref in refs {
-                let callerId = nameToId[ref.caller] ?? "class:\(filePath):\(ref.caller)"
-                guard let calleeId = nameToId[ref.callee] else { continue }
-                guard nodeIds.contains(callerId), nodeIds.contains(calleeId) else { continue }
-                guard callerId != calleeId else { continue }
-                edges.append(CGEdge(fromId: callerId, toId: calleeId, kind: .calls,
-                                    confidence: .inferred))
+                guard let callerIds = idsByFileName[filePath]?[ref.caller], callerIds.count == 1 else { continue }
+                let callerId = callerIds[0]
+                var calleeId: String?
+                if let same = idsByFileName[filePath]?[ref.callee] {
+                    calleeId = same.count == 1 ? same[0] : nil
+                    if same.count > 1 { continue }
+                }
+                if calleeId == nil {
+                    let imported = (scan.imports[filePath] ?? []).flatMap { idsByFileName[$0]?[ref.callee] ?? [] }
+                    if imported.count == 1 { calleeId = imported[0] } else if imported.count > 1 { continue }
+                }
+                if calleeId == nil, let global = idsByName[ref.callee], global.count == 1 { calleeId = global[0] }
+                guard let callee = calleeId, callee != callerId else { continue }
+                guard seenCallEdges.insert("\(callerId)>\(callee)").inserted else { continue }
+                edges.append(CGEdge(fromId: callerId, toId: callee, kind: .calls, confidence: .inferred))
             }
         }
 

@@ -115,14 +115,14 @@ final class CodeGraphScanTests: XCTestCase {
 
     func testCallsEdgeIsInferred() {
         let symbols: [ScanResult.Symbol] = [
-            .init(name: "Parser",      kind: "class", line: 1),
-            .init(name: "UserService", kind: "class", line: 10),
+            .init(name: "parse", kind: "function", line: 1),
+            .init(name: "serve", kind: "function", line: 10),
         ]
         let scan = ScanResult(
             files: [.init(path: "src/s.ts", language: "typescript", loc: 20)],
             imports: [:],
             symbols: ["src/s.ts": symbols],
-            calls: ["src/s.ts": [.init(caller: "UserService", callee: "Parser", line: 15)]]
+            calls: ["src/s.ts": [.init(caller: "serve", callee: "parse", line: 15)]]
         )
         let data = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/repo"))
 

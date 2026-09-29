@@ -34,4 +34,43 @@ final class StructureGraphBuilderMethodTests: XCTestCase {
         XCTAssertTrue(ids.contains("method:f.swift:Alpha.load"))
         XCTAssertFalse(ids.contains("method:f.swift:Alpha.Alpha.load"))
     }
+
+    func testCallEdgesResolveSameFileThenImportsThenUniqueNames() {
+        let files: [ScanResult.FileEntry] = ["a.swift", "b.swift", "c.swift", "d.swift"].map {
+            .init(path: $0, language: "swift", loc: 3)
+        }
+        let symbols: [String: [ScanResult.Symbol]] = [
+            "a.swift": [.init(name: "helper", kind: "function", line: 1), .init(name: "run", kind: "function", line: 2)],
+            "b.swift": [.init(name: "other", kind: "function", line: 1)],
+            "c.swift": [.init(name: "load", kind: "function", line: 1)],
+            "d.swift": [.init(name: "load", kind: "function", line: 1), .init(name: "caller", kind: "function", line: 2)],
+        ]
+        let calls: [String: [ScanResult.CallRef]] = [
+            "a.swift": [.init(caller: "run", callee: "helper", line: 3)],
+            "b.swift": [.init(caller: "other", callee: "helper", line: 2)],   // globally unique
+            "d.swift": [.init(caller: "caller", callee: "load", line: 3)],    // same file wins over c.swift
+        ]
+        let scan = ScanResult(files: files, imports: [:], symbols: symbols,
+                              calls: calls, inherits: [:], implements: [:])
+        let edges = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/r")).edges
+            .filter { $0.kind == .calls }
+        let pairs = Set(edges.map { "\($0.fromId)>\($0.toId)" })
+        XCTAssertTrue(pairs.contains("function:a.swift:run>function:a.swift:helper"))
+        XCTAssertTrue(pairs.contains("function:b.swift:other>function:a.swift:helper"))
+        XCTAssertTrue(pairs.contains("function:d.swift:caller>function:d.swift:load"))
+        XCTAssertFalse(pairs.contains("function:d.swift:caller>function:c.swift:load"))
+        XCTAssertTrue(edges.allSatisfy { $0.confidence == .inferred })
+    }
+
+    func testAmbiguousCalleeIsSkipped() {
+        let files: [ScanResult.FileEntry] = ["x.swift", "y.swift", "z.swift"].map { .init(path: $0, language: "swift", loc: 2) }
+        let scan = ScanResult(files: files, imports: [:],
+                              symbols: ["x.swift": [.init(name: "save", kind: "function", line: 1)],
+                                        "y.swift": [.init(name: "save", kind: "function", line: 1)],
+                                        "z.swift": [.init(name: "go", kind: "function", line: 1)]],
+                              calls: ["z.swift": [.init(caller: "go", callee: "save", line: 2)]],
+                              inherits: [:], implements: [:])
+        let calls = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/r")).edges.filter { $0.kind == .calls }
+        XCTAssertTrue(calls.isEmpty, "two files define save and z imports neither — no guess")
+    }
 }

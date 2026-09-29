@@ -207,6 +207,15 @@ public final class FileStructureExtractor {
         return parseFiles(paths: paths.sorted(), repoRoot: repoRoot)
     }
 
+    /// Identifiers followed by `(` that are language keywords, not calls.
+    static let nonCallKeywords: Set<String> = [
+        "if", "for", "while", "switch", "return", "guard", "catch", "func", "function", "init",
+        "super", "self", "Self", "typeof", "await", "try", "case", "throw", "new", "sizeof",
+        "fun", "when", "print", "assert", "precondition", "fatalError",
+    ]
+    static let callRegex = try! NSRegularExpression(pattern: #"\b([A-Za-z_][A-Za-z0-9_]*)\s*\("#)
+    static let maxCallsPerFile = 500
+
     /// Parse a specific set of repo-relative paths (used by incremental scan).
     func parseFiles(paths: [String], repoRoot: URL) -> [RawFileStructure] {
         paths.compactMap { path -> RawFileStructure? in
@@ -215,6 +224,9 @@ public final class FileStructureExtractor {
             guard let content = try? String(contentsOf: url, encoding: .utf8) else { return nil }
             var imports: [RawImport] = []
             var symbols: [ScanResult.Symbol] = []
+            var calls: [ScanResult.CallRef] = []
+            var seenCalls = Set<String>()
+            var currentCallable: String? = nil
             var loc = 0
             // Enclosing-type tracking by indentation (the regex extractor has no
             // scope information). A function declared deeper than the nearest open
@@ -255,10 +267,30 @@ public final class FileStructureExtractor {
                                                          declaration: found.declaration, parent: parent))
                         if typeKinds.contains(found.kind) { typeStack.append((indent, found.name)) }
                     }
+                    if let last = symbols.last, last.line == idx + 1 {
+                        // A declaration line opens a new callable (or a type, which closes the current one).
+                        if last.kind == "function" { currentCallable = last.name }
+                        else if last.kind == "method", let p = last.parent { currentCallable = "\(p).\(last.name)" }
+                        else { currentCallable = nil }
+                    } else if let caller = currentCallable, calls.count < Self.maxCallsPerFile {
+                        // Strip a trailing line comment; strings are not stripped (cheap heuristic,
+                        // unresolvable names are dropped by the builder anyway).
+                        let code = line.components(separatedBy: "//").first ?? line
+                        let ns = code as NSString
+                        for m in Self.callRegex.matches(in: code, range: NSRange(location: 0, length: ns.length)) {
+                            let name = ns.substring(with: m.range(at: 1))
+                            guard !Self.nonCallKeywords.contains(name) else { continue }
+                            let calleeLast = caller.split(separator: ".").last.map(String.init) ?? caller
+                            guard name != calleeLast else { continue }        // no self-recursion edges
+                            if seenCalls.insert("\(caller)>\(name)").inserted {
+                                calls.append(ScanResult.CallRef(caller: caller, callee: name, line: idx + 1))
+                            }
+                        }
+                    }
                 }
             }
             return RawFileStructure(path: path, language: lang, loc: loc,
-                                    rawImports: imports, symbols: symbols)
+                                    rawImports: imports, symbols: symbols, calls: calls)
         }
     }
 }
