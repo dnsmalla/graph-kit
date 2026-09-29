@@ -63,25 +63,37 @@ public struct ScanResult: Sendable {
         }
     }
 
+    /// A code citation written in a markdown doc: a backticked span or a link
+    /// target. `text` is as written; resolution happens in the graph builder.
+    public struct Citation: Codable, Equatable, Sendable {
+        public let text: String
+        public let line: Int
+        public init(text: String, line: Int) { self.text = text; self.line = line }
+    }
+
     public let files:      [FileEntry]
     public let imports:    [String: [String]]
     public let symbols:    [String: [Symbol]]
     public let calls:      [String: [CallRef]]
     public let inherits:   [String: [InheritRef]]
     public let implements: [String: [ImplementRef]]
+    /// Per markdown file: code citations found outside fenced blocks.
+    public let citations:  [String: [Citation]]
 
     public init(files: [FileEntry],
                 imports:    [String: [String]],
                 symbols:    [String: [Symbol]],
                 calls:      [String: [CallRef]]       = [:],
                 inherits:   [String: [InheritRef]]    = [:],
-                implements: [String: [ImplementRef]]  = [:]) {
+                implements: [String: [ImplementRef]]  = [:],
+                citations:  [String: [Citation]]      = [:]) {
         self.files      = files
         self.imports    = imports
         self.symbols    = symbols
         self.calls      = calls
         self.inherits   = inherits
         self.implements = implements
+        self.citations  = citations
     }
 
     public static let empty = ScanResult(files: [], imports: [:], symbols: [:])

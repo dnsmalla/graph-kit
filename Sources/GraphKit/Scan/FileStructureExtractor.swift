@@ -229,6 +229,42 @@ public final class FileStructureExtractor {
         return !["self", "this", "Self"].contains(receiver)
     }
 
+    static let backtickRegex = try! NSRegularExpression(pattern: #"`([^`\n]+)`"#)
+    static let linkRegex = try! NSRegularExpression(pattern: #"\[[^\]]*\]\(([^)\s]+)[^)]*\)"#)
+    static let maxCitationsPerFile = 2000
+
+    /// Code citations in markdown: backticked spans and `[text](target)` link
+    /// targets, skipping fenced code blocks. Classification/resolution is left
+    /// to the graph builder, which knows the file and symbol inventory.
+    static func markdownCitations(in content: String) -> [ScanResult.Citation] {
+        var out: [ScanResult.Citation] = []
+        var fence: String? = nil
+        for (idx, raw) in content.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+            let line = String(raw)
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if let open = fence {
+                if trimmed.hasPrefix(open) { fence = nil }
+                continue
+            }
+            if trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~") {
+                fence = String(trimmed.prefix(3)); continue
+            }
+            let ns = line as NSString
+            let full = NSRange(location: 0, length: ns.length)
+            for m in backtickRegex.matches(in: line, range: full) {
+                let t = ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces)
+                if !t.isEmpty { out.append(.init(text: t, line: idx + 1)) }
+            }
+            for m in linkRegex.matches(in: line, range: full) {
+                var t = ns.substring(with: m.range(at: 1))
+                if let hash = t.firstIndex(of: "#") { t = String(t[..<hash]) }
+                if !t.isEmpty { out.append(.init(text: t, line: idx + 1)) }
+            }
+            if out.count >= maxCitationsPerFile { break }
+        }
+        return out
+    }
+
     static let callRegex = try! NSRegularExpression(pattern: #"\b([A-Za-z_][A-Za-z0-9_]*)\s*\("#)
     static let maxCallsPerFile = 500
 
@@ -317,7 +353,8 @@ public final class FileStructureExtractor {
                 }
             }
             return RawFileStructure(path: path, language: lang, loc: loc,
-                                    rawImports: imports, symbols: symbols, calls: calls)
+                                    rawImports: imports, symbols: symbols, calls: calls,
+                                    citations: lang == "markdown" ? Self.markdownCitations(in: content) : [])
         }
     }
 }

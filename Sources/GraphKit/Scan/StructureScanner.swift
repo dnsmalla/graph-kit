@@ -162,6 +162,7 @@ public final class StructureScanner {
         var calls:      [String: [ScanResult.CallRef]]      = [:]
         var inherits:   [String: [ScanResult.InheritRef]]   = [:]
         var implements: [String: [ScanResult.ImplementRef]] = [:]
+        var citations:  [String: [ScanResult.Citation]]     = [:]
 
         for r in all {
             files.append(.init(path: r.path, language: r.language, loc: r.loc))
@@ -169,6 +170,7 @@ public final class StructureScanner {
             calls[r.path]      = r.calls
             inherits[r.path]   = r.inherits
             implements[r.path] = r.implements
+            if !r.citations.isEmpty { citations[r.path] = r.citations }
 
             var resolved: [String] = []
             for imp in r.rawImports {
@@ -185,6 +187,7 @@ public final class StructureScanner {
         }
 
         return ScanResult(files: files, imports: imports, symbols: symbols,
-                          calls: calls, inherits: inherits, implements: implements)
+                          calls: calls, inherits: inherits, implements: implements,
+                          citations: citations)
     }
 }

@@ -18,7 +18,8 @@ public struct ScanCache: Codable, Equatable, Sendable {
     /// new edges): a cache written by an older extractor is then discarded
     /// instead of serving stale structures for every unchanged file.
     /// "2": declarations kept, methods parent-qualified, call refs emitted.
-    public static let currentVersion = "2"
+    /// "3": markdown code citations carried per file.
+    public static let currentVersion = "3"
 
     public var version: String
     /// relative path -> cached entry

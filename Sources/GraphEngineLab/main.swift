@@ -384,6 +384,37 @@ check(EdgeWeight.weight(of: CGEdge(fromId: "a", toId: "b", kind: .relatedTo,
       "title-match noise weighs ~0.108 as documented",
       "the docstring's stated weight is wrong again")
 
+// MARK: - Doc citations -> references edges
+
+print("doc citations")
+let citeScan = ScanResult(
+    files: [.init(path: "docs/guide.md", language: "markdown", loc: 5),
+            .init(path: "kb/db.mjs", language: "javascript", loc: 5),
+            .init(path: "a.swift", language: "swift", loc: 3),
+            .init(path: "b.swift", language: "swift", loc: 3)],
+    imports: [:],
+    symbols: ["kb/db.mjs": [.init(name: "backupTo", kind: "function", line: 1),
+                            .init(name: "Store", kind: "class", line: 3),
+                            .init(name: "open", kind: "method", line: 4, parent: "Store")],
+              "a.swift": [.init(name: "dupName", kind: "function", line: 1)],
+              "b.swift": [.init(name: "dupName", kind: "function", line: 1)]],
+    citations: ["docs/guide.md": [
+        .init(text: "kb/db.mjs:10-20", line: 1), .init(text: "../kb/db.mjs", line: 2),
+        .init(text: "backupTo", line: 3), .init(text: "Store.open", line: 3),
+        .init(text: "dupName", line: 4), .init(text: "nope.mjs", line: 4),
+        .init(text: "/etc/passwd.mjs", line: 5), .init(text: "https://x.io/a.js", line: 5),
+        .init(text: "fun", line: 5)]])
+let citeGraph = StructureGraphBuilder.build(citeScan, repoRoot: URL(fileURLWithPath: "/tmp/x"))
+let citeRefs = citeGraph.edges.filter { $0.kind == .references }
+check(citeRefs.filter { $0.toId == "file:kb/db.mjs" }.count == 1
+        && citeRefs.first { $0.toId == "file:kb/db.mjs" }?.confidence == .extracted,
+      "path citation (line suffix, deduped) -> EXTRACTED file edge", "\(citeRefs)")
+check(citeRefs.contains { $0.toId == "function:kb/db.mjs:backupTo" && $0.confidence == .inferred },
+      "unique symbol citation -> INFERRED edge", "\(citeRefs)")
+check(citeRefs.contains { $0.toId == "method:kb/db.mjs:Store.open" },
+      "Parent.name resolves a method", "\(citeRefs)")
+check(citeRefs.count == 3, "ambiguous / unknown / absolute / URL / short emit nothing", "\(citeRefs)")
+
 // MARK: - Verdict
 
 print("")

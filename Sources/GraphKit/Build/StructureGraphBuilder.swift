@@ -139,7 +139,81 @@ public enum StructureGraphBuilder {
             }
         }
 
+        edges += citationEdges(scan, nodes: nodes)
+
         return CGData(nodes: nodes, edges: edges)
+    }
+
+    // MARK: - Doc → code citations
+
+    private static let sourceExtensions: Set<String> =
+        FileStructureExtractor.codeExtensions.union(["py"])
+    private static let symbolCitation = try! NSRegularExpression(
+        pattern: #"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$"#)
+    private static let lineSuffix = try! NSRegularExpression(pattern: #":\d+(-\d+)?$"#)
+
+    /// `references` edges from a markdown doc to the files (EXTRACTED) and symbols
+    /// (INFERRED) it cites. Unknown or ambiguous names emit nothing.
+    private static func citationEdges(_ scan: ScanResult, nodes: [CGNode]) -> [CGEdge] {
+        guard !scan.citations.isEmpty else { return [] }
+        let filePaths = Set(scan.files.map(\.path))
+        // "name" / "Parent.name" → ids, and plain last component → ids.
+        var byKey: [String: [String]] = [:]
+        var byPlain: [String: [String]] = [:]
+        for n in nodes where n.kind == .function || n.kind == .classType {
+            let key = n.id.split(separator: ":", omittingEmptySubsequences: false)
+                .dropFirst(2).joined(separator: ":")
+            let plain = String(key.split(separator: ".").last ?? Substring(key))
+            byKey[key, default: []].append(n.id)
+            if plain != key { byPlain[plain, default: []].append(n.id) } else { byPlain[key, default: []].append(n.id) }
+        }
+        func resolvePath(_ raw: String, docPath: String) -> String? {
+            var t = raw
+            let r = NSRange(location: 0, length: (t as NSString).length)
+            if let m = lineSuffix.firstMatch(in: t, range: r) { t = (t as NSString).substring(to: m.range.location) }
+            guard !t.isEmpty, !t.contains("://"), !t.hasPrefix("/"), !t.hasPrefix("~"),
+                  !t.contains(":"), !t.contains(" ") else { return nil }
+            let ext = (t as NSString).pathExtension.lowercased()
+            guard t.contains("/") || sourceExtensions.contains(ext) else { return nil }
+            func norm(_ p: String) -> String? {
+                var parts: [String] = []
+                for c in p.split(separator: "/", omittingEmptySubsequences: true) {
+                    if c == "." { continue }
+                    if c == ".." { guard !parts.isEmpty else { return nil }; parts.removeLast() } else { parts.append(String(c)) }
+                }
+                return parts.joined(separator: "/")
+            }
+            if let p = norm(t), filePaths.contains(p) { return p }
+            let dir = (docPath as NSString).deletingLastPathComponent
+            if let p = norm(dir.isEmpty ? t : dir + "/" + t), filePaths.contains(p) { return p }
+            return nil
+        }
+        var out: [CGEdge] = []
+        var seen = Set<String>()
+        for f in scan.files where f.language == "markdown" {
+            guard let cites = scan.citations[f.path] else { continue }
+            let docId = "file:\(f.path)"
+            for c in cites {
+                if let target = resolvePath(c.text, docPath: f.path) {
+                    guard target != f.path else { continue }
+                    let to = "file:\(target)"
+                    if seen.insert("\(docId)>\(to)").inserted {
+                        out.append(CGEdge(fromId: docId, toId: to, kind: .references, confidence: .extracted))
+                    }
+                    continue
+                }
+                let ns = c.text as NSString
+                guard ns.length >= 4,
+                      symbolCitation.firstMatch(in: c.text, range: NSRange(location: 0, length: ns.length)) != nil
+                else { continue }
+                let ids = c.text.contains(".") ? byKey[c.text] : byPlain[c.text]
+                guard let ids, ids.count == 1 else { continue }
+                if seen.insert("\(docId)>\(ids[0])").inserted {
+                    out.append(CGEdge(fromId: docId, toId: ids[0], kind: .references, confidence: .inferred))
+                }
+            }
+        }
+        return out
     }
 
     // MARK: - Helpers
