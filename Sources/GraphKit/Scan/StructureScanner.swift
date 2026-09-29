@@ -114,8 +114,18 @@ public final class StructureScanner {
                     executable: git, arguments: ["-C", repoRoot.path, "ls-files"],
                     environment: nil)
                 if exit == 0 {
-                    return (String(data: out, encoding: .utf8) ?? "")
+                    var files = (String(data: out, encoding: .utf8) ?? "")
                         .split(separator: "\n").map(String.init)
+                    // New files the user has not `git add`ed yet are part of the code
+                    // they are working on; .gitignore still excludes build output.
+                    if let (ex2, out2, _) = try? await launcher.run(
+                        executable: git,
+                        arguments: ["-C", repoRoot.path, "ls-files", "--others", "--exclude-standard"],
+                        environment: nil), ex2 == 0 {
+                        files += (String(data: out2, encoding: .utf8) ?? "")
+                            .split(separator: "\n").map(String.init)
+                    }
+                    return Array(Set(files)).sorted()
                         .filter { exts.contains(($0 as NSString).pathExtension.lowercased()) }
                 }
             } catch { /* fall through to FileManager */ }
