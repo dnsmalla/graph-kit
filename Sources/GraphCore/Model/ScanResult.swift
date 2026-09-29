@@ -29,8 +29,19 @@ public struct ScanResult: Sendable {
         public let caller: String
         public let callee: String
         public let line: Int
-        public init(caller: String, callee: String, line: Int) {
-            self.caller = caller; self.callee = callee; self.line = line
+        /// True for a receiver-qualified call (`x.foo()`, not `self.foo()`); such a
+        /// call is never resolved through the repo-wide unique-name fallback.
+        public let isMember: Bool
+        public init(caller: String, callee: String, line: Int, isMember: Bool = false) {
+            self.caller = caller; self.callee = callee; self.line = line; self.isMember = isMember
+        }
+        private enum CodingKeys: String, CodingKey { case caller, callee, line, isMember }
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            caller = try c.decode(String.self, forKey: .caller)
+            callee = try c.decode(String.self, forKey: .callee)
+            line = try c.decode(Int.self, forKey: .line)
+            isMember = try c.decodeIfPresent(Bool.self, forKey: .isMember) ?? false
         }
     }
 

@@ -213,6 +213,22 @@ public final class FileStructureExtractor {
         "super", "self", "Self", "typeof", "await", "try", "case", "throw", "new", "sizeof",
         "fun", "when", "print", "assert", "precondition", "fatalError",
     ]
+    /// True when the identifier at `nameStart` is preceded by `.` (after optional
+    /// whitespace) and the receiver is not `self` / `this` / `Self`.
+    static func isMemberCall(_ ns: NSString, nameStart: Int) -> Bool {
+        var i = nameStart - 1
+        while i >= 0, let u = Unicode.Scalar(ns.character(at: i)), u == " " || u == "\t" { i -= 1 }
+        guard i >= 0, ns.character(at: i) == 0x2E else { return false }    // "."
+        var j = i - 1
+        while j >= 0, let u = Unicode.Scalar(ns.character(at: j)), u == "?" || u == "!" { j -= 1 }
+        let end = j + 1
+        var start = end
+        while start > 0, let u = Unicode.Scalar(ns.character(at: start - 1)),
+              CharacterSet.alphanumerics.contains(u) || u == "_" { start -= 1 }
+        let receiver = ns.substring(with: NSRange(location: start, length: end - start))
+        return !["self", "this", "Self"].contains(receiver)
+    }
+
     static let callRegex = try! NSRegularExpression(pattern: #"\b([A-Za-z_][A-Za-z0-9_]*)\s*\("#)
     static let maxCallsPerFile = 500
 
@@ -283,8 +299,10 @@ public final class FileStructureExtractor {
                             guard !Self.nonCallKeywords.contains(name) else { continue }
                             let calleeLast = caller.split(separator: ".").last.map(String.init) ?? caller
                             guard name != calleeLast else { continue }        // no self-recursion edges
-                            if seenCalls.insert("\(caller)>\(name)").inserted {
-                                calls.append(ScanResult.CallRef(caller: caller, callee: name, line: idx + 1))
+                            let member = Self.isMemberCall(ns, nameStart: m.range(at: 1).location)
+                            if seenCalls.insert("\(caller)>\(name)>\(member)").inserted {
+                                calls.append(ScanResult.CallRef(caller: caller, callee: name, line: idx + 1,
+                                                                isMember: member))
                             }
                         }
                     }

@@ -63,4 +63,12 @@ final class RegexExtractorTests: XCTestCase {
         let calls = try XCTUnwrap(try parse(["a.swift": src]).first?.calls)
         XCTAssertTrue(calls.contains { $0.caller == "run" && $0.callee == "helper" })
     }
+
+    func testMemberCallsAreFlaggedButSelfCallsAreNot() throws {
+        let src = "func run() {\n    arr.removeAll()\n    self.helper()\n    helper()\n    x .sorted()\n}\n"
+        let calls = try XCTUnwrap(try parse(["a.swift": src]).first?.calls)
+        XCTAssertEqual(calls.first { $0.callee == "removeAll" }?.isMember, true)
+        XCTAssertEqual(calls.first { $0.callee == "sorted" }?.isMember, true)
+        XCTAssertEqual(calls.first { $0.callee == "helper" }?.isMember, false)
+    }
 }

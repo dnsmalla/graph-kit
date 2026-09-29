@@ -73,4 +73,49 @@ final class StructureGraphBuilderMethodTests: XCTestCase {
         let calls = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/r")).edges.filter { $0.kind == .calls }
         XCTAssertTrue(calls.isEmpty, "two files define save and z imports neither — no guess")
     }
+
+    private func callPairs(files: [String], symbols: [String: [ScanResult.Symbol]],
+                           imports: [String: [String]] = [:],
+                           calls: [String: [ScanResult.CallRef]]) -> Set<String> {
+        let scan = ScanResult(files: files.map { .init(path: $0, language: "swift", loc: 3) },
+                              imports: imports, symbols: symbols, calls: calls,
+                              inherits: [:], implements: [:])
+        let edges = StructureGraphBuilder.build(scan, repoRoot: URL(fileURLWithPath: "/r")).edges
+            .filter { $0.kind == .calls }
+        return Set(edges.map { "\($0.fromId)>\($0.toId)" })
+    }
+
+    func testMemberCallDoesNotUseGlobalUniqueFallback() {
+        let pairs = callPairs(
+            files: ["a.swift", "b.swift"],
+            symbols: ["a.swift": [.init(name: "run", kind: "function", line: 1)],
+                      "b.swift": [.init(name: "removeAll", kind: "function", line: 1)]],
+            calls: ["a.swift": [.init(caller: "run", callee: "removeAll", line: 2, isMember: true)]])
+        XCTAssertTrue(pairs.isEmpty, "arr.removeAll() must not link to an unrelated repo symbol")
+        let plain = callPairs(
+            files: ["a.swift", "b.swift"],
+            symbols: ["a.swift": [.init(name: "run", kind: "function", line: 1)],
+                      "b.swift": [.init(name: "removeAll", kind: "function", line: 1)]],
+            calls: ["a.swift": [.init(caller: "run", callee: "removeAll", line: 2)]])
+        XCTAssertEqual(plain.count, 1, "a plain call keeps the global-unique fallback")
+    }
+
+    func testMemberCallStillLinksSameFileAndImportedFile() {
+        let pairs = callPairs(
+            files: ["a.swift", "b.swift"],
+            symbols: ["a.swift": [.init(name: "run", kind: "function", line: 1),
+                                  .init(name: "local", kind: "function", line: 2)],
+                      "b.swift": [.init(name: "shared", kind: "function", line: 1)]],
+            imports: ["a.swift": ["b.swift"]],
+            calls: ["a.swift": [.init(caller: "run", callee: "local", line: 3, isMember: true),
+                                .init(caller: "run", callee: "shared", line: 4, isMember: true)]])
+        XCTAssertTrue(pairs.contains("function:a.swift:run>function:a.swift:local"))
+        XCTAssertTrue(pairs.contains("function:a.swift:run>function:b.swift:shared"))
+    }
+
+    func testCallRefDecodesWithoutIsMember() throws {
+        let json = #"{"caller":"a","callee":"b","line":3}"#.data(using: .utf8)!
+        let ref = try JSONDecoder().decode(ScanResult.CallRef.self, from: json)
+        XCTAssertFalse(ref.isMember)
+    }
 }

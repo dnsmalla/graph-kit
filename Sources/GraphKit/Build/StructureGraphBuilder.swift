@@ -105,7 +105,8 @@ public enum StructureGraphBuilder {
 
         // ── Calls edges (symbol → symbol, INFERRED) ───────────────────────────
         // Resolution order: a symbol of that name in the SAME file, then in files
-        // this file imports, then a name defined exactly once in the repo. A name
+        // this file imports, then a name defined exactly once in the repo (plain calls only: a
+        // receiver-qualified member call never uses that last stage). A name
         // that is ambiguous at the stage that finds it is skipped — a wrong edge
         // is worse than a missing one.
         var idsByFileName: [String: [String: [String]]] = [:]
@@ -131,7 +132,7 @@ public enum StructureGraphBuilder {
                     let imported = (scan.imports[filePath] ?? []).flatMap { idsByFileName[$0]?[ref.callee] ?? [] }
                     if imported.count == 1 { calleeId = imported[0] } else if imported.count > 1 { continue }
                 }
-                if calleeId == nil, let global = idsByName[ref.callee], global.count == 1 { calleeId = global[0] }
+                if calleeId == nil, !ref.isMember, let global = idsByName[ref.callee], global.count == 1 { calleeId = global[0] }
                 guard let callee = calleeId, callee != callerId else { continue }
                 guard seenCallEdges.insert("\(callerId)>\(callee)").inserted else { continue }
                 edges.append(CGEdge(fromId: callerId, toId: callee, kind: .calls, confidence: .inferred))
