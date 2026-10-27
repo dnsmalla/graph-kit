@@ -96,13 +96,17 @@ pub struct CGData {
 }
 
 /// A JSON array whose elements are each deserialized as `T`; elements that do not fit are
-/// dropped. A `null` or missing array is empty.
+/// dropped. A `null`, a missing value, or any non-array (an object, a string, a number) is
+/// empty: a list field of the wrong shape never fails the document around it.
 pub(crate) fn lenient_vec<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
 where
     D: Deserializer<'de>,
     T: DeserializeOwned,
 {
-    let values = Option::<Vec<serde_json::Value>>::deserialize(d)?.unwrap_or_default();
+    let values = match Option::<serde_json::Value>::deserialize(d)? {
+        Some(serde_json::Value::Array(items)) => items,
+        _ => Vec::new(),
+    };
     Ok(values
         .into_iter()
         .filter_map(|v| serde_json::from_value(v).ok())

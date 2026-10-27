@@ -16,6 +16,8 @@
               "agentRuns": 0,
               "chatTurns": 0,
               "liveSessions": 0,
+              "members": 0,
+              "more": 0,
               "running": 0
             },
             "size": 4.0,
@@ -36,10 +38,12 @@
             "label": "Kits",
             "labelled": true,
             "meta": {
-              "checksOk": false,
+              "checksOk": null,
               "enabled": 0,
               "features": 0,
-              "kits": 0
+              "kits": 0,
+              "members": 0,
+              "more": 0
             },
             "size": 4.0,
             "status": "off"
@@ -59,7 +63,10 @@
             "label": "Knowledge",
             "labelled": true,
             "meta": {
+              "lastIndexedAt": null,
               "meetings": 0,
+              "members": 0,
+              "more": 0,
               "outcomes": 0,
               "outcomesTerminal": 0,
               "pendingReviews": 0,
@@ -85,6 +92,8 @@
             "meta": {
               "active": 0,
               "facts": 0,
+              "members": 0,
+              "more": 0,
               "repos": 0,
               "superseded": 0
             },
@@ -108,7 +117,10 @@
             "meta": {
               "billable": 0,
               "calls": 0,
-              "models": 0
+              "members": 0,
+              "models": 0,
+              "more": 0,
+              "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
             },
             "size": 4.0,
             "status": "off"
@@ -129,6 +141,9 @@
             "labelled": true,
             "meta": {
               "enabled": 0,
+              "lastRunAt": null,
+              "members": 0,
+              "more": 0,
               "routines": 0
             },
             "size": 4.0,
@@ -149,6 +164,8 @@
             "label": "Skills",
             "labelled": true,
             "meta": {
+              "members": 0,
+              "more": 0,
               "skills": 0,
               "sources": 0
             },
@@ -188,6 +205,7 @@
           "label": "Knowledge",
           "labelled": true,
           "meta": {
+            "lastIndexedAt": null,
             "meetings": 0,
             "members": 0,
             "more": 0,
@@ -245,7 +263,8 @@
             "calls": 0,
             "members": 0,
             "models": 0,
-            "more": 0
+            "more": 0,
+            "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
           },
           "size": 4.0,
           "status": "off"
@@ -277,6 +296,7 @@
           "labelled": true,
           "meta": {
             "enabled": 0,
+            "lastRunAt": null,
             "members": 0,
             "more": 0,
             "routines": 0
@@ -292,7 +312,7 @@
           "label": "Kits",
           "labelled": true,
           "meta": {
-            "checksOk": false,
+            "checksOk": null,
             "enabled": 0,
             "features": 0,
             "kits": 0,

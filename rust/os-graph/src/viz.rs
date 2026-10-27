@@ -13,11 +13,12 @@
 use crate::builder::{js_cmp, CoreCategory, SystemCoreNode, SystemGraph};
 use crate::models::{lenient_value, lenient_vec};
 use crate::snapshot::{
-    OsChecks, OsCodeGraph, OsCounts, OsKindCount, OsKit, OsKnowledge, OsModelUsage,
-    OsProjectMemory, OsSnapshotFull,
+    OsChecks, OsCodeGraph, OsCounts, OsKindCount, OsKit, OsKnowledge, OsProjectMemory,
+    OsSnapshotFull,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// One node of a [`VizGraph`]. `kind` is one of `hub`, `codeCluster`, `sourceKind`,
@@ -48,9 +49,12 @@ pub struct VizNode {
 pub struct VizEdge {
     pub source: String,
     pub target: String,
-    /// `member` (hub to member), `requires`, `relates`, `source`, `provides`.
+    /// `member` (hub to member), `requires`, `relates`, `source`, `provides`, `indexes`.
     pub kind: String,
     pub weight: f64,
+    /// Short text for the edge when the data gives one (for example `indexed code graphs`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -146,6 +150,9 @@ pub const HUB_KEYS: [&str; 8] = [
 
 /// Most members a hub shows at the OS level; the rest are counted in its `more` meta.
 pub const OS_MEMBER_CAP: usize = 40;
+/// Most leaf members a hub drill-down shows per list (models, callers, endpoints, skills per
+/// source, ...); the rest are counted in the centre's `more` meta.
+pub const DRILL_MEMBER_CAP: usize = 60;
 const LABELLED_OS_MEMBERS: usize = 6;
 const LABELLED_HUB_MEMBERS: usize = 30;
 
@@ -255,7 +262,22 @@ fn edge(source: &str, target: &str, kind: &str, weight: f64) -> VizEdge {
         target: target.to_owned(),
         kind: kind.to_owned(),
         weight,
+        label: None,
     }
+}
+
+fn labelled_edge(source: &str, target: &str, kind: &str, label: &str) -> VizEdge {
+    VizEdge {
+        label: Some(label.to_owned()),
+        ..edge(source, target, kind, 1.0)
+    }
+}
+
+/// A grouping node that labels a family of rows (`By model`, `Enabled`, ...). Always labelled.
+fn group_node(id: &str, label: &str, count: usize) -> VizNode {
+    let mut n = node(id.to_owned(), label.to_owned(), "group", 0, 1.0);
+    n.labelled = true;
+    n.with("count", json!(count))
 }
 
 fn spoke(hub: &str, id: &str) -> VizEdge {
@@ -299,7 +321,34 @@ fn opt(v: &Option<String>) -> Value {
     v.as_ref().map_or(Value::Null, |s| json!(s))
 }
 
-fn with_counts(n: VizNode, c: &OsCounts) -> VizNode {
+/// `part / whole`, or 0 when the whole is 0.
+fn ratio(part: f64, whole: f64) -> f64 {
+    if whole > 0.0 {
+        part / whole
+    } else {
+        0.0
+    }
+}
+
+/// Cache reads over all input-side tokens (fresh input, cache reads and cache writes).
+fn cache_hit_ratio(c: &OsCounts) -> f64 {
+    ratio(c.cache_read, c.input + c.cache_read + c.cache_write)
+}
+
+/// Adds one breakdown row into another with the same key (duplicate rows are summed).
+fn add_counts(into: &mut OsCounts, c: &OsCounts) {
+    into.calls += c.calls;
+    into.runs += c.runs;
+    into.input += c.input;
+    into.output += c.output;
+    into.cache_read += c.cache_read;
+    into.cache_write += c.cache_write;
+    into.billable += c.billable;
+}
+
+/// The token counts of one breakdown row, its `share` of the total billable tokens and its
+/// `cacheHitRatio`.
+fn with_counts(n: VizNode, c: &OsCounts, total_billable: f64) -> VizNode {
     n.with("calls", int(c.calls))
         .with("runs", int(c.runs))
         .with("input", int(c.input))
@@ -307,6 +356,51 @@ fn with_counts(n: VizNode, c: &OsCounts) -> VizNode {
         .with("cacheRead", int(c.cache_read))
         .with("cacheWrite", int(c.cache_write))
         .with("billable", int(c.billable))
+        .with("share", json!(ratio(c.billable, total_billable)))
+        .with("cacheHitRatio", json!(cache_hit_ratio(c)))
+}
+
+/// The rows of a breakdown keyed by name, largest billable first, then by key.
+fn ranked_rows(by_key: BTreeMap<String, OsCounts>) -> Vec<(String, OsCounts)> {
+    let mut rows: Vec<(String, OsCounts)> = by_key.into_iter().collect();
+    rows.sort_by(|a, b| {
+        b.1.billable
+            .total_cmp(&a.1.billable)
+            .then_with(|| js_cmp(&a.0, &b.0))
+    });
+    rows
+}
+
+/// Keeps the first `cap` nodes; returns them with how many were left out.
+fn capped_nodes(mut nodes: Vec<VizNode>, cap: usize) -> (Vec<VizNode>, usize) {
+    let more = nodes.len().saturating_sub(cap);
+    nodes.truncate(cap);
+    (nodes, more)
+}
+
+/// Ascending by string, with `None` last (for ISO timestamps: oldest first).
+fn none_last_asc(a: Option<&str>, b: Option<&str>) -> Ordering {
+    match (a, b) {
+        (Some(x), Some(y)) => js_cmp(x, y),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => Ordering::Equal,
+    }
+}
+
+/// Descending by string, with `None` last (for ISO timestamps: newest first).
+fn none_last_desc(a: Option<&str>, b: Option<&str>) -> Ordering {
+    match (a, b) {
+        (Some(x), Some(y)) => js_cmp(y, x),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => Ordering::Equal,
+    }
+}
+
+/// The newest of some optional ISO timestamps, if there is one.
+fn newest<'a>(values: impl Iterator<Item = Option<&'a str>>) -> Option<String> {
+    values.flatten().max().map(str::to_owned)
 }
 
 fn meta_str(n: &VizNode, key: &str) -> String {
@@ -315,6 +409,10 @@ fn meta_str(n: &VizNode, key: &str) -> String {
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_owned()
+}
+
+fn meta_str_opt<'a>(n: &'a VizNode, key: &str) -> Option<&'a str> {
+    n.meta.get(key).and_then(Value::as_str)
 }
 
 fn meta_f64(n: &VizNode, key: &str) -> f64 {
@@ -383,29 +481,27 @@ fn dedupe(members: Vec<Member>) -> Vec<Member> {
         .collect()
 }
 
-fn sort_by_rank(members: &mut [Member]) {
-    members.sort_by(|a, b| {
-        b.1.partial_cmp(&a.1)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| js_cmp(&a.0.id, &b.0.id))
-    });
+/// Ranks by value, larger first, then by id. Each part ranks its own members before they are
+/// capped, so a part's order is its ranking.
+fn sort_by_value(members: &mut [Member]) {
+    members.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| js_cmp(&a.0.id, &b.0.id)));
 }
 
-/// Labels the `k` largest nodes; the rest are drawn without text.
+/// Labels the `k` largest nodes; the rest are drawn without text. Group nodes are always
+/// labelled and do not count toward `k`.
 fn mark_labels(nodes: &mut [VizNode], k: usize) {
-    let mut order: Vec<usize> = (0..nodes.len()).collect();
+    let mut order: Vec<usize> = (0..nodes.len())
+        .filter(|&i| nodes[i].kind != "group")
+        .collect();
     order.sort_by(|&a, &b| {
         nodes[b]
             .size
-            .partial_cmp(&nodes[a].size)
-            .unwrap_or(std::cmp::Ordering::Equal)
+            .total_cmp(&nodes[a].size)
             .then_with(|| js_cmp(&nodes[a].id, &nodes[b].id))
     });
-    for n in nodes.iter_mut() {
-        n.labelled = false;
-    }
-    for &i in order.iter().take(k) {
-        nodes[i].labelled = true;
+    let picked: Vec<usize> = order.into_iter().take(k).collect();
+    for (i, n) in nodes.iter_mut().enumerate() {
+        n.labelled = n.kind == "group" || picked.contains(&i);
     }
 }
 
@@ -588,8 +684,8 @@ fn code_part(input: &OsVizInput) -> Part {
     let max = code.communities.iter().map(|c| c.size).max().unwrap_or(0) as f64;
     for c in &code.communities {
         let label = match c.top_labels.first().filter(|s| !s.is_empty()) {
-            Some(top) => format!("Cluster {} · {top}", c.index + 1),
-            None => format!("Cluster {}", c.index + 1),
+            Some(top) => format!("Cluster {} · {top}", c.index.saturating_add(1)),
+            None => format!("Cluster {}", c.index.saturating_add(1)),
         };
         let n = node(
             format!("cluster:{}", c.index),
@@ -604,6 +700,7 @@ fn code_part(input: &OsVizInput) -> Part {
         .with("topLabels", json!(c.top_labels));
         part.members.push((n, c.size as f64));
     }
+    sort_by_value(&mut part.members);
     if !part.members.is_empty() {
         part.status = "ok".into();
     }
@@ -625,7 +722,7 @@ fn knowledge_part(input: &OsVizInput) -> Part {
     let pending = k.pending_reviews;
     let max = kinds.iter().map(|c| c.count).fold(meetings, f64::max);
     let has_data = !kinds.is_empty() || meetings > 0.0;
-    for c in kinds {
+    for c in &kinds {
         let n = node(
             format!("source:{}", c.kind),
             c.kind.clone(),
@@ -641,7 +738,7 @@ fn knowledge_part(input: &OsVizInput) -> Part {
     if meetings > 0.0 {
         part.members.push((
             node(
-                "meetings".into(),
+                "knowledge:meetings".into(),
                 "Meetings".into(),
                 "sourceKind",
                 0,
@@ -654,7 +751,7 @@ fn knowledge_part(input: &OsVizInput) -> Part {
     if pending > 0.0 {
         part.members.push((
             node(
-                "reviews".into(),
+                "knowledge:reviews".into(),
                 "Pending reviews".into(),
                 "activity",
                 0,
@@ -665,12 +762,17 @@ fn knowledge_part(input: &OsVizInput) -> Part {
             pending,
         ));
     }
+    sort_by_value(&mut part.members);
     part.meta.insert("sources".into(), int(k.sources.total));
     part.meta.insert("meetings".into(), int(meetings));
     part.meta.insert("pendingReviews".into(), int(pending));
     part.meta.insert("outcomes".into(), int(k.outcomes.total));
     part.meta
         .insert("outcomesTerminal".into(), int(k.outcomes.terminal));
+    part.meta.insert(
+        "lastIndexedAt".into(),
+        opt(&newest(kinds.iter().map(|c| c.last_indexed_at.as_deref()))),
+    );
     part.status = if pending > 0.0 {
         "warn"
     } else if has_data {
@@ -716,6 +818,7 @@ fn memory_part(input: &OsVizInput) -> Part {
         .with("lastConfirmedAt", opt(&r.last_confirmed_at));
         part.members.push((n, r.facts));
     }
+    sort_by_value(&mut part.members);
     part.meta.insert("repos".into(), json!(repos.len()));
     part.meta.insert("facts".into(), int(facts));
     part.meta.insert("active".into(), int(active));
@@ -745,6 +848,7 @@ fn skills_part(input: &OsVizInput) -> Part {
         .with("source", json!(src));
         part.members.push((n, *count as f64));
     }
+    sort_by_value(&mut part.members);
     part.meta.insert("skills".into(), json!(skills.len()));
     part.meta.insert("sources".into(), json!(by_src.len()));
     part.status = if skills.is_empty() { "off" } else { "ok" }.into();
@@ -755,38 +859,59 @@ fn models_part(input: &OsVizInput) -> Part {
     let mut part = Part::new("off");
     let empty = OsSnapshotFull::default();
     let tokens = &input.snapshot.as_ref().unwrap_or(&empty).tokens;
-    let mut rows: Vec<&OsModelUsage> = tokens
+    let total = tokens.totals.billable;
+    // A (provider, model) pair listed twice is one row: its counts are summed.
+    let mut by_pair: BTreeMap<(&str, &str), OsCounts> = BTreeMap::new();
+    for m in tokens
         .by_model
         .iter()
         .filter(|m| !m.provider.is_empty() || !m.model.is_empty())
-        .collect();
-    rows.sort_by(|a, b| js_cmp(&a.provider, &b.provider).then_with(|| js_cmp(&a.model, &b.model)));
-    let max = rows.iter().map(|m| m.counts.billable).fold(0.0, f64::max);
-    for m in &rows {
+    {
+        add_counts(
+            by_pair
+                .entry((m.provider.as_str(), m.model.as_str()))
+                .or_default(),
+            &m.counts,
+        );
+    }
+    let mut rows: Vec<((&str, &str), OsCounts)> = by_pair.into_iter().collect();
+    rows.sort_by(|a, b| {
+        b.1.billable
+            .total_cmp(&a.1.billable)
+            .then_with(|| js_cmp(a.0 .0, b.0 .0))
+            .then_with(|| js_cmp(a.0 .1, b.0 .1))
+    });
+    let max = rows.iter().map(|(_, c)| c.billable).fold(0.0, f64::max);
+    for ((provider, model), counts) in &rows {
         // Only the per-model totals are in the snapshot, so models link to the hub alone.
-        let label = if m.model.is_empty() {
+        let label = if model.is_empty() {
             "unknown".to_owned()
         } else {
-            m.model.clone()
+            (*model).to_owned()
         };
         let n = with_counts(
             node(
-                format!("model:{}/{}", m.provider, m.model),
+                format!("model:{provider}/{model}"),
                 label,
                 "model",
                 0,
-                log_size(m.counts.billable, max),
+                log_size(counts.billable, max),
             ),
-            &m.counts,
+            counts,
+            total,
         )
-        .with("provider", json!(m.provider))
-        .with("model", json!(m.model));
-        part.members.push((n, m.counts.billable));
+        .with("provider", json!(provider))
+        .with("model", json!(model));
+        part.members.push((n, counts.billable));
     }
-    part.meta
-        .insert("billable".into(), int(tokens.totals.billable));
+    sort_by_value(&mut part.members);
+    part.meta.insert("billable".into(), int(total));
     part.meta.insert("calls".into(), int(tokens.totals.calls));
     part.meta.insert("models".into(), json!(rows.len()));
+    part.meta.insert(
+        "note".into(),
+        json!("three separate breakdowns of the same total: by model, by caller, by endpoint"),
+    );
     part.status = if rows.is_empty() { "off" } else { "ok" }.into();
     part
 }
@@ -795,7 +920,20 @@ fn agents_part(input: &OsVizInput) -> Part {
     let mut part = Part::new("off");
     let empty = OsSnapshotFull::default();
     let s = input.snapshot.as_ref().unwrap_or(&empty);
-    let members = agent_members(s);
+    let mut members = agent_members(s);
+    // Running first, then the newest start.
+    members.sort_by(|a, b| {
+        let running = |n: &VizNode| n.status.as_deref() != Some("running");
+        running(&a.0)
+            .cmp(&running(&b.0))
+            .then_with(|| {
+                none_last_desc(
+                    meta_str_opt(&a.0, "startedAt"),
+                    meta_str_opt(&b.0, "startedAt"),
+                )
+            })
+            .then_with(|| js_cmp(&a.0.id, &b.0.id))
+    });
     let running = members.len();
     part.members = members;
     part.meta.insert("running".into(), json!(running));
@@ -818,8 +956,24 @@ fn routines_part(input: &OsVizInput) -> Part {
     for r in &routines {
         part.members.push((routine_node(r), 1.0));
     }
+    // Enabled first, then the soonest next run (none last), then by id.
+    part.members.sort_by(|a, b| {
+        meta_bool(&b.0, "enabled")
+            .cmp(&meta_bool(&a.0, "enabled"))
+            .then_with(|| {
+                none_last_asc(
+                    meta_str_opt(&a.0, "nextRunAt"),
+                    meta_str_opt(&b.0, "nextRunAt"),
+                )
+            })
+            .then_with(|| js_cmp(&a.0.id, &b.0.id))
+    });
     part.meta.insert("routines".into(), json!(routines.len()));
     part.meta.insert("enabled".into(), json!(enabled));
+    part.meta.insert(
+        "lastRunAt".into(),
+        opt(&newest(routines.iter().map(|r| r.last_run_at.as_deref()))),
+    );
     part.status = if enabled > 0 { "ok" } else { "off" }.into();
     part
 }
@@ -842,7 +996,8 @@ fn kits_part(input: &OsVizInput) -> Part {
             .status(if kit.enabled { "ok" } else { "off" })
             .with("enabled", json!(kit.enabled))
             .with("requires", json!(kit.requires));
-        part.members.push((n, 1.0));
+        // Kits rank above features; enabled kits first.
+        part.members.push((n, if kit.enabled { 3.0 } else { 2.0 }));
         for f in kit.requires.iter().filter(|f| !f.is_empty()) {
             part.edges
                 .push(edge(&kit_id, &format!("feature:{f}"), "requires", 1.0));
@@ -855,15 +1010,19 @@ fn kits_part(input: &OsVizInput) -> Part {
             .with("enabled", json!(on));
         part.members.push((n, 1.0));
     }
-    let checks_good = checks_ok(&system.checks);
+    sort_by_value(&mut part.members);
+    // Checks absent: unknown, not failing. The kits hub then warns only for its own kits.
+    let checks_good = system.checks.as_ref().map(checks_ok);
     part.meta.insert("kits".into(), json!(kits.len()));
     part.meta.insert("enabled".into(), json!(enabled));
     part.meta.insert("features".into(), json!(features.len()));
     part.meta.insert("checksOk".into(), json!(checks_good));
     part.status = if kits.is_empty() {
         "off"
-    } else if enabled < kits.len() || !checks_good {
+    } else if enabled < kits.len() || checks_good == Some(false) {
         "warn"
+    } else if checks_good.is_none() {
+        "unknown"
     } else {
         "ok"
     }
@@ -880,8 +1039,8 @@ pub fn build_os_graph(input: &OsVizInput) -> VizGraph {
         let group = i as u32;
         let hub = format!("hub:{key}");
         let part = os_part(key, input);
-        let mut members = dedupe(part.members);
-        sort_by_rank(&mut members);
+        // Each part ranks its own members, so deduping keeps that order.
+        let members = dedupe(part.members);
         let total = members.len();
         let shown = total.min(OS_MEMBER_CAP);
         let mut meta = part.meta;
@@ -906,41 +1065,47 @@ pub fn build_os_graph(input: &OsVizInput) -> VizGraph {
 
     let empty = OsSnapshotFull::default();
     let s = input.snapshot.as_ref().unwrap_or(&empty);
+    // Knowledge indexes the code graphs; the edge exists only when there are some.
     if !s.knowledge.code_graph.is_empty() {
-        edges.push(edge("hub:knowledge", "hub:code", "relates", 1.0));
+        edges.push(labelled_edge(
+            "hub:knowledge",
+            "hub:code",
+            "indexes",
+            "indexed code graphs",
+        ));
     }
-    let auto_task = s
-        .tokens
-        .by_source
-        .iter()
-        .any(|b| b.source == "auto-task" && b.counts.calls + b.counts.runs > 0.0);
-    if auto_task {
-        edges.push(edge("hub:routines", "hub:models", "relates", 1.0));
-    }
-    // Kept only when the feature node is in the graph (a kit requires it).
-    edges.push(edge("hub:code", "feature:code_graph_3d", "relates", 1.0));
-
     finish("os", "OS", nodes, edges)
 }
 
 // ---- Drill-downs: the same part in more detail ----
 
+/// One hub's drill-down. `members` counts the leaf rows before the caps, `more` the rows the
+/// caps left out; both go to the centre's meta, as the OS-level hubs' do.
+struct Detail {
+    nodes: Vec<VizNode>,
+    edges: Vec<VizEdge>,
+    members: usize,
+    more: usize,
+}
+
 /// The members of one hub's drill-down, with their spokes and the detail edges.
-fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> (Vec<VizNode>, Vec<VizEdge>) {
+fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> Detail {
     let hub = format!("hub:{key}");
     let empty = OsSnapshotFull::default();
     let s = input.snapshot.as_ref().unwrap_or(&empty);
     let mut nodes: Vec<VizNode> = dedupe(part.members).into_iter().map(|(n, _)| n).collect();
     let mut edges = part.edges;
+    let (mut members, mut more) = (nodes.len(), 0);
     match key {
         "knowledge" => {
             let k = &s.knowledge;
             let max = k.outcomes.by_state.values().copied().fold(0.0, f64::max);
-            for (state, count) in &k.outcomes.by_state {
-                if state.is_empty() {
-                    continue;
-                }
-                nodes.push(
+            let outcomes: Vec<VizNode> = k
+                .outcomes
+                .by_state
+                .iter()
+                .filter(|(state, _)| !state.is_empty())
+                .map(|(state, count)| {
                     node(
                         format!("outcome:{state}"),
                         state.clone(),
@@ -948,17 +1113,18 @@ fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> (Vec<VizNode>, Vec<V
                         0,
                         log_size(*count, max),
                     )
-                    .with("count", int(*count)),
-                );
-            }
+                    .with("count", int(*count))
+                })
+                .collect();
             let mut repos: Vec<&OsCodeGraph> = k
                 .code_graph
                 .iter()
                 .filter(|c| !c.repo_id.is_empty())
                 .collect();
             repos.sort_by(|a, b| js_cmp(&a.repo_id, &b.repo_id));
-            for r in repos {
-                nodes.push(
+            let repos: Vec<VizNode> = repos
+                .into_iter()
+                .map(|r| {
                     node(
                         format!("codegraph:{}", r.repo_id),
                         r.repo_id.clone(),
@@ -967,54 +1133,97 @@ fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> (Vec<VizNode>, Vec<V
                         1.0,
                     )
                     .with("commitSha", opt(&r.commit_sha))
-                    .with("generatedAt", opt(&r.generated_at)),
-                );
-            }
+                    .with("generatedAt", opt(&r.generated_at))
+                })
+                .collect();
+            members += outcomes.len() + repos.len();
+            let (outcomes, out_more) = capped_nodes(outcomes, DRILL_MEMBER_CAP);
+            let (repos, repo_more) = capped_nodes(repos, DRILL_MEMBER_CAP);
+            more = out_more + repo_more;
+            nodes.extend(outcomes);
+            nodes.extend(repos);
             for n in &nodes {
                 edges.push(spoke(&hub, &n.id));
             }
         }
         "skills" => {
-            // The members are the sources; each skill hangs off its source.
+            // The members are the sources; each skill hangs off its source. A source lists its
+            // skills alphabetically, up to the cap, and its `more` says how many it left out.
+            let mut by_src: BTreeMap<String, Vec<&Skill>> = BTreeMap::new();
+            for sk in unique_skills(&input.skills) {
+                by_src
+                    .entry(sk.source.clone().unwrap_or_default())
+                    .or_default()
+                    .push(sk);
+            }
+            members = by_src.values().map(Vec::len).sum();
             for n in &nodes {
                 edges.push(spoke(&hub, &n.id));
             }
-            for sk in unique_skills(&input.skills) {
-                let src = sk.source.clone().unwrap_or_default();
-                let label = if sk.name.is_empty() {
-                    sk.id.clone()
-                } else {
-                    sk.name.clone()
-                };
-                let id = format!("skill:{}", sk.id);
-                nodes.push(
-                    node(id.clone(), label, "skill", 0, 1.0)
-                        .with("name", json!(sk.name))
-                        .with("description", opt(&sk.description))
-                        .with("source", json!(src)),
-                );
-                edges.push(edge(&id, &format!("skillSource:{src}"), "source", 1.0));
+            for (src, list) in by_src {
+                let src_id = format!("skillSource:{src}");
+                let shown = list.len().min(DRILL_MEMBER_CAP);
+                let left = list.len() - shown;
+                more += left;
+                if let Some(source) = nodes.iter_mut().find(|n| n.id == src_id) {
+                    source.meta.insert("more".into(), json!(left));
+                }
+                for sk in list.into_iter().take(shown) {
+                    let label = if sk.name.is_empty() {
+                        sk.id.clone()
+                    } else {
+                        sk.name.clone()
+                    };
+                    let id = format!("skill:{}", sk.id);
+                    nodes.push(
+                        node(id.clone(), label, "skill", 0, 1.0)
+                            .with("name", json!(sk.name))
+                            .with("description", opt(&sk.description))
+                            .with("source", json!(src)),
+                    );
+                    edges.push(edge(&id, &src_id, "source", 1.0));
+                }
             }
         }
         "models" => {
-            // Providers sit between the hub and their models; callers and endpoints hang
-            // off the hub, not off a model, because the snapshot has no model-by-caller table.
+            // Three breakdowns of the same total: by model (grouped by provider), by caller and
+            // by endpoint. Each is under its own labelled group node.
+            let total = s.tokens.totals.billable;
             let models = std::mem::take(&mut nodes);
-            let mut providers: BTreeMap<String, f64> = BTreeMap::new();
+            let model_rows = models.len();
+            let mut billable_by_provider: BTreeMap<String, f64> = BTreeMap::new();
             for m in &models {
-                *providers.entry(meta_str(m, "provider")).or_default() += meta_f64(m, "billable");
+                *billable_by_provider
+                    .entry(meta_str(m, "provider"))
+                    .or_default() += meta_f64(m, "billable");
             }
-            let max_p = providers.values().copied().fold(0.0, f64::max);
-            for (p, billable) in &providers {
+            let (kept_models, model_more) = capped_nodes(models, DRILL_MEMBER_CAP);
+            let kept_providers: BTreeSet<String> = kept_models
+                .iter()
+                .map(|m| meta_str(m, "provider"))
+                .collect();
+            let max_p = billable_by_provider.values().copied().fold(0.0, f64::max);
+            if model_rows > 0 {
+                nodes.push(
+                    group_node("group:by-model", "By model", model_rows)
+                        .with("more", json!(model_more)),
+                );
+                edges.push(spoke(&hub, "group:by-model"));
+            }
+            for (p, billable) in &billable_by_provider {
+                if !kept_providers.contains(p) {
+                    continue;
+                }
                 let id = format!("provider:{p}");
                 let label = if p.is_empty() { "unknown" } else { p.as_str() }.to_owned();
                 nodes.push(
                     node(id.clone(), label, "provider", 0, log_size(*billable, max_p))
-                        .with("billable", int(*billable)),
+                        .with("billable", int(*billable))
+                        .with("share", json!(ratio(*billable, total))),
                 );
-                edges.push(spoke(&hub, &id));
+                edges.push(edge("group:by-model", &id, "member", 1.0));
             }
-            for m in models {
+            for m in kept_models {
                 edges.push(edge(
                     &format!("provider:{}", meta_str(&m, "provider")),
                     &m.id,
@@ -1023,84 +1232,104 @@ fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> (Vec<VizNode>, Vec<V
                 ));
                 nodes.push(m);
             }
-            let tokens = &s.tokens;
-            let max_c = tokens
-                .by_source
-                .iter()
-                .map(|c| c.counts.billable)
-                .fold(0.0, f64::max);
-            let mut sources: Vec<_> = tokens
-                .by_source
-                .iter()
-                .filter(|c| !c.source.is_empty())
+
+            let mut by_caller: BTreeMap<String, OsCounts> = BTreeMap::new();
+            for c in s.tokens.by_source.iter().filter(|c| !c.source.is_empty()) {
+                add_counts(by_caller.entry(c.source.clone()).or_default(), &c.counts);
+            }
+            let callers = ranked_rows(by_caller);
+            let max_c = callers.iter().map(|(_, c)| c.billable).fold(0.0, f64::max);
+            let caller_rows = callers.len();
+            let callers: Vec<VizNode> = callers
+                .into_iter()
+                .map(|(src, c)| {
+                    let id = format!("caller:{src}");
+                    with_counts(
+                        node(id, src.clone(), "caller", 0, log_size(c.billable, max_c)),
+                        &c,
+                        total,
+                    )
+                })
                 .collect();
-            sources.sort_by(|a, b| js_cmp(&a.source, &b.source));
-            for c in sources {
-                let id = format!("caller:{}", c.source);
-                nodes.push(with_counts(
-                    node(
-                        id.clone(),
-                        c.source.clone(),
-                        "caller",
-                        0,
-                        log_size(c.counts.billable, max_c),
-                    ),
-                    &c.counts,
-                ));
-                edges.push(spoke(&hub, &id));
+            let (callers, caller_more) = capped_nodes(callers, DRILL_MEMBER_CAP);
+            if caller_rows > 0 {
+                nodes.push(
+                    group_node("group:by-caller", "By caller", caller_rows)
+                        .with("more", json!(caller_more)),
+                );
+                edges.push(spoke(&hub, "group:by-caller"));
             }
-            let max_e = tokens
-                .by_endpoint
-                .iter()
-                .map(|e| e.counts.billable)
-                .fold(0.0, f64::max);
-            let mut endpoints: Vec<_> = tokens.by_endpoint.iter().collect();
-            endpoints.sort_by(|a, b| {
-                js_cmp(
-                    a.endpoint.as_deref().unwrap_or(""),
-                    b.endpoint.as_deref().unwrap_or(""),
-                )
-            });
-            for e in endpoints {
-                let ep = e.endpoint.clone().unwrap_or_default();
-                let label = if ep.is_empty() {
-                    "(no endpoint)".to_owned()
-                } else {
-                    ep.clone()
-                };
-                let id = format!("endpoint:{ep}");
-                nodes.push(with_counts(
-                    node(
-                        id.clone(),
-                        label,
-                        "endpoint",
-                        0,
-                        log_size(e.counts.billable, max_e),
-                    ),
+            for c in callers {
+                edges.push(edge("group:by-caller", &c.id, "member", 1.0));
+                nodes.push(c);
+            }
+
+            let mut by_endpoint: BTreeMap<String, OsCounts> = BTreeMap::new();
+            for e in &s.tokens.by_endpoint {
+                add_counts(
+                    by_endpoint
+                        .entry(e.endpoint.clone().unwrap_or_default())
+                        .or_default(),
                     &e.counts,
-                ));
-                edges.push(spoke(&hub, &id));
+                );
             }
+            let endpoints = ranked_rows(by_endpoint);
+            let max_e = endpoints
+                .iter()
+                .map(|(_, c)| c.billable)
+                .fold(0.0, f64::max);
+            let endpoint_rows = endpoints.len();
+            let endpoints: Vec<VizNode> = endpoints
+                .into_iter()
+                .map(|(ep, c)| {
+                    let label = if ep.is_empty() {
+                        "(no endpoint)".to_owned()
+                    } else {
+                        ep.clone()
+                    };
+                    let id = format!("endpoint:{ep}");
+                    with_counts(
+                        node(id, label, "endpoint", 0, log_size(c.billable, max_e)),
+                        &c,
+                        total,
+                    )
+                })
+                .collect();
+            let (endpoints, endpoint_more) = capped_nodes(endpoints, DRILL_MEMBER_CAP);
+            if endpoint_rows > 0 {
+                nodes.push(
+                    group_node("group:by-endpoint", "By endpoint", endpoint_rows)
+                        .with("more", json!(endpoint_more)),
+                );
+                edges.push(spoke(&hub, "group:by-endpoint"));
+            }
+            for e in endpoints {
+                edges.push(edge("group:by-endpoint", &e.id, "member", 1.0));
+                nodes.push(e);
+            }
+            members = model_rows + caller_rows + endpoint_rows;
+            more = model_more + caller_more + endpoint_more;
         }
         "routines" => {
-            // Routines grouped under an enabled and a disabled node.
-            // An empty hub is its centre only, so the groups exist only with routines.
+            // Routines grouped under an enabled and a disabled node. The routines arrive in
+            // rank order (enabled first, soonest run first); the groups count all of them.
             let routines = std::mem::take(&mut nodes);
-            if !routines.is_empty() {
-                let on = routines.iter().filter(|r| meta_bool(r, "enabled")).count();
-                let off = routines.len() - on;
+            let total = routines.len();
+            let on = routines.iter().filter(|r| meta_bool(r, "enabled")).count();
+            let off = total - on;
+            let (routines, routine_more) = capped_nodes(routines, DRILL_MEMBER_CAP);
+            members = total;
+            more = routine_more;
+            // An empty hub is its centre only, so the groups exist only with routines.
+            if total > 0 {
                 let on_id = "routines:enabled";
                 let off_id = "routines:disabled";
-                nodes.push(
-                    node(on_id.into(), "Enabled".into(), "routine", 0, 1.0)
-                        .status(if on > 0 { "ok" } else { "off" })
-                        .with("count", json!(on)),
-                );
-                nodes.push(
-                    node(off_id.into(), "Disabled".into(), "routine", 0, 1.0)
-                        .status("off")
-                        .with("count", json!(off)),
-                );
+                nodes.push(group_node(on_id, "Enabled", on).status(if on > 0 {
+                    "ok"
+                } else {
+                    "off"
+                }));
+                nodes.push(group_node(off_id, "Disabled", off).status("off"));
                 edges.push(spoke(&hub, on_id));
                 edges.push(spoke(&hub, off_id));
                 for r in routines {
@@ -1115,11 +1344,14 @@ fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> (Vec<VizNode>, Vec<V
             }
         }
         "kits" => {
+            // Kits (enabled first), then features; the checks follow when they are known.
+            let (kept, kit_more) = capped_nodes(std::mem::take(&mut nodes), DRILL_MEMBER_CAP);
+            nodes = kept;
+            more = kit_more;
             for n in &nodes {
                 edges.push(spoke(&hub, &n.id));
             }
-            if input.snapshot.is_some() {
-                let c = &s.system.checks;
+            if let Some(c) = s.system.checks.as_ref() {
                 let checks = [
                     ("db", "db", c.db, None),
                     ("claude", "claude CLI", c.claude, c.claude_error.clone()),
@@ -1138,13 +1370,21 @@ fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> (Vec<VizNode>, Vec<V
             }
         }
         _ => {
-            // memory, agents: every member is a direct child of the hub.
+            // memory, agents: every member is a direct child of the hub, in rank order.
+            let (kept, left) = capped_nodes(std::mem::take(&mut nodes), DRILL_MEMBER_CAP);
+            nodes = kept;
+            more = left;
             for n in &nodes {
                 edges.push(spoke(&hub, &n.id));
             }
         }
     }
-    (nodes, edges)
+    Detail {
+        nodes,
+        edges,
+        members,
+        more,
+    }
 }
 
 /// One part of the OS in detail. `None` for `code` (the existing SystemGraph) and for any
@@ -1155,8 +1395,11 @@ pub fn build_hub_graph(hub: &str, input: &OsVizInput) -> Option<VizGraph> {
     }
     let part = os_part(hub, input);
     let status = part.status.clone();
-    let meta = part.meta.clone();
-    let (mut members, edges) = hub_detail(hub, input, part);
+    let mut meta = part.meta.clone();
+    let detail = hub_detail(hub, input, part);
+    meta.insert("members".into(), json!(detail.members));
+    meta.insert("more".into(), json!(detail.more));
+    let mut members = detail.nodes;
     // Families within a hub get their own group, numbered by kind (sorted); the centre is 0.
     let kinds: BTreeSet<String> = members.iter().map(|n| n.kind.clone()).collect();
     for n in members.iter_mut() {
@@ -1165,7 +1408,7 @@ pub fn build_hub_graph(hub: &str, input: &OsVizInput) -> Option<VizGraph> {
     mark_labels(&mut members, LABELLED_HUB_MEMBERS);
     let mut nodes = vec![center(hub, &status, meta)];
     nodes.extend(members);
-    Some(finish(hub, hub_title(hub), nodes, edges))
+    Some(finish(hub, hub_title(hub), nodes, detail.edges))
 }
 
 /// The whole view: the OS graph and every hub except `code`.
@@ -1286,7 +1529,12 @@ mod tests {
             .iter()
             .filter(|e| e.target.starts_with("caller:"))
             .collect();
-        assert!(caller_edges.iter().all(|e| e.source == "hub:models"));
+        // Callers hang off their group, which hangs off the hub.
+        assert!(caller_edges.iter().all(|e| e.source == "group:by-caller"));
+        assert!(models
+            .edges
+            .iter()
+            .any(|e| e.source == "hub:models" && e.target == "group:by-caller"));
     }
 
     #[test]
@@ -1421,11 +1669,8 @@ mod tests {
         assert!(os.edges.iter().any(|e| e.source == "kit:graph-kit"
             && e.target == "feature:code_graph_3d"
             && e.kind == "requires"));
-        // code_graph_3d is required by a kit, so the Code hub links to it.
-        assert!(os
-            .edges
-            .iter()
-            .any(|e| e.source == "hub:code" && e.target == "feature:code_graph_3d"));
+        // No invented cross-hub edge: the Code hub links to nothing it does not state.
+        assert!(!os.edges.iter().any(|e| e.source == "hub:code"));
         let feature = os
             .nodes
             .iter()
@@ -1467,14 +1712,18 @@ mod tests {
             ..OsVizInput::default()
         };
         let os = build_os_graph(&input);
-        assert!(os
+        let indexes = os
             .edges
             .iter()
-            .any(|e| e.source == "hub:knowledge" && e.target == "hub:code"));
-        assert!(os
+            .find(|e| e.source == "hub:knowledge" && e.target == "hub:code")
+            .expect("knowledge indexes the code hub");
+        assert_eq!(indexes.kind, "indexes");
+        assert_eq!(indexes.label.as_deref(), Some("indexed code graphs"));
+        // Auto Task usage is not the routines list: no routines-to-models edge.
+        assert!(!os
             .edges
             .iter()
-            .any(|e| e.source == "hub:routines" && e.target == "hub:models"));
+            .any(|e| e.source == "hub:routines" || e.target == "hub:routines"));
 
         let quiet = build_os_graph(&OsVizInput::default());
         assert!(!quiet.edges.iter().any(|e| e.kind == "relates"));
@@ -1604,7 +1853,7 @@ mod tests {
         assert_eq!(
             k.nodes
                 .iter()
-                .find(|n| n.id == "reviews")
+                .find(|n| n.id == "knowledge:reviews")
                 .unwrap()
                 .status
                 .as_deref(),
@@ -1628,5 +1877,362 @@ mod tests {
                 );
             }
         }
+    }
+
+    fn input_of(snap: OsSnapshotFull) -> OsVizInput {
+        OsVizInput {
+            snapshot: Some(snap),
+            ..OsVizInput::default()
+        }
+    }
+
+    #[test]
+    fn non_array_list_fields_are_empty_and_never_fail_the_call() {
+        let text = r#"{"skills":{"a":1},"routines":"none","code":{"communities":5},
+              "snapshot":{"system":{"kits":{"x":1}},"tokens":{"totals":{"billable":5},"byModel":{"p":"m"}},
+              "knowledge":{"sources":{"byKind":7}},"running":{"chatTurns":null}}}"#;
+        let input: OsVizInput =
+            serde_json::from_str(text).expect("a non-array list is empty, not an error");
+        assert!(input.skills.is_empty());
+        assert!(input.routines.is_empty());
+        let snap = input.snapshot.as_ref().expect("snapshot");
+        assert!(snap.system.kits.is_empty());
+        assert!(snap.tokens.by_model.is_empty());
+        assert!(snap.knowledge.sources.by_kind.is_empty());
+        assert!(snap.running.chat_turns.is_empty());
+        // The rest of the snapshot still counts.
+        assert_eq!(snap.tokens.totals.billable, 5.0);
+        assert_eq!(build_os_view(&input).hubs.len(), 7);
+    }
+
+    #[test]
+    fn absent_checks_are_unknown_not_a_failure() {
+        let input = input_of(snapshot(
+            r#"{"system":{"kits":[{"id":"graph-kit","requires":[],"enabled":true}]}}"#,
+        ));
+        let os = build_os_graph(&input);
+        let hub = os.nodes.iter().find(|n| n.id == "hub:kits").unwrap();
+        assert_eq!(hub.status.as_deref(), Some("unknown"));
+        assert_eq!(hub.meta["checksOk"], Value::Null);
+        let g = build_hub_graph("kits", &input).unwrap();
+        assert!(!g.nodes.iter().any(|n| n.kind == "check"));
+        assert_eq!(g.nodes[0].meta["members"], json!(1));
+
+        // A kit that is off still warns: that is the kits' own state.
+        let off = input_of(snapshot(
+            r#"{"system":{"kits":[{"id":"k","requires":[],"enabled":false}]}}"#,
+        ));
+        let hub = build_os_graph(&off)
+            .nodes
+            .into_iter()
+            .find(|n| n.id == "hub:kits")
+            .unwrap();
+        assert_eq!(hub.status.as_deref(), Some("warn"));
+
+        // Checks that are present and failing warn; present and passing are ok.
+        let failing = input_of(snapshot(
+            r#"{"system":{"kits":[{"id":"k","requires":[],"enabled":true}],
+              "checks":{"db":true,"claude":true,"skills":false}}}"#,
+        ));
+        let hub = build_os_graph(&failing)
+            .nodes
+            .into_iter()
+            .find(|n| n.id == "hub:kits")
+            .unwrap();
+        assert_eq!(hub.status.as_deref(), Some("warn"));
+        let passing = input_of(snapshot(
+            r#"{"system":{"kits":[{"id":"k","requires":[],"enabled":true}],
+              "checks":{"db":true,"claude":true,"skills":true}}}"#,
+        ));
+        let hub = build_os_graph(&passing)
+            .nodes
+            .into_iter()
+            .find(|n| n.id == "hub:kits")
+            .unwrap();
+        assert_eq!(hub.status.as_deref(), Some("ok"));
+        assert_eq!(hub.meta["checksOk"], json!(true));
+    }
+
+    #[test]
+    fn kits_outrank_features_under_the_os_cap_and_enabled_kits_come_first() {
+        let kits: Vec<String> = (0..30)
+            .map(|i| {
+                format!(
+                    r#"{{"id":"kit-{i:02}","requires":["feat-{i:02}"],"enabled":{}}}"#,
+                    i % 2 == 0
+                )
+            })
+            .collect();
+        let text = format!(
+            r#"{{"system":{{"kits":[{}],"checks":{{"db":true,"claude":true,"skills":true}}}}}}"#,
+            kits.join(",")
+        );
+        let os = build_os_graph(&input_of(snapshot(&text)));
+        let hub = os.nodes.iter().find(|n| n.id == "hub:kits").unwrap();
+        assert_eq!(hub.meta["members"], json!(60));
+        assert_eq!(hub.meta["more"], json!(20));
+        // All 30 kits are shown; the 10 features that fit come after them.
+        assert_eq!(os.nodes.iter().filter(|n| n.kind == "kit").count(), 30);
+        assert_eq!(os.nodes.iter().filter(|n| n.kind == "feature").count(), 10);
+        // Enabled kits (even indexes) before the disabled ones.
+        let order: Vec<&str> = os
+            .nodes
+            .iter()
+            .filter(|n| n.kind == "kit")
+            .map(|n| n.id.as_str())
+            .collect();
+        let first_disabled = order
+            .iter()
+            .position(|id| *id == "kit:kit-01")
+            .expect("kit-01 is shown");
+        assert!(order[..first_disabled].iter().all(|id| id
+            .trim_start_matches("kit:kit-")
+            .parse::<u32>()
+            .unwrap()
+            % 2
+            == 0));
+    }
+
+    #[test]
+    fn skills_drill_down_caps_each_source_alphabetically_with_more() {
+        let skills: Vec<Skill> = (0..70)
+            .map(|i| Skill {
+                id: format!("s{i:02}"),
+                name: format!("skill {i:02}"),
+                description: None,
+                source: Some("kit".into()),
+            })
+            .collect();
+        let input = OsVizInput {
+            skills,
+            ..OsVizInput::default()
+        };
+        let g = build_hub_graph("skills", &input).unwrap();
+        assert_eq!(
+            g.nodes.iter().filter(|n| n.kind == "skill").count(),
+            DRILL_MEMBER_CAP
+        );
+        let source = g.nodes.iter().find(|n| n.id == "skillSource:kit").unwrap();
+        assert_eq!(source.meta["count"], json!(70));
+        assert_eq!(source.meta["more"], json!(10));
+        assert_eq!(g.nodes[0].meta["members"], json!(70));
+        assert_eq!(g.nodes[0].meta["more"], json!(10));
+        // The first 60 by name are kept; the last ten are not.
+        assert!(g.nodes.iter().any(|n| n.id == "skill:s59"));
+        assert!(!g.nodes.iter().any(|n| n.id == "skill:s60"));
+    }
+
+    #[test]
+    fn duplicate_model_rows_are_summed_not_dropped() {
+        let input = input_of(snapshot(
+            r#"{"tokens":{"totals":{"billable":30},"byModel":[
+              {"provider":"anthropic","model":"m","billable":10,"input":5,"cacheRead":5},
+              {"provider":"anthropic","model":"m","billable":20,"input":5,"cacheRead":15,"calls":2}]}}"#,
+        ));
+        let g = build_hub_graph("models", &input).unwrap();
+        assert_eq!(g.nodes.iter().filter(|n| n.kind == "model").count(), 1);
+        let m = g
+            .nodes
+            .iter()
+            .find(|n| n.id == "model:anthropic/m")
+            .unwrap();
+        assert_eq!(m.meta["billable"], json!(30));
+        assert_eq!(m.meta["input"], json!(10));
+        assert_eq!(m.meta["cacheRead"], json!(20));
+        assert_eq!(m.meta["calls"], json!(2));
+        assert_eq!(m.meta["share"], json!(1.0));
+    }
+
+    #[test]
+    fn models_drill_down_has_three_labelled_dimensions_with_share_and_cache_ratio() {
+        let input = input_of(snapshot(
+            r#"{"tokens":{"totals":{"billable":100},
+              "byModel":[{"provider":"anthropic","model":"a","billable":75,"input":100,"cacheRead":300,"cacheWrite":100},
+                         {"provider":"openai","model":"b","billable":25}],
+              "bySource":[{"source":"api","billable":100,"calls":3}],
+              "byEndpoint":[{"endpoint":"/x","billable":100,"calls":3},{"endpoint":null,"billable":0}]}}"#,
+        ));
+        let g = build_hub_graph("models", &input).unwrap();
+        for (id, label) in [
+            ("group:by-model", "By model"),
+            ("group:by-caller", "By caller"),
+            ("group:by-endpoint", "By endpoint"),
+        ] {
+            let n = g.nodes.iter().find(|n| n.id == id).unwrap();
+            assert_eq!(n.kind, "group");
+            assert!(n.labelled);
+            assert_eq!(n.label, label);
+        }
+        // Each row sits under its own dimension.
+        assert!(g
+            .edges
+            .iter()
+            .any(|e| e.source == "group:by-model" && e.target == "provider:anthropic"));
+        assert!(g.edges.iter().any(|e| e.source == "provider:anthropic"
+            && e.target == "model:anthropic/a"
+            && e.kind == "provides"));
+        assert!(g
+            .edges
+            .iter()
+            .any(|e| e.source == "group:by-caller" && e.target == "caller:api"));
+        assert!(g
+            .edges
+            .iter()
+            .any(|e| e.source == "group:by-endpoint" && e.target == "endpoint:/x"));
+        assert!(g
+            .edges
+            .iter()
+            .any(|e| e.source == "group:by-endpoint" && e.target == "endpoint:"));
+
+        let a = g
+            .nodes
+            .iter()
+            .find(|n| n.id == "model:anthropic/a")
+            .unwrap();
+        assert_eq!(a.meta["share"], json!(0.75));
+        // 300 / (100 + 300 + 100).
+        assert!((a.meta["cacheHitRatio"].as_f64().unwrap() - 0.6).abs() < 1e-12);
+        let b = g.nodes.iter().find(|n| n.id == "model:openai/b").unwrap();
+        assert_eq!(b.meta["cacheHitRatio"], json!(0.0));
+        let caller = g.nodes.iter().find(|n| n.id == "caller:api").unwrap();
+        assert_eq!(caller.meta["share"], json!(1.0));
+        let note = g.nodes[0].meta["note"].as_str().unwrap();
+        assert!(note.contains("same total"), "{note}");
+    }
+
+    #[test]
+    fn share_and_cache_ratio_are_zero_when_their_total_is_zero() {
+        let input = input_of(snapshot(
+            r#"{"tokens":{"byModel":[{"provider":"p","model":"m","billable":0,"input":0}]}}"#,
+        ));
+        let g = build_hub_graph("models", &input).unwrap();
+        let m = g.nodes.iter().find(|n| n.id == "model:p/m").unwrap();
+        assert_eq!(m.meta["share"], json!(0.0));
+        assert_eq!(m.meta["cacheHitRatio"], json!(0.0));
+    }
+
+    #[test]
+    fn hub_meta_carries_last_indexed_and_last_run_and_ids_are_prefixed() {
+        let input = OsVizInput {
+            snapshot: Some(snapshot(
+                r#"{"knowledge":{"meetings":{"count":3},"sources":{"byKind":[
+                  {"kind":"box","count":2,"lastIndexedAt":"2026-10-20T00:00:00Z"},
+                  {"kind":"email","count":1,"lastIndexedAt":"2026-10-26T09:00:00Z"}]}}}"#,
+            )),
+            routines: vec![
+                Routine {
+                    id: "r1".into(),
+                    last_run_at: Some("2026-10-25T00:00:00Z".into()),
+                    ..Routine::default()
+                },
+                Routine {
+                    id: "r2".into(),
+                    last_run_at: Some("2026-10-26T00:00:00Z".into()),
+                    ..Routine::default()
+                },
+            ],
+            ..OsVizInput::default()
+        };
+        let os = build_os_graph(&input);
+        let k = os.nodes.iter().find(|n| n.id == "hub:knowledge").unwrap();
+        assert_eq!(k.meta["lastIndexedAt"], json!("2026-10-26T09:00:00Z"));
+        let r = os.nodes.iter().find(|n| n.id == "hub:routines").unwrap();
+        assert_eq!(r.meta["lastRunAt"], json!("2026-10-26T00:00:00Z"));
+        // The drill-down centre carries the same meta, and the ids are prefixed.
+        let kd = build_hub_graph("knowledge", &input).unwrap();
+        assert_eq!(
+            kd.nodes[0].meta["lastIndexedAt"],
+            json!("2026-10-26T09:00:00Z")
+        );
+        assert_eq!(kd.nodes[0].meta["members"], json!(kd.nodes.len() - 1));
+        assert!(kd.nodes.iter().any(|n| n.id == "knowledge:meetings"));
+        assert!(!kd.nodes.iter().any(|n| n.id == "meetings"));
+    }
+
+    #[test]
+    fn routines_rank_enabled_first_then_soonest_next_run() {
+        let r = |id: &str, enabled: bool, next: Option<&str>| Routine {
+            id: id.into(),
+            title: id.into(),
+            next_run_at: next.map(str::to_owned),
+            enabled,
+            ..Routine::default()
+        };
+        let input = OsVizInput {
+            routines: vec![
+                r("a", true, Some("2026-10-30T00:00:00Z")),
+                r("c", true, None),
+                r("d", false, Some("2026-10-01T00:00:00Z")),
+                r("b", true, Some("2026-10-28T00:00:00Z")),
+            ],
+            ..OsVizInput::default()
+        };
+        let g = build_hub_graph("routines", &input).unwrap();
+        let order: Vec<&str> = g
+            .nodes
+            .iter()
+            .filter(|n| n.kind == "routine")
+            .map(|n| n.id.as_str())
+            .collect();
+        assert_eq!(order, ["routine:b", "routine:a", "routine:c", "routine:d"]);
+        let enabled = g.nodes.iter().find(|n| n.id == "routines:enabled").unwrap();
+        assert_eq!(enabled.kind, "group");
+        assert_eq!(enabled.meta["count"], json!(3));
+    }
+
+    #[test]
+    fn running_agents_rank_newest_start_first() {
+        let input = input_of(snapshot(
+            r#"{"running":{"chatTurns":[
+              {"chatSessionId":"a","startedAt":"2026-10-01T00:00:00Z"},
+              {"chatSessionId":"b","startedAt":"2026-10-03T00:00:00Z"},
+              {"chatSessionId":"c","startedAt":"2026-10-02T00:00:00Z"},
+              {"chatSessionId":"d"}]}}"#,
+        ));
+        let g = build_hub_graph("agents", &input).unwrap();
+        let order: Vec<&str> = g
+            .nodes
+            .iter()
+            .filter(|n| n.kind == "chatTurn")
+            .map(|n| n.id.as_str())
+            .collect();
+        assert_eq!(
+            order,
+            ["chatTurn:b", "chatTurn:c", "chatTurn:a", "chatTurn:d"]
+        );
+    }
+
+    #[test]
+    fn cluster_index_at_the_top_of_usize_saturates_instead_of_overflowing() {
+        let input = OsVizInput {
+            code: Some(CodeSummary {
+                communities: vec![CommunitySummary {
+                    index: usize::MAX,
+                    size: 1,
+                    dominant_category: "code".into(),
+                    top_labels: vec!["x".into()],
+                }],
+                ..CodeSummary::default()
+            }),
+            ..OsVizInput::default()
+        };
+        let os = build_os_graph(&input);
+        let cluster = os.nodes.iter().find(|n| n.kind == "codeCluster").unwrap();
+        assert!(cluster.label.starts_with("Cluster "), "{}", cluster.label);
+    }
+
+    #[test]
+    fn no_invented_edges_from_the_code_or_routines_hubs() {
+        let input = input_of(snapshot(
+            r#"{"system":{"kits":[{"id":"graph-kit","requires":["code_graph_3d"],"enabled":true}]},
+              "tokens":{"bySource":[{"source":"auto-task","calls":4,"billable":9}],
+                        "byModel":[{"provider":"p","model":"m","billable":9}]}}"#,
+        ));
+        let os = build_os_graph(&input);
+        assert!(!os.edges.iter().any(|e| e.source == "hub:code"));
+        assert!(!os
+            .edges
+            .iter()
+            .any(|e| e.source == "hub:routines" || e.target == "hub:routines"));
     }
 }

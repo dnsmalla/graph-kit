@@ -35,24 +35,11 @@
               "agentRuns": 1,
               "chatTurns": 1,
               "liveSessions": 1,
+              "members": 3,
+              "more": 0,
               "running": 3
             },
             "size": 4.0,
-            "status": "running"
-          },
-          {
-            "drill": null,
-            "group": 2,
-            "id": "chatTurn:chat-1",
-            "kind": "chatTurn",
-            "label": "Chat chat-1",
-            "labelled": true,
-            "meta": {
-              "cancelPath": "/agent/v2/cancel",
-              "cancellable": true,
-              "startedAt": "2026-10-26T13:56:08.693Z"
-            },
-            "size": 1.0,
             "status": "running"
           },
           {
@@ -86,6 +73,21 @@
               "lastWrite": "2026-10-26T13:56:08.695Z",
               "meetingTitle": "Weekly sync",
               "startedAt": "2026-10-26T13:56:08.694Z"
+            },
+            "size": 1.0,
+            "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "chatTurn:chat-1",
+            "kind": "chatTurn",
+            "label": "Chat chat-1",
+            "labelled": true,
+            "meta": {
+              "cancelPath": "/agent/v2/cancel",
+              "cancellable": true,
+              "startedAt": "2026-10-26T13:56:08.693Z"
             },
             "size": 1.0,
             "status": "running"
@@ -283,7 +285,9 @@
               "checksOk": true,
               "enabled": 10,
               "features": 8,
-              "kits": 10
+              "kits": 10,
+              "members": 18,
+              "more": 0
             },
             "size": 4.0,
             "status": "ok"
@@ -603,6 +607,12 @@
           {
             "kind": "member",
             "source": "hub:knowledge",
+            "target": "knowledge:reviews",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
             "target": "outcome:merged",
             "weight": 1.0
           },
@@ -610,12 +620,6 @@
             "kind": "member",
             "source": "hub:knowledge",
             "target": "outcome:open",
-            "weight": 1.0
-          },
-          {
-            "kind": "member",
-            "source": "hub:knowledge",
-            "target": "reviews",
             "weight": 1.0
           },
           {
@@ -635,13 +639,29 @@
             "label": "Knowledge",
             "labelled": true,
             "meta": {
+              "lastIndexedAt": "2026-10-26 13:56:08",
               "meetings": 0,
+              "members": 5,
+              "more": 0,
               "outcomes": 2,
               "outcomesTerminal": 1,
               "pendingReviews": 1,
               "sources": 1
             },
             "size": 4.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "knowledge:reviews",
+            "kind": "activity",
+            "label": "Pending reviews",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 1.0,
             "status": "warn"
           },
           {
@@ -657,19 +677,6 @@
             },
             "size": 3.0,
             "status": null
-          },
-          {
-            "drill": null,
-            "group": 1,
-            "id": "reviews",
-            "kind": "activity",
-            "label": "Pending reviews",
-            "labelled": true,
-            "meta": {
-              "count": 1
-            },
-            "size": 1.0,
-            "status": "warn"
           },
           {
             "drill": null,
@@ -735,6 +742,8 @@
             "meta": {
               "active": 1,
               "facts": 1,
+              "members": 1,
+              "more": 0,
               "repos": 1,
               "superseded": 0
             },
@@ -765,32 +774,50 @@
         "edges": [
           {
             "kind": "member",
-            "source": "hub:models",
+            "source": "group:by-caller",
             "target": "caller:api",
             "weight": 1.0
           },
           {
             "kind": "member",
-            "source": "hub:models",
+            "source": "group:by-caller",
             "target": "caller:cli",
             "weight": 1.0
           },
           {
             "kind": "member",
-            "source": "hub:models",
+            "source": "group:by-endpoint",
             "target": "endpoint:/agent/v2/stream",
             "weight": 1.0
           },
           {
             "kind": "member",
-            "source": "hub:models",
+            "source": "group:by-endpoint",
             "target": "endpoint:/kb/loop/agent-run",
             "weight": 1.0
           },
           {
             "kind": "member",
-            "source": "hub:models",
+            "source": "group:by-model",
             "target": "provider:anthropic",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "group:by-caller",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "group:by-endpoint",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "group:by-model",
             "weight": 1.0
           },
           {
@@ -818,54 +845,52 @@
             "meta": {
               "billable": 2800,
               "calls": 2,
-              "models": 2
+              "members": 6,
+              "models": 2,
+              "more": 0,
+              "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
             },
             "size": 4.0,
             "status": "ok"
           },
           {
             "drill": null,
-            "group": 4,
-            "id": "provider:anthropic",
-            "kind": "provider",
-            "label": "anthropic",
-            "labelled": true,
-            "meta": {
-              "billable": 2800
-            },
-            "size": 3.0,
-            "status": null
-          },
-          {
-            "drill": null,
             "group": 3,
-            "id": "model:anthropic/claude-haiku-5-5",
-            "kind": "model",
-            "label": "claude-haiku-5-5",
+            "id": "group:by-model",
+            "kind": "group",
+            "label": "By model",
             "labelled": true,
             "meta": {
-              "billable": 0,
-              "cacheRead": 0,
-              "cacheWrite": 0,
-              "calls": 1,
-              "input": 0,
-              "model": "claude-haiku-5-5",
-              "output": 0,
-              "provider": "anthropic",
-              "runs": 1
+              "count": 2,
+              "more": 0
             },
             "size": 1.0,
             "status": null
           },
           {
             "drill": null,
-            "group": 3,
+            "group": 5,
+            "id": "provider:anthropic",
+            "kind": "provider",
+            "label": "anthropic",
+            "labelled": true,
+            "meta": {
+              "billable": 2800,
+              "share": 1.0
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 4,
             "id": "model:anthropic/claude-sonnet-5",
             "kind": "model",
             "label": "claude-sonnet-5",
             "labelled": true,
             "meta": {
               "billable": 2800,
+              "cacheHitRatio": 0.8333333333333334,
               "cacheRead": 8000,
               "cacheWrite": 400,
               "calls": 1,
@@ -873,9 +898,47 @@
               "model": "claude-sonnet-5",
               "output": 300,
               "provider": "anthropic",
-              "runs": 1
+              "runs": 1,
+              "share": 1.0
             },
             "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 4,
+            "id": "model:anthropic/claude-haiku-5-5",
+            "kind": "model",
+            "label": "claude-haiku-5-5",
+            "labelled": true,
+            "meta": {
+              "billable": 0,
+              "cacheHitRatio": 0.0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 1,
+              "input": 0,
+              "model": "claude-haiku-5-5",
+              "output": 0,
+              "provider": "anthropic",
+              "runs": 1,
+              "share": 0.0
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "group:by-caller",
+            "kind": "group",
+            "label": "By caller",
+            "labelled": true,
+            "meta": {
+              "count": 2,
+              "more": 0
+            },
+            "size": 1.0,
             "status": null
           },
           {
@@ -887,12 +950,14 @@
             "labelled": true,
             "meta": {
               "billable": 2800,
+              "cacheHitRatio": 0.8333333333333334,
               "cacheRead": 8000,
               "cacheWrite": 400,
               "calls": 1,
               "input": 1200,
               "output": 300,
-              "runs": 1
+              "runs": 1,
+              "share": 1.0
             },
             "size": 3.0,
             "status": null
@@ -906,12 +971,28 @@
             "labelled": true,
             "meta": {
               "billable": 0,
+              "cacheHitRatio": 0.0,
               "cacheRead": 0,
               "cacheWrite": 0,
               "calls": 1,
               "input": 0,
               "output": 0,
-              "runs": 1
+              "runs": 1,
+              "share": 0.0
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "group:by-endpoint",
+            "kind": "group",
+            "label": "By endpoint",
+            "labelled": true,
+            "meta": {
+              "count": 2,
+              "more": 0
             },
             "size": 1.0,
             "status": null
@@ -925,12 +1006,14 @@
             "labelled": true,
             "meta": {
               "billable": 2800,
+              "cacheHitRatio": 0.8333333333333334,
               "cacheRead": 8000,
               "cacheWrite": 400,
               "calls": 1,
               "input": 1200,
               "output": 300,
-              "runs": 1
+              "runs": 1,
+              "share": 1.0
             },
             "size": 3.0,
             "status": null
@@ -944,12 +1027,14 @@
             "labelled": true,
             "meta": {
               "billable": 0,
+              "cacheHitRatio": 0.0,
               "cacheRead": 0,
               "cacheWrite": 0,
               "calls": 1,
               "input": 0,
               "output": 0,
-              "runs": 1
+              "runs": 1,
+              "share": 0.0
             },
             "size": 1.0,
             "status": null
@@ -1013,6 +1098,9 @@
             "labelled": true,
             "meta": {
               "enabled": 3,
+              "lastRunAt": "2026-10-27T02:00:00Z",
+              "members": 5,
+              "more": 0,
               "routines": 5
             },
             "size": 4.0,
@@ -1022,7 +1110,7 @@
             "drill": null,
             "group": 1,
             "id": "routines:enabled",
-            "kind": "routine",
+            "kind": "group",
             "label": "Enabled",
             "labelled": true,
             "meta": {
@@ -1035,7 +1123,7 @@
             "drill": null,
             "group": 1,
             "id": "routines:disabled",
-            "kind": "routine",
+            "kind": "group",
             "label": "Disabled",
             "labelled": true,
             "meta": {
@@ -1046,55 +1134,7 @@
           },
           {
             "drill": null,
-            "group": 1,
-            "id": "routine:routine-digest",
-            "kind": "routine",
-            "label": "Weekly digest",
-            "labelled": true,
-            "meta": {
-              "enabled": false,
-              "lastRunAt": null,
-              "nextRunAt": null,
-              "schedule": null
-            },
-            "size": 1.0,
-            "status": "off"
-          },
-          {
-            "drill": null,
-            "group": 1,
-            "id": "routine:routine-docs",
-            "kind": "routine",
-            "label": "Doc freshness check",
-            "labelled": true,
-            "meta": {
-              "enabled": true,
-              "lastRunAt": "2026-10-26T23:30:00Z",
-              "nextRunAt": "2026-11-02T23:30:00Z",
-              "schedule": "Mondays at 08:30"
-            },
-            "size": 1.0,
-            "status": "ok"
-          },
-          {
-            "drill": null,
-            "group": 1,
-            "id": "routine:routine-graph",
-            "kind": "routine",
-            "label": "Rebuild code graph",
-            "labelled": true,
-            "meta": {
-              "enabled": true,
-              "lastRunAt": "2026-10-27T02:00:00Z",
-              "nextRunAt": "2026-10-28T02:00:00Z",
-              "schedule": "Nightly"
-            },
-            "size": 1.0,
-            "status": "ok"
-          },
-          {
-            "drill": null,
-            "group": 1,
+            "group": 2,
             "id": "routine:routine-regression",
             "kind": "routine",
             "label": "Regression sweep",
@@ -1110,7 +1150,55 @@
           },
           {
             "drill": null,
-            "group": 1,
+            "group": 2,
+            "id": "routine:routine-graph",
+            "kind": "routine",
+            "label": "Rebuild code graph",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "lastRunAt": "2026-10-27T02:00:00Z",
+              "nextRunAt": "2026-10-28T02:00:00Z",
+              "schedule": "Nightly"
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "routine:routine-docs",
+            "kind": "routine",
+            "label": "Doc freshness check",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "lastRunAt": "2026-10-26T23:30:00Z",
+              "nextRunAt": "2026-11-02T23:30:00Z",
+              "schedule": "Mondays at 08:30"
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "routine:routine-digest",
+            "kind": "routine",
+            "label": "Weekly digest",
+            "labelled": true,
+            "meta": {
+              "enabled": false,
+              "lastRunAt": null,
+              "nextRunAt": null,
+              "schedule": null
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 2,
             "id": "routine:routine-triage",
             "kind": "routine",
             "label": "Issue triage",
@@ -1206,25 +1294,13 @@
             "label": "Skills",
             "labelled": true,
             "meta": {
+              "members": 8,
+              "more": 0,
               "skills": 8,
               "sources": 3
             },
             "size": 4.0,
             "status": "ok"
-          },
-          {
-            "drill": null,
-            "group": 2,
-            "id": "skillSource:",
-            "kind": "skillSource",
-            "label": "unsourced",
-            "labelled": true,
-            "meta": {
-              "count": 1,
-              "source": ""
-            },
-            "size": 1.8613531161467862,
-            "status": null
           },
           {
             "drill": null,
@@ -1235,6 +1311,7 @@
             "labelled": true,
             "meta": {
               "count": 4,
+              "more": 0,
               "source": "kit"
             },
             "size": 3.0,
@@ -1249,9 +1326,25 @@
             "labelled": true,
             "meta": {
               "count": 3,
+              "more": 0,
               "source": "project"
             },
             "size": 2.7227062322935724,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "skillSource:",
+            "kind": "skillSource",
+            "label": "unsourced",
+            "labelled": true,
+            "meta": {
+              "count": 1,
+              "more": 0,
+              "source": ""
+            },
+            "size": 1.8613531161467862,
             "status": null
           },
           {
@@ -1423,12 +1516,6 @@
           "weight": 1.0
         },
         {
-          "kind": "relates",
-          "source": "hub:code",
-          "target": "feature:code_graph_3d",
-          "weight": 1.0
-        },
-        {
           "kind": "member",
           "source": "hub:kits",
           "target": "feature:agent_chat",
@@ -1537,7 +1624,8 @@
           "weight": 1.0
         },
         {
-          "kind": "relates",
+          "kind": "indexes",
+          "label": "indexed code graphs",
           "source": "hub:knowledge",
           "target": "hub:code",
           "weight": 1.0
@@ -1545,7 +1633,7 @@
         {
           "kind": "member",
           "source": "hub:knowledge",
-          "target": "reviews",
+          "target": "knowledge:reviews",
           "weight": 1.0
         },
         {
@@ -1776,6 +1864,7 @@
           "label": "Knowledge",
           "labelled": true,
           "meta": {
+            "lastIndexedAt": "2026-10-26 13:56:08",
             "meetings": 0,
             "members": 2,
             "more": 0,
@@ -1790,7 +1879,7 @@
         {
           "drill": null,
           "group": 1,
-          "id": "reviews",
+          "id": "knowledge:reviews",
           "kind": "activity",
           "label": "Pending reviews",
           "labelled": true,
@@ -1919,7 +2008,8 @@
             "calls": 2,
             "members": 2,
             "models": 2,
-            "more": 0
+            "more": 0,
+            "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
           },
           "size": 4.0,
           "status": "ok"
@@ -1933,6 +2023,7 @@
           "labelled": true,
           "meta": {
             "billable": 2800,
+            "cacheHitRatio": 0.8333333333333334,
             "cacheRead": 8000,
             "cacheWrite": 400,
             "calls": 1,
@@ -1940,7 +2031,8 @@
             "model": "claude-sonnet-5",
             "output": 300,
             "provider": "anthropic",
-            "runs": 1
+            "runs": 1,
+            "share": 1.0
           },
           "size": 3.0,
           "status": null
@@ -1954,6 +2046,7 @@
           "labelled": true,
           "meta": {
             "billable": 0,
+            "cacheHitRatio": 0.0,
             "cacheRead": 0,
             "cacheWrite": 0,
             "calls": 1,
@@ -1961,7 +2054,8 @@
             "model": "claude-haiku-5-5",
             "output": 0,
             "provider": "anthropic",
-            "runs": 1
+            "runs": 1,
+            "share": 0.0
           },
           "size": 1.0,
           "status": null
@@ -2004,21 +2098,6 @@
         {
           "drill": null,
           "group": 5,
-          "id": "chatTurn:chat-1",
-          "kind": "chatTurn",
-          "label": "Chat chat-1",
-          "labelled": true,
-          "meta": {
-            "cancelPath": "/agent/v2/cancel",
-            "cancellable": true,
-            "startedAt": "2026-10-26T13:56:08.693Z"
-          },
-          "size": 1.0,
-          "status": "running"
-        },
-        {
-          "drill": null,
-          "group": 5,
           "id": "liveSession:live-1",
           "kind": "liveSession",
           "label": "Weekly sync",
@@ -2035,6 +2114,21 @@
           "status": "running"
         },
         {
+          "drill": null,
+          "group": 5,
+          "id": "chatTurn:chat-1",
+          "kind": "chatTurn",
+          "label": "Chat chat-1",
+          "labelled": true,
+          "meta": {
+            "cancelPath": "/agent/v2/cancel",
+            "cancellable": true,
+            "startedAt": "2026-10-26T13:56:08.693Z"
+          },
+          "size": 1.0,
+          "status": "running"
+        },
+        {
           "drill": "routines",
           "group": 6,
           "id": "hub:routines",
@@ -2043,6 +2137,7 @@
           "labelled": true,
           "meta": {
             "enabled": 3,
+            "lastRunAt": "2026-10-27T02:00:00Z",
             "members": 5,
             "more": 0,
             "routines": 5
@@ -2053,31 +2148,15 @@
         {
           "drill": null,
           "group": 6,
-          "id": "routine:routine-digest",
+          "id": "routine:routine-regression",
           "kind": "routine",
-          "label": "Weekly digest",
-          "labelled": true,
-          "meta": {
-            "enabled": false,
-            "lastRunAt": null,
-            "nextRunAt": null,
-            "schedule": null
-          },
-          "size": 1.0,
-          "status": "off"
-        },
-        {
-          "drill": null,
-          "group": 6,
-          "id": "routine:routine-docs",
-          "kind": "routine",
-          "label": "Doc freshness check",
+          "label": "Regression sweep",
           "labelled": true,
           "meta": {
             "enabled": true,
-            "lastRunAt": "2026-10-26T23:30:00Z",
-            "nextRunAt": "2026-11-02T23:30:00Z",
-            "schedule": "Mondays at 08:30"
+            "lastRunAt": "2026-10-27T00:00:00Z",
+            "nextRunAt": "2026-10-28T00:00:00Z",
+            "schedule": "Every weekday at 09:00"
           },
           "size": 1.0,
           "status": "ok"
@@ -2101,18 +2180,34 @@
         {
           "drill": null,
           "group": 6,
-          "id": "routine:routine-regression",
+          "id": "routine:routine-docs",
           "kind": "routine",
-          "label": "Regression sweep",
+          "label": "Doc freshness check",
           "labelled": true,
           "meta": {
             "enabled": true,
-            "lastRunAt": "2026-10-27T00:00:00Z",
-            "nextRunAt": "2026-10-28T00:00:00Z",
-            "schedule": "Every weekday at 09:00"
+            "lastRunAt": "2026-10-26T23:30:00Z",
+            "nextRunAt": "2026-11-02T23:30:00Z",
+            "schedule": "Mondays at 08:30"
           },
           "size": 1.0,
           "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:routine-digest",
+          "kind": "routine",
+          "label": "Weekly digest",
+          "labelled": true,
+          "meta": {
+            "enabled": false,
+            "lastRunAt": null,
+            "nextRunAt": null,
+            "schedule": null
+          },
+          "size": 1.0,
+          "status": "off"
         },
         {
           "drill": null,
@@ -2146,110 +2241,6 @@
             "more": 0
           },
           "size": 4.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:agent_chat",
-          "kind": "feature",
-          "label": "agent_chat",
-          "labelled": true,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:auto_tasks",
-          "kind": "feature",
-          "label": "auto_tasks",
-          "labelled": true,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:code_graph_3d",
-          "kind": "feature",
-          "label": "code_graph_3d",
-          "labelled": true,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:doc_gen",
-          "kind": "feature",
-          "label": "doc_gen",
-          "labelled": true,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:file_explorer",
-          "kind": "feature",
-          "label": "file_explorer",
-          "labelled": true,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:gantt_issues",
-          "kind": "feature",
-          "label": "gantt_issues",
-          "labelled": true,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:mobile_sync",
-          "kind": "feature",
-          "label": "mobile_sync",
-          "labelled": false,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
-          "status": "ok"
-        },
-        {
-          "drill": null,
-          "group": 7,
-          "id": "feature:terminal",
-          "kind": "feature",
-          "label": "terminal",
-          "labelled": false,
-          "meta": {
-            "enabled": true
-          },
-          "size": 1.0,
           "status": "ok"
         },
         {
@@ -2403,6 +2394,110 @@
               "file_explorer",
               "terminal"
             ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:agent_chat",
+          "kind": "feature",
+          "label": "agent_chat",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:auto_tasks",
+          "kind": "feature",
+          "label": "auto_tasks",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:code_graph_3d",
+          "kind": "feature",
+          "label": "code_graph_3d",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:doc_gen",
+          "kind": "feature",
+          "label": "doc_gen",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:file_explorer",
+          "kind": "feature",
+          "label": "file_explorer",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:gantt_issues",
+          "kind": "feature",
+          "label": "gantt_issues",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:mobile_sync",
+          "kind": "feature",
+          "label": "mobile_sync",
+          "labelled": false,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:terminal",
+          "kind": "feature",
+          "label": "terminal",
+          "labelled": false,
+          "meta": {
+            "enabled": true
           },
           "size": 1.0,
           "status": "ok"

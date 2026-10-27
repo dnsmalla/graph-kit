@@ -53,7 +53,7 @@ pub struct OsActivityItem {
 // Every field has a default and every bad value falls back to it, so a server that adds or
 // reshapes a field never fails the whole view. Only the parts the OS graph reads are declared.
 
-use crate::models::{lenient_opt_string, lenient_string, lenient_vec};
+use crate::models::{lenient_opt_string, lenient_string, lenient_value, lenient_vec};
 use serde::de::DeserializeOwned;
 use serde::Deserializer;
 use serde_json::Value;
@@ -153,8 +153,10 @@ pub struct OsSystem {
     pub kits: Vec<OsKit>,
     #[serde(default, deserialize_with = "lenient_string")]
     pub status: String,
-    #[serde(default, deserialize_with = "lenient_default")]
-    pub checks: OsChecks,
+    /// `None` when the snapshot carries no checks (or they do not fit): the checks are then
+    /// unknown, not failing.
+    #[serde(default, deserialize_with = "lenient_value")]
+    pub checks: Option<OsChecks>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
