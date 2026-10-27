@@ -8,7 +8,8 @@ import type { SystemCoreNode } from '../../../typescript/src/system/types';
 import { fmtBytes, fmtInt, fmtTime, humanKey, metaRows, words, type MetaRow } from '../format';
 import { HUB_TITLES, isHubKey } from '../viz';
 import { coreById, largestInCommunity, linkIndex, linksOf, type Neighbour, type NeighbourList } from '../codeNodes';
-import { normalizePath } from '../fileTree';
+import { displayPath, isRepoPath, normalizePath } from '../fileTree';
+import { copyToClipboard } from '../clipboard';
 
 /** The activity row a ring item stands for (ring ids are `activity:<id>`), or null. */
 export function findActivity(selected: OsSelection, activity: OsActivityItem[]): OsActivityItem | null {
@@ -155,15 +156,24 @@ function VizActions({
   );
 }
 
-/** Copies text to the clipboard. False when the host has no clipboard or refuses. */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (typeof navigator === 'undefined' || !navigator.clipboard) return false;
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
+/** Lines the preview shows at first, and per "Show more" press. */
+export const PREVIEW_STEP_LINES = 2000;
+/** Characters of one line the preview shows; a longer line is cut with an ellipsis. */
+export const PREVIEW_LINE_CHARS = 2000;
+
+/** A line as the preview shows it: cut at PREVIEW_LINE_CHARS with an ellipsis (an empty line shows a space). */
+export function previewLine(line: string): string {
+  if (line.length > PREVIEW_LINE_CHARS) return `${line.slice(0, PREVIEW_LINE_CHARS)}…`;
+  return line === '' ? ' ' : line;
+}
+
+/**
+ * Whether the preview of `path` should be requested now: the drawer shows the preview and the
+ * preview state is not already for that path. An error is NOT a reason to ask again: the user asks
+ * with Retry. Pure, so the effect that calls it cannot loop on its own state.
+ */
+export function shouldRequestPreview(open: boolean, path: string, current: FilePreview | null): boolean {
+  return open && path !== '' && (current === null || current.path !== path);
 }
 
 /** A file's text as numbered lines. A trailing newline does not add an empty last line. */
@@ -173,8 +183,9 @@ export function fileLines(text: string): string[] {
   return lines;
 }
 
-/** The preview body: loading, missing, failed, binary, or the numbered text of the file. */
-export function CodePreview({ preview }: { preview: FilePreview | null }) {
+/** The preview body: loading, missing, failed (with Retry), binary, or the numbered text of the file (capped). */
+export function CodePreview({ preview, onRetry }: { preview: FilePreview | null; onRetry?: () => void }) {
+  const [shown, setShown] = useState(PREVIEW_STEP_LINES);
   if (!preview || preview.status === 'idle' || preview.status === 'loading') {
     return (
       <p className="meta" role="status">
@@ -191,9 +202,15 @@ export function CodePreview({ preview }: { preview: FilePreview | null }) {
   }
   if (preview.status === 'error') {
     return (
-      <p className="banner banner-error" role="alert">
-        {preview.message ?? 'Could not load the file.'}
-      </p>
+      <div className="banner banner-error os-code-error" role="alert">
+        <p>Couldn&apos;t load the file.</p>
+        {preview.message ? <p className="meta">{preview.message}</p> : null}
+        {onRetry ? (
+          <button type="button" className="btn" onClick={onRetry}>
+            Retry
+          </button>
+        ) : null}
+      </div>
     );
   }
   const content: FileContent | undefined = preview.content;
@@ -206,6 +223,8 @@ export function CodePreview({ preview }: { preview: FilePreview | null }) {
     );
   }
   const lines = fileLines(content.text ?? '');
+  const visible = lines.slice(0, shown);
+  const remaining = lines.length - visible.length;
   return (
     <figure className="os-code" aria-label="File preview">
       <figcaption className="os-code-head meta">
@@ -215,16 +234,25 @@ export function CodePreview({ preview }: { preview: FilePreview | null }) {
       {content.truncated ? <p className="meta os-code-note">Only the start of this file is shown.</p> : null}
       <div className="os-code-scroll" role="region" aria-label="File text" tabIndex={0}>
         <ol className="os-code-lines">
-          {lines.map((line, i) => (
+          {visible.map((line, i) => (
             <li key={i}>
               <span className="os-code-no" aria-hidden="true">
                 {i + 1}
               </span>
-              <span className="os-code-text">{line === '' ? ' ' : line}</span>
+              <span className="os-code-text">{previewLine(line)}</span>
             </li>
           ))}
         </ol>
       </div>
+      {remaining > 0 ? (
+        <button
+          type="button"
+          className="btn os-code-more"
+          onClick={() => setShown((count) => count + PREVIEW_STEP_LINES)}
+        >
+          Show more ({fmtInt(remaining)} lines)
+        </button>
+      ) : null}
     </figure>
   );
 }
@@ -273,6 +301,7 @@ function CodeNodeCard({
   onClose,
   onPreview,
   onOpenFile,
+  onCopy,
   onFocusCore,
   onCollapse,
   headingRef,
@@ -285,24 +314,29 @@ function CodeNodeCard({
   onClose: () => void;
   onPreview?: (path: string) => void;
   onOpenFile?: (path: string) => void;
+  onCopy: (text: string) => Promise<boolean>;
   onFocusCore?: (item: { id: string; label: string; detail: string }) => void;
   onCollapse: () => void;
   headingRef: RefObject<HTMLHeadingElement | null>;
 }) {
-  const path = normalizePath(node.path);
+  // The path as the tree keys it (the identity). Only a repo path is sent to the host.
+  const key = normalizePath(node.path);
+  const repo = isRepoPath(key) ? key : '';
+  const outside = key !== '' && repo === '';
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const previewRef = useRef(preview);
   previewRef.current = preview;
-  // The preview is loaded when it is opened, and again for another file while it is open.
+  const onPreviewRef = useRef(onPreview);
+  onPreviewRef.current = onPreview;
   useEffect(() => {
-    setCopied(false);
-  }, [path]);
+    setCopyState('idle');
+  }, [key]);
+  // The preview is requested when it is opened, and for another file while it is open. Only the
+  // deps below re-run this: a parent's new callback identity or an error state never re-requests.
   useEffect(() => {
-    if (!previewOpen || path === '') return;
-    const current = previewRef.current;
-    if (!current || current.path !== path || current.status === 'error') onPreview?.(path);
-  }, [previewOpen, path, onPreview]);
+    if (shouldRequestPreview(previewOpen, repo, previewRef.current)) onPreviewRef.current?.(repo);
+  }, [previewOpen, repo]);
 
   const links = project ? linksOf(linkIndex(project.edges), node.id, core) : null;
   const community = fmtInt(node.community + 1);
@@ -340,31 +374,34 @@ function CodeNodeCard({
           <dd>{fmtInt(node.degree)}</dd>
         </div>
       </dl>
-      {path ? (
+      {key ? (
         <div className="os-path">
-          <span className="meta">Path</span>
+          <span className="meta">{outside ? 'Path (outside the repo)' : 'Path'}</span>
           <div className="os-path-row">
-            <code className="os-path-text" title={path}>
-              {path}
+            <code className="os-path-text" title={key}>
+              {displayPath(key)}
             </code>
             <button
               type="button"
               className="btn os-path-copy"
-              aria-label={`Copy path ${path}`}
+              aria-label={`Copy path ${key}`}
               onClick={() => {
-                void copyText(path).then((ok) => setCopied(ok));
+                void onCopy(key).then((ok) => setCopyState(ok ? 'copied' : 'failed'));
               }}
             >
-              {copied ? 'Copied' : 'Copy'}
+              Copy
             </button>
+            <span className="meta os-copy-state" role="status">
+              {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : ''}
+            </span>
           </div>
         </div>
       ) : (
         <p className="meta">This node is not in a file.</p>
       )}
-      {path ? (
+      {repo ? (
         <div className="os-actions">
-          <button type="button" className="btn btn-primary" onClick={() => onOpenFile?.(path)}>
+          <button type="button" className="btn btn-primary" onClick={() => onOpenFile?.(repo)}>
             Open in Explorer
           </button>
           <button type="button" className="btn" aria-expanded={previewOpen} onClick={() => setPreviewOpen((open) => !open)}>
@@ -372,7 +409,14 @@ function CodeNodeCard({
           </button>
         </div>
       ) : null}
-      {path && previewOpen ? <CodePreview preview={preview && preview.path === path ? preview : null} /> : null}
+      {outside ? <p className="meta">Outside the repo, so the app cannot open or preview it.</p> : null}
+      {repo && previewOpen ? (
+        <CodePreview
+          key={repo}
+          preview={preview && preview.path === repo ? preview : null}
+          onRetry={() => onPreview?.(repo)}
+        />
+      ) : null}
       {links ? (
         <>
           <LinkList
@@ -385,6 +429,13 @@ function CodeNodeCard({
             list={links.usedBy}
             onPick={(n) => onFocusCore?.({ id: n.id, label: n.label, detail: n.category })}
           />
+          {links.contains.total > 0 ? (
+            <LinkList
+              title="Contains"
+              list={links.contains}
+              onPick={(n) => onFocusCore?.({ id: n.id, label: n.label, detail: n.category })}
+            />
+          ) : null}
         </>
       ) : null}
     </section>
@@ -414,6 +465,7 @@ export function Selection({
   onStop,
   onPreview,
   onOpenFile,
+  onCopy,
   onFocusCore,
   onExploreCluster,
 }: {
@@ -437,6 +489,8 @@ export function Selection({
   onStop?: (cancel: OsCancel, key: string) => void;
   onPreview?: (path: string) => void;
   onOpenFile?: (path: string) => void;
+  /** Copies text (the host's clipboard first). Defaults to the page's own routes. Resolves true when copied. */
+  onCopy?: (text: string) => Promise<boolean>;
   /** A linked node was picked: select it and fly to it. */
   onFocusCore?: (item: { id: string; label: string; detail: string }) => void;
   /** "Explore in code" on a code cluster: the cluster's largest node, or null when there is none. */
@@ -477,6 +531,7 @@ export function Selection({
         onClose={onClose}
         onPreview={onPreview}
         onOpenFile={onOpenFile}
+        onCopy={onCopy ?? ((text) => copyToClipboard(text))}
         onFocusCore={onFocusCore}
         onCollapse={() => setCollapsed(true)}
         headingRef={headingRef}

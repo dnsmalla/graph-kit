@@ -407,6 +407,18 @@ h1 {
   white-space: pre;
 }
 
+.os-code-more {
+  align-self: flex-start;
+}
+
+.os-code-error p {
+  margin: 0 0 4px;
+}
+
+.os-copy-state {
+  margin-left: 4px;
+}
+
 .os-codeview {
   align-self: flex-start;
 }
@@ -490,9 +502,14 @@ h1 {
   background: color-mix(in srgb, var(--tok-color-accent) 12%, transparent);
 }
 
-.os-tree-row:focus-visible {
+.os-tree-row:focus-visible,
+.os-tree-item:focus-visible > .os-tree-row {
   outline: 2px solid var(--tok-color-accent);
   outline-offset: -2px;
+}
+
+.os-tree-item:focus {
+  outline: none;
 }
 
 .os-tree-selected {

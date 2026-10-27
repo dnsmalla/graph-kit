@@ -101,8 +101,8 @@ export function renderCodeSelection(
 }
 
 /** The preview body alone, for each preview state. */
-export function renderPreview(preview: FilePreview | null): string {
-  return plain(renderToString(<CodePreview preview={preview} />));
+export function renderPreview(preview: FilePreview | null, onRetry?: () => void): string {
+  return plain(renderToString(<CodePreview preview={preview} onRetry={onRetry} />));
 }
 
 /** The file structure tab alone, over the given core nodes. */

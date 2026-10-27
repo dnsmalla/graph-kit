@@ -6,36 +6,53 @@ import type { SystemCoreNode } from '../../typescript/src/system/types';
 /** Most neighbours a list shows before its "+N more". */
 export const LINK_LIST_CAP = 12;
 
-/** A project edge as the links read it. */
+/**
+ * The edge kinds that are dependencies: "Depends on" and "Used by" list only these. `references` is
+ * the reference kind of EDGE_KINDS (there is no `uses` kind); `dependsOn` is the explicit one.
+ */
+export const DEPENDENCY_KINDS: readonly string[] = ['imports', 'calls', 'inherits', 'implements', 'references', 'dependsOn'];
+/** The edge kinds that say a node holds another: listed separately as "Contains". */
+export const CONTAINMENT_KINDS: readonly string[] = ['contains', 'defines'];
+
+/** A project edge as the links read it. `kind` is the edge's kind; an edge of another kind is not a link. */
 export interface LinkEdge {
   fromId: string;
   toId: string;
+  kind?: string;
 }
 
-/** Each node's outgoing and incoming neighbours (ids, unique, in the order the edges give). */
+/** Each node's outgoing and incoming dependencies, and its outgoing containment (ids, unique, in the order the edges give). */
 export interface LinkIndex {
   out: Map<string, string[]>;
   inc: Map<string, string[]>;
+  contains: Map<string, string[]>;
 }
 
 const linkMemo = new WeakMap<readonly LinkEdge[], LinkIndex>();
 
-/** The directed links of a project's edges, memoised on the edges array. */
+/** The directed links of a project's edges, memoised on the edges array. Only dependency and containment kinds count. */
 export function linkIndex(edges: readonly LinkEdge[]): LinkIndex {
   const hit = linkMemo.get(edges);
   if (hit) return hit;
   const out = new Map<string, string[]>();
   const inc = new Map<string, string[]>();
+  const contains = new Map<string, string[]>();
   const seen = new Set<string>();
   for (const edge of edges) {
-    if (edge.fromId === edge.toId) continue;
-    const key = `${edge.fromId}\u0001${edge.toId}`;
+    if (edge.fromId === edge.toId || typeof edge.kind !== 'string') continue;
+    const isDependency = DEPENDENCY_KINDS.includes(edge.kind);
+    if (!isDependency && !CONTAINMENT_KINDS.includes(edge.kind)) continue;
+    const key = `${isDependency ? 'd' : 'c'}\u0001${edge.fromId}\u0001${edge.toId}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    push(out, edge.fromId, edge.toId);
-    push(inc, edge.toId, edge.fromId);
+    if (isDependency) {
+      push(out, edge.fromId, edge.toId);
+      push(inc, edge.toId, edge.fromId);
+    } else {
+      push(contains, edge.fromId, edge.toId);
+    }
   }
-  const index = { out, inc };
+  const index = { out, inc, contains };
   linkMemo.set(edges, index);
   return index;
 }
@@ -78,15 +95,16 @@ function labelOf(node: SystemCoreNode): string {
 }
 
 /**
- * The "Depends on" (outgoing) and "Used by" (incoming) lists of a node. Only neighbours that are
- * drawn in the core are listed (a trimmed-away node cannot be selected), sorted by label then id.
+ * The "Depends on" (outgoing dependencies), "Used by" (incoming) and "Contains" (outgoing containment)
+ * lists of a node. Only neighbours that are drawn in the core are listed (a trimmed-away node cannot
+ * be selected), sorted by label then id.
  */
 export function linksOf(
   index: LinkIndex,
   nodeId: string,
   core: readonly SystemCoreNode[],
   cap: number = LINK_LIST_CAP,
-): { dependsOn: NeighbourList; usedBy: NeighbourList } {
+): { dependsOn: NeighbourList; usedBy: NeighbourList; contains: NeighbourList } {
   const drawn = coreById(core);
   const list = (ids: string[] | undefined): NeighbourList => {
     const rows: Neighbour[] = [];
@@ -97,7 +115,11 @@ export function linksOf(
     rows.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     return { items: rows.slice(0, cap), more: Math.max(0, rows.length - cap), total: rows.length };
   };
-  return { dependsOn: list(index.out.get(nodeId)), usedBy: list(index.inc.get(nodeId)) };
+  return {
+    dependsOn: list(index.out.get(nodeId)),
+    usedBy: list(index.inc.get(nodeId)),
+    contains: list(index.contains.get(nodeId)),
+  };
 }
 
 /** The core node a cluster's click explores: the highest-degree node of community `community`, or null. */

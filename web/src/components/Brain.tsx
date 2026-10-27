@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OsSelection, ViewState, OsController } from '../controller';
 import type { CoreView, RingView, VizView } from '../systemGraph';
 import { SYSTEM_VIEW_LIMITS } from '../systemGraph';
@@ -212,6 +212,12 @@ export function Brain({
     );
   };
 
+  // The preview and file callbacks are stable: a new identity on every render would re-run the
+  // Selection's preview request.
+  const loadPreview = useCallback((path: string) => void controller.loadFilePreview(path), [controller]);
+  const openFileInApp = useCallback((path: string) => controller.openFile(path), [controller]);
+  const copyTextFor = useCallback((text: string) => controller.copyText(text), [controller]);
+
   return (
     <section className="os-centre" aria-labelledby="sec-brain">
       <div className="os-centre-head">
@@ -369,8 +375,9 @@ export function Brain({
             onDrill={drill}
             onOpen={(target) => controller.open(target)}
             onStop={(cancel, key) => void controller.stopItem(cancel, key)}
-            onPreview={(path) => void controller.loadFilePreview(path)}
-            onOpenFile={(path) => controller.openFile(path)}
+            onPreview={loadPreview}
+            onOpenFile={openFileInApp}
+            onCopy={copyTextFor}
             onFocusCore={(item) => controller.openCodeNode(item)}
             onExploreCluster={(top) => {
               triggerRef.current = null;

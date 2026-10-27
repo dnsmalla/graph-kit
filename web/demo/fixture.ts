@@ -350,6 +350,9 @@ export function buildDemoProjectGraph(): CGData {
     }
   }
   nodes.push({ id: DEMO_BINARY_PATH, title: 'overview.png', kind: 'file' as CGNodeKind, metadata: {} });
+  // Preview fixtures: a file whose load fails (the host rejects it) and a 6,000-line file with one very long line.
+  nodes.push({ id: DEMO_BROKEN_PATH, title: 'broken.ts', kind: 'file' as CGNodeKind, metadata: {} });
+  nodes.push({ id: DEMO_LONG_PATH, title: 'huge.ts', kind: 'file' as CGNodeKind, metadata: {} });
   return { nodes, edges, layers: [], tour: [] };
 }
 
@@ -364,7 +367,20 @@ export function demoFilePaths(graph: CGData): Set<string> {
 }
 
 /** A demo file's text, generated from its path (deterministic; nothing here is a real file). */
+/** A demo file whose preview load is rejected by the demo host (the error state of the code preview). */
+export const DEMO_BROKEN_PATH = 'src/broken.ts';
+/** A demo file of 6,000 lines (one of them very long): the capped preview and "Show more". */
+export const DEMO_LONG_PATH = 'src/huge.ts';
+export const DEMO_LONG_LINES = 6000;
+
 export function demoFileText(path: string): { text: string; language: string } {
+  if (path === DEMO_LONG_PATH) {
+    const lines = ['// src/huge.ts', '// Generated for the demo. Not a real file.'];
+    for (let i = 3; i <= DEMO_LONG_LINES; i++) {
+      lines.push(i === 1500 ? `const blob = "${'x'.repeat(2500)}";` : `export const line${i} = ${i};`);
+    }
+    return { text: lines.join('\n') + '\n', language: 'TypeScript' };
+  }
   const rand = demoRng(path.split('').reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7));
   const name = path.slice(path.lastIndexOf('/') + 1);
   if (/\.md$/i.test(path)) {

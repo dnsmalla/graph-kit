@@ -2,6 +2,8 @@
 // runs in the app's web view, in the demo and in tests. Everything that talks to
 // a server or to native code goes through the OsHost the page was mounted with.
 import type { CGData } from '../../typescript/src/models';
+import { copyToClipboard } from './clipboard';
+import { isRepoPath } from './fileTree';
 import { OsAuthError, type OsFileContent, type OsHost, type OsOpenTarget, type OsRange } from './host';
 import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
 import { HUB_TITLES, isHubKey, levelKey, type CameraPose, type OsView, type ViewLevel } from './viz';
@@ -12,6 +14,7 @@ const DEFAULT_OPEN_NOTICE = 'Open this in the app.';
 const DEFAULT_SIGNED_OUT_NOTICE = 'Your session has ended. Sign in again.';
 const NO_OPEN_FILE_NOTICE = 'Opening files in Explorer needs the app.';
 const NO_PREVIEW_MESSAGE = 'Code preview needs the app.';
+const OUTSIDE_REPO_NOTICE = 'This file is outside the project, so the app cannot open or preview it.';
 
 /** The most text of a file the page keeps for the preview (characters; the host may cut it sooner). */
 export const FILE_PREVIEW_MAX_CHARS = 256 * 1024;
@@ -545,6 +548,10 @@ export class OsController {
    */
   openFile(path: string, line?: number): void {
     if (this.disposed || !isId(path)) return;
+    if (!isRepoPath(path)) {
+      this.set({ notice: OUTSIDE_REPO_NOTICE });
+      return;
+    }
     const host = this.deps.host;
     const open = host.openFile;
     if (typeof open !== 'function') {
@@ -561,6 +568,11 @@ export class OsController {
     if (!opened) this.set({ notice: `Could not open ${path} in the app.` });
   }
 
+  /** Copies text through the host (when it can), else the page's clipboard routes. False when nothing copied it. */
+  copyText(text: string): Promise<boolean> {
+    return copyToClipboard(text, this.deps.host);
+  }
+
   /**
    * Loads the code preview of one file (host.loadFile). Only the latest request may set the
    * preview: an older response that arrives late is dropped, as is any response after dispose().
@@ -568,6 +580,11 @@ export class OsController {
    */
   async loadFilePreview(path: string): Promise<void> {
     if (this.disposed || !isId(path)) return;
+    if (!isRepoPath(path)) {
+      this.fileSeq++;
+      this.set({ filePreview: { path, status: 'error', message: OUTSIDE_REPO_NOTICE } });
+      return;
+    }
     const seq = ++this.fileSeq;
     const host = this.deps.host;
     const load = host.loadFile;

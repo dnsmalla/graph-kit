@@ -54,6 +54,11 @@ export interface OsHost {
    */
   openFile?(path: string, line?: number): boolean;
   /**
+   * Copies text with the host's own clipboard. Optional; tried first when present. true = copied;
+   * false (or a throw) = the page tries its own routes (the async clipboard API, then a textarea).
+   */
+  copyText?(text: string): boolean;
+  /**
    * The content of a project file for the code preview. Optional. Resolve null when the file is not
    * there (the page shows it as missing). A rejection marks the preview as failed; OsAuthError signs out.
    */

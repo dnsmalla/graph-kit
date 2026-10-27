@@ -1,7 +1,7 @@
 import type { CGData } from '../../typescript/src/models';
 import type { OsHost } from '../src/host';
 import type { OsSnapshot } from '../src/types';
-import { buildDemoProjectGraph, demoFilePaths, demoFileText, demoRoutines, demoSkills, fixtureSnapshot } from './fixture';
+import { buildDemoProjectGraph, DEMO_BROKEN_PATH, demoFilePaths, demoFileText, demoRoutines, demoSkills, fixtureSnapshot } from './fixture';
 
 // The demo graph is built once: it is large and the host returns the same object each time.
 let projectGraph: CGData | null = null;
@@ -49,9 +49,11 @@ export function createFixtureHost(): OsHost {
       return true;
     },
     loadFile: async (path) => {
+      console.info('[fixture] loadFile', path);
       projectGraph ??= buildDemoProjectGraph();
       filePaths ??= demoFilePaths(projectGraph);
       if (!filePaths.has(path)) return null;
+      if (path === DEMO_BROKEN_PATH) throw new Error('The demo host could not read this file.');
       if (/\.png$/i.test(path)) return { path, binary: true, bytes: 18432, language: null };
       const { text, language } = demoFileText(path);
       return { path, text, truncated: false, bytes: new TextEncoder().encode(text).length, language };
