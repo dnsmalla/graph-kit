@@ -28,3 +28,21 @@ pub fn orbit_layout_json(system_graph_json: &str, opts_json: &str) -> String {
     install_panic_hook();
     crate::api::orbit_layout_json(system_graph_json, opts_json)
 }
+
+#[wasm_bindgen]
+pub fn viz_layout_json(viz_json: &str, opts_json: &str) -> String {
+    install_panic_hook();
+    crate::api::viz_layout_json(viz_json, opts_json)
+}
+
+#[wasm_bindgen]
+pub fn build_os_view_json(input_json: &str) -> String {
+    install_panic_hook();
+    crate::api::build_os_view_json(input_json)
+}
+
+#[wasm_bindgen]
+pub fn code_summary_json(system_graph_json: &str, top: u32) -> String {
+    install_panic_hook();
+    crate::api::code_summary_json(system_graph_json, top)
+}

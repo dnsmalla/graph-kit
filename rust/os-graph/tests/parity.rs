@@ -7,7 +7,8 @@
 
 use graph_kit_os::api::orbit_layout_json;
 use graph_kit_os::{
-    build_system_graph, orbit_layout, BuildOptions, CGData, OrbitOptions, OsSnapshot,
+    build_os_view, build_system_graph, orbit_layout, BuildOptions, CGData, OrbitOptions,
+    OsSnapshot, OsVizInput,
 };
 use serde_json::Value;
 use std::fs;
@@ -16,8 +17,17 @@ use std::path::{Path, PathBuf};
 const TOLERANCE: f64 = 1e-9;
 
 fn golden_files() -> Vec<PathBuf> {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden");
-    let mut files: Vec<PathBuf> = fs::read_dir(&dir)
+    json_files_in(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden"))
+}
+
+/// The VizGraph goldens live in `tests/golden/viz/` (the web test reads only the top level of
+/// `tests/golden/`, and expects the system-graph shape there).
+fn viz_golden_files() -> Vec<PathBuf> {
+    json_files_in(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/viz"))
+}
+
+fn json_files_in(dir: &Path) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = fs::read_dir(dir)
         .unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()))
         .map(|entry| entry.expect("dir entry").path())
         .filter(|p| p.extension().is_some_and(|ext| ext == "json"))
@@ -157,4 +167,81 @@ fn check_orbit(case: &str, got_orbit: &Value, want_orbit: &Value, max_coord_diff
         (gr - wr).abs() <= TOLERANCE,
         "{case}: bounds.radius {gr} vs golden {wr}"
     );
+}
+
+/// Floats within 1e-9 (the `ln` of the size scale can differ in the last ulp across libms);
+/// everything else exact.
+fn json_close(got: &Value, want: &Value, path: &str) {
+    match (got, want) {
+        (Value::Number(g), Value::Number(w)) => {
+            let (g, w) = (g.as_f64().unwrap(), w.as_f64().unwrap());
+            assert!((g - w).abs() <= TOLERANCE, "{path}: {g} vs golden {w}");
+        }
+        (Value::Array(g), Value::Array(w)) => {
+            assert_eq!(g.len(), w.len(), "{path}: length");
+            for (i, (a, b)) in g.iter().zip(w).enumerate() {
+                json_close(a, b, &format!("{path}[{i}]"));
+            }
+        }
+        (Value::Object(g), Value::Object(w)) => {
+            let keys: Vec<&String> = g.keys().collect();
+            let want_keys: Vec<&String> = w.keys().collect();
+            assert_eq!(keys, want_keys, "{path}: keys");
+            for (k, v) in g {
+                json_close(v, &w[k], &format!("{path}.{k}"));
+            }
+        }
+        _ => assert_eq!(got, want, "{path}"),
+    }
+}
+
+/// Runs one `viz_*` golden input through the Rust builder.
+fn viz_output(case: &str, input: &Value) -> Value {
+    let input: OsVizInput =
+        serde_json::from_value(input.clone()).unwrap_or_else(|e| panic!("{case}: input: {e}"));
+    serde_json::to_value(build_os_view(&input)).unwrap()
+}
+
+#[test]
+fn viz_goldens_match_the_rust_builder() {
+    let files = viz_golden_files();
+    assert!(
+        files.len() >= 4,
+        "expected the viz goldens (viz_*.json), found {}",
+        files.len()
+    );
+    for file in &files {
+        let case = file.file_name().unwrap().to_string_lossy().into_owned();
+        let golden: Value = serde_json::from_str(&fs::read_to_string(file).unwrap())
+            .unwrap_or_else(|e| panic!("{case}: invalid JSON: {e}"));
+        let got = viz_output(&case, &golden["input"]);
+        assert!(
+            !golden["expected"].is_null(),
+            "{case}: no expected output; run the ignored writer"
+        );
+        json_close(&got, &golden["expected"], &case);
+        eprintln!(
+            "viz parity {case}: os nodes={} ok",
+            got["os"]["nodes"].as_array().unwrap().len()
+        );
+    }
+}
+
+/// Rewrites `expected` in every `tests/golden/viz/*.json` from the current builder. Run it only when the
+/// output is meant to change, then review the diff:
+///
+/// `rustup run stable cargo test --release --test parity -- --ignored write_viz_goldens`
+#[test]
+#[ignore]
+fn write_viz_goldens() {
+    for file in viz_golden_files() {
+        let case = file.file_name().unwrap().to_string_lossy().into_owned();
+        let mut golden: Value = serde_json::from_str(&fs::read_to_string(&file).unwrap()).unwrap();
+        let expected = viz_output(&case, &golden["input"]);
+        golden["expected"] = expected;
+        let mut text = serde_json::to_string_pretty(&golden).unwrap();
+        text.push('\n');
+        fs::write(&file, text).unwrap();
+        eprintln!("wrote {}", file.display());
+    }
 }

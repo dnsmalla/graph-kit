@@ -1,10 +1,11 @@
 //! JSON-in / JSON-out entry points. These are what the `wasm` feature exports, and they
 //! are plain Rust so they are testable natively. Errors come back as `{"error": "..."}`.
 
-use crate::builder::{build_system_graph, BuildOptions};
+use crate::builder::{build_system_graph, BuildOptions, SystemGraph};
 use crate::models::{lenient_f64, lenient_vec, CGData};
 use crate::orbit::{layout_raw, OrbitLayout, OrbitOptions};
 use crate::snapshot::OsSnapshot;
+use crate::viz::{build_os_view, code_summary, OsVizInput};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
@@ -108,6 +109,88 @@ pub fn build_system_graph_json(snapshot_json: &str, project_json: &str, opts_jso
 /// it as `null`.
 pub fn orbit_layout_json(system_graph_json: &str, opts_json: &str) -> String {
     orbit_inner(system_graph_json, opts_json).unwrap_or_else(|e| error_json(&e))
+}
+
+/// Lenient read of a [`crate::viz::VizGraph`]: only the node id and group, and the edge
+/// ends and weight, feed the layout. Everything else is ignored.
+#[derive(Deserialize)]
+struct VizLayoutInput {
+    #[serde(default, deserialize_with = "lenient_vec")]
+    nodes: Vec<VizLayoutNode>,
+    #[serde(default, deserialize_with = "lenient_vec")]
+    edges: Vec<VizLayoutEdge>,
+}
+
+#[derive(Deserialize)]
+struct VizLayoutNode {
+    id: String,
+    /// The layout community. Missing or non-number: community 0.
+    #[serde(default, deserialize_with = "lenient_f64")]
+    group: Option<f64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct VizLayoutEdge {
+    source: String,
+    target: String,
+    /// Missing or non-number: the edge is dropped (as in [`OrbitEdge`]).
+    #[serde(default, deserialize_with = "lenient_f64")]
+    weight: Option<f64>,
+}
+
+fn viz_layout_inner(viz_json: &str, opts_json: &str) -> Result<String, String> {
+    let graph: VizLayoutInput =
+        parse_nullable(viz_json, "viz")?.ok_or_else(|| "viz: must not be null".to_string())?;
+    let opts = parse_nullable::<OrbitOptions>(opts_json, "orbitOptions")?.unwrap_or_default();
+    let core: Vec<(&str, Option<f64>)> = graph
+        .nodes
+        .iter()
+        .map(|n| (n.id.as_str(), n.group))
+        .collect();
+    let edges: Vec<(&str, &str, f64)> = graph
+        .edges
+        .iter()
+        .map(|e| {
+            (
+                e.source.as_str(),
+                e.target.as_str(),
+                e.weight.unwrap_or(f64::NAN),
+            )
+        })
+        .collect();
+    let layout: OrbitLayout = layout_raw(&core, &edges, &[], &opts);
+    serde_json::to_string(&layout).map_err(|e| e.to_string())
+}
+
+/// Lay out a [`crate::viz::VizGraph`] (the OS graph or any hub graph) in 3D. Node `group`
+/// is the community. Returns the same `OrbitLayout` shape as [`orbit_layout_json`].
+pub fn viz_layout_json(viz_json: &str, opts_json: &str) -> String {
+    viz_layout_inner(viz_json, opts_json).unwrap_or_else(|e| error_json(&e))
+}
+
+fn os_view_inner(input_json: &str) -> Result<String, String> {
+    let input = parse_nullable::<OsVizInput>(input_json, "osInput")?.unwrap_or_default();
+    serde_json::to_string(&build_os_view(&input)).map_err(|e| e.to_string())
+}
+
+/// The OS view from the page's inputs: `{"snapshot", "skills", "routines", "code"}` (each
+/// optional; `null` is an empty input). Returns `{"os": VizGraph, "hubs": {key: VizGraph}}`
+/// for every hub except `code`, whose detail is the SystemGraph.
+pub fn build_os_view_json(input_json: &str) -> String {
+    os_view_inner(input_json).unwrap_or_else(|e| error_json(&e))
+}
+
+fn code_summary_inner(system_graph_json: &str, top: u32) -> Result<String, String> {
+    let graph: SystemGraph = parse_nullable(system_graph_json, "systemGraph")?
+        .ok_or_else(|| "systemGraph: must not be null".to_string())?;
+    serde_json::to_string(&code_summary(&graph, top as usize)).map_err(|e| e.to_string())
+}
+
+/// Summary of a built SystemGraph for the OS view's code part: the totals and the `top`
+/// largest communities. Returns the `CodeSummary` JSON.
+pub fn code_summary_json(system_graph_json: &str, top: u32) -> String {
+    code_summary_inner(system_graph_json, top).unwrap_or_else(|e| error_json(&e))
 }
 
 #[cfg(test)]
@@ -262,5 +345,50 @@ mod tests {
         let out = parse_value(&build_system_graph_json("null", &project, "null"));
         assert!(out.get("error").is_none(), "{out}");
         assert_eq!(out["core"][0]["category"], "tests");
+    }
+
+    #[test]
+    fn os_view_json_has_the_os_graph_and_every_hub_but_code() {
+        let out = parse_value(&build_os_view_json("null"));
+        assert_eq!(out["os"]["level"], "os");
+        assert_eq!(out["os"]["nodes"].as_array().unwrap().len(), 8);
+        let hubs = out["hubs"].as_object().unwrap();
+        assert_eq!(hubs.len(), 7);
+        assert!(!hubs.contains_key("code"));
+        let bad = parse_value(&build_os_view_json("{not json"));
+        assert!(bad["error"].as_str().unwrap().starts_with("osInput:"));
+    }
+
+    #[test]
+    fn viz_layout_places_every_node_by_group_and_ignores_bad_edges() {
+        let viz = build_os_view_json(
+            r#"{"snapshot":{"tokens":{"byModel":[{"provider":"p","model":"m","billable":4}]}}}"#,
+        );
+        let view = parse_value(&viz);
+        let os = serde_json::to_string(&view["os"]).unwrap();
+        let layout = parse_value(&viz_layout_json(&os, "{}"));
+        assert_eq!(layout["core"].as_array().unwrap().len(), 8 + 1);
+        // Hub groups are the hub indices, so eight communities at most.
+        assert_eq!(layout["communityCenters"].as_array().unwrap().len(), 8);
+        // The same input twice gives the same layout bytes.
+        assert_eq!(layout, parse_value(&viz_layout_json(&os, "{}")));
+        let weird = r#"{"nodes":[{"id":"a"},{"id":"b","group":"x"},{"label":"no id"}],
+            "edges":[{"source":"a","target":"b"},{"source":"a","target":"b","weight":2}]}"#;
+        let out = parse_value(&viz_layout_json(weird, "{}"));
+        assert_eq!(out["core"].as_array().unwrap().len(), 2);
+        assert!(parse_value(&viz_layout_json("null", "{}"))["error"].is_string());
+    }
+
+    #[test]
+    fn code_summary_json_reads_a_system_graph() {
+        let graph = build_system_graph_json(
+            "null",
+            r#"{"nodes":[{"id":"a.ts","title":"a","kind":"file","metadata":{}}]}"#,
+            "null",
+        );
+        let summary = parse_value(&code_summary_json(&graph, 3));
+        assert_eq!(summary["totalNodes"], 1);
+        assert_eq!(summary["communities"][0]["topLabels"][0], "a");
+        assert!(parse_value(&code_summary_json("null", 3))["error"].is_string());
     }
 }

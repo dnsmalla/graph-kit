@@ -93,6 +93,28 @@ Known limits of the JSON boundary:
 - Non-string titles and ids are dropped or treated as absent, where the TS would copy the
   number through.
 
+## VizGraph (the whole OS as one graph)
+
+`os-graph/src/viz.rs` builds the OS view. One generic `VizGraph` type (`nodes`, `edges`,
+`level`, `title`) feeds one layout (`viz_layout_json`) and one renderer:
+
+- `build_os_view_json(input)` returns `{os, hubs}`: the top-level graph (one hub per part,
+  members capped at 40 per hub with `meta.more`), and a drill-down graph for each hub except
+  `code`. `code` drills into the existing SystemGraph; `code_summary_json` summarises it for the
+  OS view.
+- Cross-hub edges are only the ones the data states: kit to feature, Knowledge to Code when a
+  code graph exists, Routines to Models when auto-task usage exists, and Code to the
+  `code_graph_3d` feature. Model usage is not cross-tabulated by caller in the snapshot, so models
+  link to the Models hub only.
+- Ids are stable (`hub:models`, `model:<provider>/<model>`, `skill:<id>`, ...), all lists are
+  sorted, and the output does not depend on input order.
+
+Goldens for it are in `os-graph/tests/golden/viz/` (a subfolder on purpose: the web test reads
+only the top level of `tests/golden/` and expects the system-graph shape there). They are
+frozen; to regenerate after an intended change, run
+`rustup run stable cargo test --release --test parity -- --ignored write_viz_goldens`, then
+review the diff.
+
 ## Goldens
 
 `tests/golden/` holds 19 frozen cases. They are fixtures now: the TypeScript generator that

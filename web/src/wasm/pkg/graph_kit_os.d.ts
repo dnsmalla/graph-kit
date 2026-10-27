@@ -3,7 +3,11 @@
 
 export function __wbg_reset_state(): void;
 
+export function build_os_view_json(input_json: string): string;
+
 export function build_system_graph_json(snapshot_json: string, project_json: string, opts_json: string): string;
+
+export function code_summary_json(system_graph_json: string, top: number): string;
 
 export function orbit_layout_json(system_graph_json: string, opts_json: string): string;
 
@@ -13,13 +17,18 @@ export function orbit_layout_json(system_graph_json: string, opts_json: string):
  */
 export function start(): void;
 
+export function viz_layout_json(viz_json: string, opts_json: string): string;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly build_os_view_json: (a: number, b: number, c: number) => void;
     readonly build_system_graph_json: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+    readonly code_summary_json: (a: number, b: number, c: number, d: number) => void;
     readonly orbit_layout_json: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly start: () => void;
+    readonly viz_layout_json: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly __wbindgen_export: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export2: (a: number, b: number) => number;
     readonly __wbindgen_export3: (a: number, b: number, c: number, d: number) => number;

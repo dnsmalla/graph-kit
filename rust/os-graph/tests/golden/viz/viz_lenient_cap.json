@@ -1,0 +1,2960 @@
+{
+  "expected": {
+    "hubs": {
+      "agents": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "chatTurn:ok-1",
+            "weight": 1.0
+          }
+        ],
+        "level": "agents",
+        "nodes": [
+          {
+            "drill": "agents",
+            "group": 5,
+            "id": "hub:agents",
+            "kind": "hub",
+            "label": "Agents",
+            "labelled": true,
+            "meta": {
+              "agentRuns": 0,
+              "chatTurns": 1,
+              "liveSessions": 0,
+              "running": 1
+            },
+            "size": 4.0,
+            "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "chatTurn:ok-1",
+            "kind": "chatTurn",
+            "label": "Chat ok-1",
+            "labelled": true,
+            "meta": {
+              "cancelPath": null,
+              "cancellable": false,
+              "startedAt": null
+            },
+            "size": 1.0,
+            "status": "running"
+          }
+        ],
+        "title": "Agents"
+      },
+      "kits": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:claude",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:db",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:skills",
+            "weight": 1.0
+          }
+        ],
+        "level": "kits",
+        "nodes": [
+          {
+            "drill": "kits",
+            "group": 7,
+            "id": "hub:kits",
+            "kind": "hub",
+            "label": "Kits",
+            "labelled": true,
+            "meta": {
+              "checksOk": false,
+              "enabled": 0,
+              "features": 0,
+              "kits": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:db",
+            "kind": "check",
+            "label": "db",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": false
+            },
+            "size": 1.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:claude",
+            "kind": "check",
+            "label": "claude CLI",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": false
+            },
+            "size": 1.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:skills",
+            "kind": "check",
+            "label": "skills",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": false
+            },
+            "size": 1.0,
+            "status": "warn"
+          }
+        ],
+        "title": "Kits"
+      },
+      "knowledge": {
+        "edges": [],
+        "level": "knowledge",
+        "nodes": [
+          {
+            "drill": "knowledge",
+            "group": 1,
+            "id": "hub:knowledge",
+            "kind": "hub",
+            "label": "Knowledge",
+            "labelled": true,
+            "meta": {
+              "meetings": 0,
+              "outcomes": 0,
+              "outcomesTerminal": 0,
+              "pendingReviews": 0,
+              "sources": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Knowledge"
+      },
+      "memory": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-00",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-01",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-02",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-03",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-04",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-05",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-06",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-07",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-08",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-09",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-10",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-11",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-12",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-13",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-14",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-15",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-16",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-17",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-18",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-19",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-20",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-21",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-22",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-23",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-24",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-25",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-26",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-27",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-28",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-29",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-30",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-31",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-32",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-33",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-34",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-35",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-36",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-37",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-38",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-39",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-40",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-41",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-42",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-43",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/repos/project-44",
+            "weight": 1.0
+          }
+        ],
+        "level": "memory",
+        "nodes": [
+          {
+            "drill": "memory",
+            "group": 2,
+            "id": "hub:memory",
+            "kind": "hub",
+            "label": "Memory",
+            "labelled": true,
+            "meta": {
+              "active": 90,
+              "facts": 129,
+              "repos": 45,
+              "superseded": 45
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-00",
+            "kind": "memoryRepo",
+            "label": "project-00",
+            "labelled": false,
+            "meta": {
+              "active": 0,
+              "facts": 0,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-00",
+              "superseded": 0
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-01",
+            "kind": "memoryRepo",
+            "label": "project-01",
+            "labelled": false,
+            "meta": {
+              "active": 1,
+              "facts": 1,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-01",
+              "superseded": 1
+            },
+            "size": 1.7124143742160443,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-02",
+            "kind": "memoryRepo",
+            "label": "project-02",
+            "labelled": true,
+            "meta": {
+              "active": 2,
+              "facts": 2,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-02",
+              "superseded": 2
+            },
+            "size": 2.129150068107159,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-03",
+            "kind": "memoryRepo",
+            "label": "project-03",
+            "labelled": true,
+            "meta": {
+              "active": 3,
+              "facts": 3,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-03",
+              "superseded": 0
+            },
+            "size": 2.4248287484320885,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-04",
+            "kind": "memoryRepo",
+            "label": "project-04",
+            "labelled": true,
+            "meta": {
+              "active": 4,
+              "facts": 4,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-04",
+              "superseded": 1
+            },
+            "size": 2.6541749506938324,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-05",
+            "kind": "memoryRepo",
+            "label": "project-05",
+            "labelled": true,
+            "meta": {
+              "active": 0,
+              "facts": 5,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-05",
+              "superseded": 2
+            },
+            "size": 2.841564442323204,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-06",
+            "kind": "memoryRepo",
+            "label": "project-06",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 6,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-06",
+              "superseded": 0
+            },
+            "size": 3.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-07",
+            "kind": "memoryRepo",
+            "label": "project-07",
+            "labelled": false,
+            "meta": {
+              "active": 2,
+              "facts": 0,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-07",
+              "superseded": 1
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-08",
+            "kind": "memoryRepo",
+            "label": "project-08",
+            "labelled": false,
+            "meta": {
+              "active": 3,
+              "facts": 1,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-08",
+              "superseded": 2
+            },
+            "size": 1.7124143742160443,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-09",
+            "kind": "memoryRepo",
+            "label": "project-09",
+            "labelled": true,
+            "meta": {
+              "active": 4,
+              "facts": 2,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-09",
+              "superseded": 0
+            },
+            "size": 2.129150068107159,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-10",
+            "kind": "memoryRepo",
+            "label": "project-10",
+            "labelled": true,
+            "meta": {
+              "active": 0,
+              "facts": 3,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-10",
+              "superseded": 1
+            },
+            "size": 2.4248287484320885,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-11",
+            "kind": "memoryRepo",
+            "label": "project-11",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 4,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-11",
+              "superseded": 2
+            },
+            "size": 2.6541749506938324,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-12",
+            "kind": "memoryRepo",
+            "label": "project-12",
+            "labelled": true,
+            "meta": {
+              "active": 2,
+              "facts": 5,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-12",
+              "superseded": 0
+            },
+            "size": 2.841564442323204,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-13",
+            "kind": "memoryRepo",
+            "label": "project-13",
+            "labelled": true,
+            "meta": {
+              "active": 3,
+              "facts": 6,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-13",
+              "superseded": 1
+            },
+            "size": 3.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-14",
+            "kind": "memoryRepo",
+            "label": "project-14",
+            "labelled": false,
+            "meta": {
+              "active": 4,
+              "facts": 0,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-14",
+              "superseded": 2
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-15",
+            "kind": "memoryRepo",
+            "label": "project-15",
+            "labelled": false,
+            "meta": {
+              "active": 0,
+              "facts": 1,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-15",
+              "superseded": 0
+            },
+            "size": 1.7124143742160443,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-16",
+            "kind": "memoryRepo",
+            "label": "project-16",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 2,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-16",
+              "superseded": 1
+            },
+            "size": 2.129150068107159,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-17",
+            "kind": "memoryRepo",
+            "label": "project-17",
+            "labelled": true,
+            "meta": {
+              "active": 2,
+              "facts": 3,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-17",
+              "superseded": 2
+            },
+            "size": 2.4248287484320885,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-18",
+            "kind": "memoryRepo",
+            "label": "project-18",
+            "labelled": true,
+            "meta": {
+              "active": 3,
+              "facts": 4,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-18",
+              "superseded": 0
+            },
+            "size": 2.6541749506938324,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-19",
+            "kind": "memoryRepo",
+            "label": "project-19",
+            "labelled": true,
+            "meta": {
+              "active": 4,
+              "facts": 5,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-19",
+              "superseded": 1
+            },
+            "size": 2.841564442323204,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-20",
+            "kind": "memoryRepo",
+            "label": "project-20",
+            "labelled": true,
+            "meta": {
+              "active": 0,
+              "facts": 6,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-20",
+              "superseded": 2
+            },
+            "size": 3.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-21",
+            "kind": "memoryRepo",
+            "label": "project-21",
+            "labelled": false,
+            "meta": {
+              "active": 1,
+              "facts": 0,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-21",
+              "superseded": 0
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-22",
+            "kind": "memoryRepo",
+            "label": "project-22",
+            "labelled": false,
+            "meta": {
+              "active": 2,
+              "facts": 1,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-22",
+              "superseded": 1
+            },
+            "size": 1.7124143742160443,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-23",
+            "kind": "memoryRepo",
+            "label": "project-23",
+            "labelled": true,
+            "meta": {
+              "active": 3,
+              "facts": 2,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-23",
+              "superseded": 2
+            },
+            "size": 2.129150068107159,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-24",
+            "kind": "memoryRepo",
+            "label": "project-24",
+            "labelled": true,
+            "meta": {
+              "active": 4,
+              "facts": 3,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-24",
+              "superseded": 0
+            },
+            "size": 2.4248287484320885,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-25",
+            "kind": "memoryRepo",
+            "label": "project-25",
+            "labelled": true,
+            "meta": {
+              "active": 0,
+              "facts": 4,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-25",
+              "superseded": 1
+            },
+            "size": 2.6541749506938324,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-26",
+            "kind": "memoryRepo",
+            "label": "project-26",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 5,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-26",
+              "superseded": 2
+            },
+            "size": 2.841564442323204,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-27",
+            "kind": "memoryRepo",
+            "label": "project-27",
+            "labelled": true,
+            "meta": {
+              "active": 2,
+              "facts": 6,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-27",
+              "superseded": 0
+            },
+            "size": 3.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-28",
+            "kind": "memoryRepo",
+            "label": "project-28",
+            "labelled": false,
+            "meta": {
+              "active": 3,
+              "facts": 0,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-28",
+              "superseded": 1
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-29",
+            "kind": "memoryRepo",
+            "label": "project-29",
+            "labelled": false,
+            "meta": {
+              "active": 4,
+              "facts": 1,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-29",
+              "superseded": 2
+            },
+            "size": 1.7124143742160443,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-30",
+            "kind": "memoryRepo",
+            "label": "project-30",
+            "labelled": true,
+            "meta": {
+              "active": 0,
+              "facts": 2,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-30",
+              "superseded": 0
+            },
+            "size": 2.129150068107159,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-31",
+            "kind": "memoryRepo",
+            "label": "project-31",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 3,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-31",
+              "superseded": 1
+            },
+            "size": 2.4248287484320885,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-32",
+            "kind": "memoryRepo",
+            "label": "project-32",
+            "labelled": true,
+            "meta": {
+              "active": 2,
+              "facts": 4,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-32",
+              "superseded": 2
+            },
+            "size": 2.6541749506938324,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-33",
+            "kind": "memoryRepo",
+            "label": "project-33",
+            "labelled": true,
+            "meta": {
+              "active": 3,
+              "facts": 5,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-33",
+              "superseded": 0
+            },
+            "size": 2.841564442323204,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-34",
+            "kind": "memoryRepo",
+            "label": "project-34",
+            "labelled": true,
+            "meta": {
+              "active": 4,
+              "facts": 6,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-34",
+              "superseded": 1
+            },
+            "size": 3.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-35",
+            "kind": "memoryRepo",
+            "label": "project-35",
+            "labelled": false,
+            "meta": {
+              "active": 0,
+              "facts": 0,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-35",
+              "superseded": 2
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-36",
+            "kind": "memoryRepo",
+            "label": "project-36",
+            "labelled": false,
+            "meta": {
+              "active": 1,
+              "facts": 1,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-36",
+              "superseded": 0
+            },
+            "size": 1.7124143742160443,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-37",
+            "kind": "memoryRepo",
+            "label": "project-37",
+            "labelled": true,
+            "meta": {
+              "active": 2,
+              "facts": 2,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-37",
+              "superseded": 1
+            },
+            "size": 2.129150068107159,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-38",
+            "kind": "memoryRepo",
+            "label": "project-38",
+            "labelled": true,
+            "meta": {
+              "active": 3,
+              "facts": 3,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-38",
+              "superseded": 2
+            },
+            "size": 2.4248287484320885,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-39",
+            "kind": "memoryRepo",
+            "label": "project-39",
+            "labelled": true,
+            "meta": {
+              "active": 4,
+              "facts": 4,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-39",
+              "superseded": 0
+            },
+            "size": 2.6541749506938324,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-40",
+            "kind": "memoryRepo",
+            "label": "project-40",
+            "labelled": true,
+            "meta": {
+              "active": 0,
+              "facts": 5,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-40",
+              "superseded": 1
+            },
+            "size": 2.841564442323204,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-41",
+            "kind": "memoryRepo",
+            "label": "project-41",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 6,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-41",
+              "superseded": 2
+            },
+            "size": 3.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-42",
+            "kind": "memoryRepo",
+            "label": "project-42",
+            "labelled": false,
+            "meta": {
+              "active": 2,
+              "facts": 0,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-42",
+              "superseded": 0
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-43",
+            "kind": "memoryRepo",
+            "label": "project-43",
+            "labelled": false,
+            "meta": {
+              "active": 3,
+              "facts": 1,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-43",
+              "superseded": 1
+            },
+            "size": 1.7124143742160443,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/repos/project-44",
+            "kind": "memoryRepo",
+            "label": "project-44",
+            "labelled": false,
+            "meta": {
+              "active": 4,
+              "facts": 2,
+              "lastConfirmedAt": null,
+              "repoRoot": "/repos/project-44",
+              "superseded": 2
+            },
+            "size": 2.129150068107159,
+            "status": "ok"
+          }
+        ],
+        "title": "Memory"
+      },
+      "models": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "provider:p",
+            "weight": 1.0
+          },
+          {
+            "kind": "provides",
+            "source": "provider:p",
+            "target": "model:p/m",
+            "weight": 1.0
+          }
+        ],
+        "level": "models",
+        "nodes": [
+          {
+            "drill": "models",
+            "group": 4,
+            "id": "hub:models",
+            "kind": "hub",
+            "label": "Models",
+            "labelled": true,
+            "meta": {
+              "billable": 0,
+              "calls": 0,
+              "models": 1
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "provider:p",
+            "kind": "provider",
+            "label": "p",
+            "labelled": true,
+            "meta": {
+              "billable": 4
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "model:p/m",
+            "kind": "model",
+            "label": "m",
+            "labelled": true,
+            "meta": {
+              "billable": 4,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 0,
+              "input": 0,
+              "model": "m",
+              "output": 0,
+              "provider": "p",
+              "runs": 0
+            },
+            "size": 3.0,
+            "status": null
+          }
+        ],
+        "title": "Models"
+      },
+      "routines": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:routines",
+            "target": "routines:disabled",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:routines",
+            "target": "routines:enabled",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:enabled",
+            "target": "routine:r2",
+            "weight": 1.0
+          }
+        ],
+        "level": "routines",
+        "nodes": [
+          {
+            "drill": "routines",
+            "group": 6,
+            "id": "hub:routines",
+            "kind": "hub",
+            "label": "Routines",
+            "labelled": true,
+            "meta": {
+              "enabled": 1,
+              "routines": 1
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routines:enabled",
+            "kind": "routine",
+            "label": "Enabled",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routines:disabled",
+            "kind": "routine",
+            "label": "Disabled",
+            "labelled": true,
+            "meta": {
+              "count": 0
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:r2",
+            "kind": "routine",
+            "label": "Ok",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "lastRunAt": null,
+              "nextRunAt": null,
+              "schedule": null
+            },
+            "size": 1.0,
+            "status": "ok"
+          }
+        ],
+        "title": "Routines"
+      },
+      "skills": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:skills",
+            "target": "skillSource:",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:s1",
+            "target": "skillSource:",
+            "weight": 1.0
+          }
+        ],
+        "level": "skills",
+        "nodes": [
+          {
+            "drill": "skills",
+            "group": 3,
+            "id": "hub:skills",
+            "kind": "hub",
+            "label": "Skills",
+            "labelled": true,
+            "meta": {
+              "skills": 1,
+              "sources": 1
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "skillSource:",
+            "kind": "skillSource",
+            "label": "unsourced",
+            "labelled": true,
+            "meta": {
+              "count": 1,
+              "source": ""
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:s1",
+            "kind": "skill",
+            "label": "one",
+            "labelled": true,
+            "meta": {
+              "description": null,
+              "name": "one",
+              "source": ""
+            },
+            "size": 1.0,
+            "status": null
+          }
+        ],
+        "title": "Skills"
+      }
+    },
+    "os": {
+      "edges": [
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "chatTurn:ok-1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:code",
+          "target": "cluster:0",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-00",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-01",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-02",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-03",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-04",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-05",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-06",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-07",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-08",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-09",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-10",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-11",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-12",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-13",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-15",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-16",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-17",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-18",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-19",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-20",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-22",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-23",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-24",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-25",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-26",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-27",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-29",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-30",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-31",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-32",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-33",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-34",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-36",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-37",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-38",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-39",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-40",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-41",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-43",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/repos/project-44",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:models",
+          "target": "model:p/m",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:r2",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:skills",
+          "target": "skillSource:",
+          "weight": 1.0
+        }
+      ],
+      "level": "os",
+      "nodes": [
+        {
+          "drill": "code",
+          "group": 0,
+          "id": "hub:code",
+          "kind": "hub",
+          "label": "Code",
+          "labelled": true,
+          "meta": {
+            "communities": 1,
+            "keptNodes": 3,
+            "members": 1,
+            "more": 0,
+            "totalNodes": 3
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 0,
+          "id": "cluster:0",
+          "kind": "codeCluster",
+          "label": "Cluster 1 · a",
+          "labelled": true,
+          "meta": {
+            "dominantCategory": "code",
+            "index": 0,
+            "size": 3,
+            "topLabels": [
+              "a",
+              "b"
+            ]
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": "knowledge",
+          "group": 1,
+          "id": "hub:knowledge",
+          "kind": "hub",
+          "label": "Knowledge",
+          "labelled": true,
+          "meta": {
+            "meetings": 0,
+            "members": 0,
+            "more": 0,
+            "outcomes": 0,
+            "outcomesTerminal": 0,
+            "pendingReviews": 0,
+            "sources": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "memory",
+          "group": 2,
+          "id": "hub:memory",
+          "kind": "hub",
+          "label": "Memory",
+          "labelled": true,
+          "meta": {
+            "active": 90,
+            "facts": 129,
+            "members": 45,
+            "more": 5,
+            "repos": 45,
+            "superseded": 45
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-06",
+          "kind": "memoryRepo",
+          "label": "project-06",
+          "labelled": true,
+          "meta": {
+            "active": 1,
+            "facts": 6,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-06",
+            "superseded": 0
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-13",
+          "kind": "memoryRepo",
+          "label": "project-13",
+          "labelled": true,
+          "meta": {
+            "active": 3,
+            "facts": 6,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-13",
+            "superseded": 1
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-20",
+          "kind": "memoryRepo",
+          "label": "project-20",
+          "labelled": true,
+          "meta": {
+            "active": 0,
+            "facts": 6,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-20",
+            "superseded": 2
+          },
+          "size": 3.0,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-27",
+          "kind": "memoryRepo",
+          "label": "project-27",
+          "labelled": true,
+          "meta": {
+            "active": 2,
+            "facts": 6,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-27",
+            "superseded": 0
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-34",
+          "kind": "memoryRepo",
+          "label": "project-34",
+          "labelled": true,
+          "meta": {
+            "active": 4,
+            "facts": 6,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-34",
+            "superseded": 1
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-41",
+          "kind": "memoryRepo",
+          "label": "project-41",
+          "labelled": true,
+          "meta": {
+            "active": 1,
+            "facts": 6,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-41",
+            "superseded": 2
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-05",
+          "kind": "memoryRepo",
+          "label": "project-05",
+          "labelled": false,
+          "meta": {
+            "active": 0,
+            "facts": 5,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-05",
+            "superseded": 2
+          },
+          "size": 2.841564442323204,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-12",
+          "kind": "memoryRepo",
+          "label": "project-12",
+          "labelled": false,
+          "meta": {
+            "active": 2,
+            "facts": 5,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-12",
+            "superseded": 0
+          },
+          "size": 2.841564442323204,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-19",
+          "kind": "memoryRepo",
+          "label": "project-19",
+          "labelled": false,
+          "meta": {
+            "active": 4,
+            "facts": 5,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-19",
+            "superseded": 1
+          },
+          "size": 2.841564442323204,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-26",
+          "kind": "memoryRepo",
+          "label": "project-26",
+          "labelled": false,
+          "meta": {
+            "active": 1,
+            "facts": 5,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-26",
+            "superseded": 2
+          },
+          "size": 2.841564442323204,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-33",
+          "kind": "memoryRepo",
+          "label": "project-33",
+          "labelled": false,
+          "meta": {
+            "active": 3,
+            "facts": 5,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-33",
+            "superseded": 0
+          },
+          "size": 2.841564442323204,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-40",
+          "kind": "memoryRepo",
+          "label": "project-40",
+          "labelled": false,
+          "meta": {
+            "active": 0,
+            "facts": 5,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-40",
+            "superseded": 1
+          },
+          "size": 2.841564442323204,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-04",
+          "kind": "memoryRepo",
+          "label": "project-04",
+          "labelled": false,
+          "meta": {
+            "active": 4,
+            "facts": 4,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-04",
+            "superseded": 1
+          },
+          "size": 2.6541749506938324,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-11",
+          "kind": "memoryRepo",
+          "label": "project-11",
+          "labelled": false,
+          "meta": {
+            "active": 1,
+            "facts": 4,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-11",
+            "superseded": 2
+          },
+          "size": 2.6541749506938324,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-18",
+          "kind": "memoryRepo",
+          "label": "project-18",
+          "labelled": false,
+          "meta": {
+            "active": 3,
+            "facts": 4,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-18",
+            "superseded": 0
+          },
+          "size": 2.6541749506938324,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-25",
+          "kind": "memoryRepo",
+          "label": "project-25",
+          "labelled": false,
+          "meta": {
+            "active": 0,
+            "facts": 4,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-25",
+            "superseded": 1
+          },
+          "size": 2.6541749506938324,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-32",
+          "kind": "memoryRepo",
+          "label": "project-32",
+          "labelled": false,
+          "meta": {
+            "active": 2,
+            "facts": 4,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-32",
+            "superseded": 2
+          },
+          "size": 2.6541749506938324,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-39",
+          "kind": "memoryRepo",
+          "label": "project-39",
+          "labelled": false,
+          "meta": {
+            "active": 4,
+            "facts": 4,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-39",
+            "superseded": 0
+          },
+          "size": 2.6541749506938324,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-03",
+          "kind": "memoryRepo",
+          "label": "project-03",
+          "labelled": false,
+          "meta": {
+            "active": 3,
+            "facts": 3,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-03",
+            "superseded": 0
+          },
+          "size": 2.4248287484320885,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-10",
+          "kind": "memoryRepo",
+          "label": "project-10",
+          "labelled": false,
+          "meta": {
+            "active": 0,
+            "facts": 3,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-10",
+            "superseded": 1
+          },
+          "size": 2.4248287484320885,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-17",
+          "kind": "memoryRepo",
+          "label": "project-17",
+          "labelled": false,
+          "meta": {
+            "active": 2,
+            "facts": 3,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-17",
+            "superseded": 2
+          },
+          "size": 2.4248287484320885,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-24",
+          "kind": "memoryRepo",
+          "label": "project-24",
+          "labelled": false,
+          "meta": {
+            "active": 4,
+            "facts": 3,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-24",
+            "superseded": 0
+          },
+          "size": 2.4248287484320885,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-31",
+          "kind": "memoryRepo",
+          "label": "project-31",
+          "labelled": false,
+          "meta": {
+            "active": 1,
+            "facts": 3,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-31",
+            "superseded": 1
+          },
+          "size": 2.4248287484320885,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-38",
+          "kind": "memoryRepo",
+          "label": "project-38",
+          "labelled": false,
+          "meta": {
+            "active": 3,
+            "facts": 3,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-38",
+            "superseded": 2
+          },
+          "size": 2.4248287484320885,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-02",
+          "kind": "memoryRepo",
+          "label": "project-02",
+          "labelled": false,
+          "meta": {
+            "active": 2,
+            "facts": 2,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-02",
+            "superseded": 2
+          },
+          "size": 2.129150068107159,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-09",
+          "kind": "memoryRepo",
+          "label": "project-09",
+          "labelled": false,
+          "meta": {
+            "active": 4,
+            "facts": 2,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-09",
+            "superseded": 0
+          },
+          "size": 2.129150068107159,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-16",
+          "kind": "memoryRepo",
+          "label": "project-16",
+          "labelled": false,
+          "meta": {
+            "active": 1,
+            "facts": 2,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-16",
+            "superseded": 1
+          },
+          "size": 2.129150068107159,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-23",
+          "kind": "memoryRepo",
+          "label": "project-23",
+          "labelled": false,
+          "meta": {
+            "active": 3,
+            "facts": 2,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-23",
+            "superseded": 2
+          },
+          "size": 2.129150068107159,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-30",
+          "kind": "memoryRepo",
+          "label": "project-30",
+          "labelled": false,
+          "meta": {
+            "active": 0,
+            "facts": 2,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-30",
+            "superseded": 0
+          },
+          "size": 2.129150068107159,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-37",
+          "kind": "memoryRepo",
+          "label": "project-37",
+          "labelled": false,
+          "meta": {
+            "active": 2,
+            "facts": 2,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-37",
+            "superseded": 1
+          },
+          "size": 2.129150068107159,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-44",
+          "kind": "memoryRepo",
+          "label": "project-44",
+          "labelled": false,
+          "meta": {
+            "active": 4,
+            "facts": 2,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-44",
+            "superseded": 2
+          },
+          "size": 2.129150068107159,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-01",
+          "kind": "memoryRepo",
+          "label": "project-01",
+          "labelled": false,
+          "meta": {
+            "active": 1,
+            "facts": 1,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-01",
+            "superseded": 1
+          },
+          "size": 1.7124143742160443,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-08",
+          "kind": "memoryRepo",
+          "label": "project-08",
+          "labelled": false,
+          "meta": {
+            "active": 3,
+            "facts": 1,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-08",
+            "superseded": 2
+          },
+          "size": 1.7124143742160443,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-15",
+          "kind": "memoryRepo",
+          "label": "project-15",
+          "labelled": false,
+          "meta": {
+            "active": 0,
+            "facts": 1,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-15",
+            "superseded": 0
+          },
+          "size": 1.7124143742160443,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-22",
+          "kind": "memoryRepo",
+          "label": "project-22",
+          "labelled": false,
+          "meta": {
+            "active": 2,
+            "facts": 1,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-22",
+            "superseded": 1
+          },
+          "size": 1.7124143742160443,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-29",
+          "kind": "memoryRepo",
+          "label": "project-29",
+          "labelled": false,
+          "meta": {
+            "active": 4,
+            "facts": 1,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-29",
+            "superseded": 2
+          },
+          "size": 1.7124143742160443,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-36",
+          "kind": "memoryRepo",
+          "label": "project-36",
+          "labelled": false,
+          "meta": {
+            "active": 1,
+            "facts": 1,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-36",
+            "superseded": 0
+          },
+          "size": 1.7124143742160443,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-43",
+          "kind": "memoryRepo",
+          "label": "project-43",
+          "labelled": false,
+          "meta": {
+            "active": 3,
+            "facts": 1,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-43",
+            "superseded": 1
+          },
+          "size": 1.7124143742160443,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-00",
+          "kind": "memoryRepo",
+          "label": "project-00",
+          "labelled": false,
+          "meta": {
+            "active": 0,
+            "facts": 0,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-00",
+            "superseded": 0
+          },
+          "size": 1.0,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/repos/project-07",
+          "kind": "memoryRepo",
+          "label": "project-07",
+          "labelled": false,
+          "meta": {
+            "active": 2,
+            "facts": 0,
+            "lastConfirmedAt": null,
+            "repoRoot": "/repos/project-07",
+            "superseded": 1
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": "skills",
+          "group": 3,
+          "id": "hub:skills",
+          "kind": "hub",
+          "label": "Skills",
+          "labelled": true,
+          "meta": {
+            "members": 1,
+            "more": 0,
+            "skills": 1,
+            "sources": 1
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 3,
+          "id": "skillSource:",
+          "kind": "skillSource",
+          "label": "unsourced",
+          "labelled": true,
+          "meta": {
+            "count": 1,
+            "source": ""
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": "models",
+          "group": 4,
+          "id": "hub:models",
+          "kind": "hub",
+          "label": "Models",
+          "labelled": true,
+          "meta": {
+            "billable": 0,
+            "calls": 0,
+            "members": 1,
+            "models": 1,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 4,
+          "id": "model:p/m",
+          "kind": "model",
+          "label": "m",
+          "labelled": true,
+          "meta": {
+            "billable": 4,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 0,
+            "input": 0,
+            "model": "m",
+            "output": 0,
+            "provider": "p",
+            "runs": 0
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": "agents",
+          "group": 5,
+          "id": "hub:agents",
+          "kind": "hub",
+          "label": "Agents",
+          "labelled": true,
+          "meta": {
+            "agentRuns": 0,
+            "chatTurns": 1,
+            "liveSessions": 0,
+            "members": 1,
+            "more": 0,
+            "running": 1
+          },
+          "size": 4.0,
+          "status": "running"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "chatTurn:ok-1",
+          "kind": "chatTurn",
+          "label": "Chat ok-1",
+          "labelled": true,
+          "meta": {
+            "cancelPath": null,
+            "cancellable": false,
+            "startedAt": null
+          },
+          "size": 1.0,
+          "status": "running"
+        },
+        {
+          "drill": "routines",
+          "group": 6,
+          "id": "hub:routines",
+          "kind": "hub",
+          "label": "Routines",
+          "labelled": true,
+          "meta": {
+            "enabled": 1,
+            "members": 1,
+            "more": 0,
+            "routines": 1
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:r2",
+          "kind": "routine",
+          "label": "Ok",
+          "labelled": true,
+          "meta": {
+            "enabled": true,
+            "lastRunAt": null,
+            "nextRunAt": null,
+            "schedule": null
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": "kits",
+          "group": 7,
+          "id": "hub:kits",
+          "kind": "hub",
+          "label": "Kits",
+          "labelled": true,
+          "meta": {
+            "checksOk": false,
+            "enabled": 0,
+            "features": 0,
+            "kits": 0,
+            "members": 0,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        }
+      ],
+      "title": "OS"
+    }
+  },
+  "input": {
+    "code": {
+      "communities": [
+        {
+          "dominantCategory": "code",
+          "index": 0,
+          "size": 3,
+          "topLabels": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "communityCount": 1,
+      "keptNodes": 3,
+      "totalNodes": 3
+    },
+    "routines": [
+      {
+        "enabled": "yes",
+        "id": "r1"
+      },
+      {
+        "enabled": true,
+        "id": "r2",
+        "title": "Ok"
+      }
+    ],
+    "skills": [
+      {
+        "id": "s1",
+        "name": "one"
+      },
+      "bad",
+      {
+        "name": "no id"
+      },
+      {
+        "id": "s1",
+        "name": "one again"
+      }
+    ],
+    "snapshot": {
+      "knowledge": {
+        "projectMemory": [
+          {
+            "active": 0,
+            "facts": 0,
+            "repoRoot": "/repos/project-00",
+            "superseded": 0
+          },
+          {
+            "active": 1,
+            "facts": 1,
+            "repoRoot": "/repos/project-01",
+            "superseded": 1
+          },
+          {
+            "active": 2,
+            "facts": 2,
+            "repoRoot": "/repos/project-02",
+            "superseded": 2
+          },
+          {
+            "active": 3,
+            "facts": 3,
+            "repoRoot": "/repos/project-03",
+            "superseded": 0
+          },
+          {
+            "active": 4,
+            "facts": 4,
+            "repoRoot": "/repos/project-04",
+            "superseded": 1
+          },
+          {
+            "active": 0,
+            "facts": 5,
+            "repoRoot": "/repos/project-05",
+            "superseded": 2
+          },
+          {
+            "active": 1,
+            "facts": 6,
+            "repoRoot": "/repos/project-06",
+            "superseded": 0
+          },
+          {
+            "active": 2,
+            "facts": 0,
+            "repoRoot": "/repos/project-07",
+            "superseded": 1
+          },
+          {
+            "active": 3,
+            "facts": 1,
+            "repoRoot": "/repos/project-08",
+            "superseded": 2
+          },
+          {
+            "active": 4,
+            "facts": 2,
+            "repoRoot": "/repos/project-09",
+            "superseded": 0
+          },
+          {
+            "active": 0,
+            "facts": 3,
+            "repoRoot": "/repos/project-10",
+            "superseded": 1
+          },
+          {
+            "active": 1,
+            "facts": 4,
+            "repoRoot": "/repos/project-11",
+            "superseded": 2
+          },
+          {
+            "active": 2,
+            "facts": 5,
+            "repoRoot": "/repos/project-12",
+            "superseded": 0
+          },
+          {
+            "active": 3,
+            "facts": 6,
+            "repoRoot": "/repos/project-13",
+            "superseded": 1
+          },
+          {
+            "active": 4,
+            "facts": 0,
+            "repoRoot": "/repos/project-14",
+            "superseded": 2
+          },
+          {
+            "active": 0,
+            "facts": 1,
+            "repoRoot": "/repos/project-15",
+            "superseded": 0
+          },
+          {
+            "active": 1,
+            "facts": 2,
+            "repoRoot": "/repos/project-16",
+            "superseded": 1
+          },
+          {
+            "active": 2,
+            "facts": 3,
+            "repoRoot": "/repos/project-17",
+            "superseded": 2
+          },
+          {
+            "active": 3,
+            "facts": 4,
+            "repoRoot": "/repos/project-18",
+            "superseded": 0
+          },
+          {
+            "active": 4,
+            "facts": 5,
+            "repoRoot": "/repos/project-19",
+            "superseded": 1
+          },
+          {
+            "active": 0,
+            "facts": 6,
+            "repoRoot": "/repos/project-20",
+            "superseded": 2
+          },
+          {
+            "active": 1,
+            "facts": 0,
+            "repoRoot": "/repos/project-21",
+            "superseded": 0
+          },
+          {
+            "active": 2,
+            "facts": 1,
+            "repoRoot": "/repos/project-22",
+            "superseded": 1
+          },
+          {
+            "active": 3,
+            "facts": 2,
+            "repoRoot": "/repos/project-23",
+            "superseded": 2
+          },
+          {
+            "active": 4,
+            "facts": 3,
+            "repoRoot": "/repos/project-24",
+            "superseded": 0
+          },
+          {
+            "active": 0,
+            "facts": 4,
+            "repoRoot": "/repos/project-25",
+            "superseded": 1
+          },
+          {
+            "active": 1,
+            "facts": 5,
+            "repoRoot": "/repos/project-26",
+            "superseded": 2
+          },
+          {
+            "active": 2,
+            "facts": 6,
+            "repoRoot": "/repos/project-27",
+            "superseded": 0
+          },
+          {
+            "active": 3,
+            "facts": 0,
+            "repoRoot": "/repos/project-28",
+            "superseded": 1
+          },
+          {
+            "active": 4,
+            "facts": 1,
+            "repoRoot": "/repos/project-29",
+            "superseded": 2
+          },
+          {
+            "active": 0,
+            "facts": 2,
+            "repoRoot": "/repos/project-30",
+            "superseded": 0
+          },
+          {
+            "active": 1,
+            "facts": 3,
+            "repoRoot": "/repos/project-31",
+            "superseded": 1
+          },
+          {
+            "active": 2,
+            "facts": 4,
+            "repoRoot": "/repos/project-32",
+            "superseded": 2
+          },
+          {
+            "active": 3,
+            "facts": 5,
+            "repoRoot": "/repos/project-33",
+            "superseded": 0
+          },
+          {
+            "active": 4,
+            "facts": 6,
+            "repoRoot": "/repos/project-34",
+            "superseded": 1
+          },
+          {
+            "active": 0,
+            "facts": 0,
+            "repoRoot": "/repos/project-35",
+            "superseded": 2
+          },
+          {
+            "active": 1,
+            "facts": 1,
+            "repoRoot": "/repos/project-36",
+            "superseded": 0
+          },
+          {
+            "active": 2,
+            "facts": 2,
+            "repoRoot": "/repos/project-37",
+            "superseded": 1
+          },
+          {
+            "active": 3,
+            "facts": 3,
+            "repoRoot": "/repos/project-38",
+            "superseded": 2
+          },
+          {
+            "active": 4,
+            "facts": 4,
+            "repoRoot": "/repos/project-39",
+            "superseded": 0
+          },
+          {
+            "active": 0,
+            "facts": 5,
+            "repoRoot": "/repos/project-40",
+            "superseded": 1
+          },
+          {
+            "active": 1,
+            "facts": 6,
+            "repoRoot": "/repos/project-41",
+            "superseded": 2
+          },
+          {
+            "active": 2,
+            "facts": 0,
+            "repoRoot": "/repos/project-42",
+            "superseded": 0
+          },
+          {
+            "active": 3,
+            "facts": 1,
+            "repoRoot": "/repos/project-43",
+            "superseded": 1
+          },
+          {
+            "active": 4,
+            "facts": 2,
+            "repoRoot": "/repos/project-44",
+            "superseded": 2
+          },
+          {
+            "repoRoot": ""
+          }
+        ]
+      },
+      "running": {
+        "chatTurns": [
+          7,
+          {
+            "chatSessionId": "ok-1"
+          }
+        ]
+      },
+      "system": "not an object",
+      "tokens": {
+        "byModel": [
+          {
+            "billable": 4,
+            "model": "m",
+            "provider": "p"
+          }
+        ],
+        "totals": {
+          "billable": "lots"
+        }
+      },
+      "unknownField": {
+        "x": 1
+      }
+    }
+  }
+}

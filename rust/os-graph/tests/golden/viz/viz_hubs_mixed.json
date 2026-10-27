@@ -1,0 +1,1795 @@
+{
+  "expected": {
+    "hubs": {
+      "agents": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "chatTurn:chat-9",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "liveSession:live-4",
+            "weight": 1.0
+          }
+        ],
+        "level": "agents",
+        "nodes": [
+          {
+            "drill": "agents",
+            "group": 5,
+            "id": "hub:agents",
+            "kind": "hub",
+            "label": "Agents",
+            "labelled": true,
+            "meta": {
+              "agentRuns": 0,
+              "chatTurns": 1,
+              "liveSessions": 1,
+              "running": 2
+            },
+            "size": 4.0,
+            "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "chatTurn:chat-9",
+            "kind": "chatTurn",
+            "label": "Chat chat-9",
+            "labelled": true,
+            "meta": {
+              "cancelPath": "/agent/v2/cancel",
+              "cancellable": true,
+              "startedAt": "2026-10-27 09:00:00"
+            },
+            "size": 1.0,
+            "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "liveSession:live-4",
+            "kind": "liveSession",
+            "label": "Live live-4",
+            "labelled": true,
+            "meta": {
+              "cancelPath": null,
+              "cancellable": false,
+              "captionCount": 12,
+              "lastWrite": null,
+              "meetingTitle": null,
+              "startedAt": null
+            },
+            "size": 1.0,
+            "status": "running"
+          }
+        ],
+        "title": "Agents"
+      },
+      "kits": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:claude",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:db",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:skills",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:code_graph_3d",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:file_explorer",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:terminal",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:graph-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:workspace-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:graph-kit",
+            "target": "feature:code_graph_3d",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:workspace-kit",
+            "target": "feature:file_explorer",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:workspace-kit",
+            "target": "feature:terminal",
+            "weight": 1.0
+          }
+        ],
+        "level": "kits",
+        "nodes": [
+          {
+            "drill": "kits",
+            "group": 7,
+            "id": "hub:kits",
+            "kind": "hub",
+            "label": "Kits",
+            "labelled": true,
+            "meta": {
+              "checksOk": false,
+              "enabled": 1,
+              "features": 3,
+              "kits": 2
+            },
+            "size": 4.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:graph-kit",
+            "kind": "kit",
+            "label": "graph-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "code_graph_3d"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:workspace-kit",
+            "kind": "kit",
+            "label": "workspace-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": false,
+              "requires": [
+                "file_explorer",
+                "terminal"
+              ]
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:code_graph_3d",
+            "kind": "feature",
+            "label": "code_graph_3d",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:file_explorer",
+            "kind": "feature",
+            "label": "file_explorer",
+            "labelled": true,
+            "meta": {
+              "enabled": false
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:terminal",
+            "kind": "feature",
+            "label": "terminal",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:db",
+            "kind": "check",
+            "label": "db",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:claude",
+            "kind": "check",
+            "label": "claude CLI",
+            "labelled": true,
+            "meta": {
+              "error": "claude CLI not found",
+              "ok": false
+            },
+            "size": 1.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:skills",
+            "kind": "check",
+            "label": "skills",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          }
+        ],
+        "title": "Kits"
+      },
+      "knowledge": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "codegraph:llm-ide",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "meetings",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "outcome:closed",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "outcome:merged",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "outcome:open",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "reviews",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "source:code",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "source:email",
+            "weight": 1.0
+          }
+        ],
+        "level": "knowledge",
+        "nodes": [
+          {
+            "drill": "knowledge",
+            "group": 1,
+            "id": "hub:knowledge",
+            "kind": "hub",
+            "label": "Knowledge",
+            "labelled": true,
+            "meta": {
+              "meetings": 4,
+              "outcomes": 6,
+              "outcomesTerminal": 4,
+              "pendingReviews": 3,
+              "sources": 5
+            },
+            "size": 4.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "source:code",
+            "kind": "sourceKind",
+            "label": "code",
+            "labelled": true,
+            "meta": {
+              "count": 2,
+              "lastIndexedAt": null
+            },
+            "size": 2.3652123889719707,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "source:email",
+            "kind": "sourceKind",
+            "label": "email",
+            "labelled": true,
+            "meta": {
+              "count": 3,
+              "lastIndexedAt": "2026-10-26 10:00:00"
+            },
+            "size": 2.7227062322935724,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "meetings",
+            "kind": "sourceKind",
+            "label": "Meetings",
+            "labelled": true,
+            "meta": {
+              "count": 4
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "reviews",
+            "kind": "activity",
+            "label": "Pending reviews",
+            "labelled": true,
+            "meta": {
+              "count": 3
+            },
+            "size": 1.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "outcome:closed",
+            "kind": "activity",
+            "label": "closed",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 2.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "outcome:merged",
+            "kind": "activity",
+            "label": "merged",
+            "labelled": true,
+            "meta": {
+              "count": 3
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "outcome:open",
+            "kind": "activity",
+            "label": "open",
+            "labelled": true,
+            "meta": {
+              "count": 2
+            },
+            "size": 2.584962500721156,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "codegraph:llm-ide",
+            "kind": "codeCluster",
+            "label": "llm-ide",
+            "labelled": true,
+            "meta": {
+              "commitSha": "f00ba4",
+              "generatedAt": "2026-10-27 01:00:00"
+            },
+            "size": 1.0,
+            "status": null
+          }
+        ],
+        "title": "Knowledge"
+      },
+      "memory": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/work/llm-ide",
+            "weight": 1.0
+          }
+        ],
+        "level": "memory",
+        "nodes": [
+          {
+            "drill": "memory",
+            "group": 2,
+            "id": "hub:memory",
+            "kind": "hub",
+            "label": "Memory",
+            "labelled": true,
+            "meta": {
+              "active": 8,
+              "facts": 10,
+              "repos": 1,
+              "superseded": 2
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/work/llm-ide",
+            "kind": "memoryRepo",
+            "label": "llm-ide",
+            "labelled": true,
+            "meta": {
+              "active": 8,
+              "facts": 10,
+              "lastConfirmedAt": "2026-10-27 08:00:00",
+              "repoRoot": "/work/llm-ide",
+              "superseded": 2
+            },
+            "size": 3.0,
+            "status": "ok"
+          }
+        ],
+        "title": "Memory"
+      },
+      "models": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "caller:api",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "caller:auto-task",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "endpoint:",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "endpoint:/agent/v2/stream",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "endpoint:/kb/loop/agent-run",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "provider:anthropic",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "provider:custom:abc",
+            "weight": 1.0
+          },
+          {
+            "kind": "provides",
+            "source": "provider:anthropic",
+            "target": "model:anthropic/claude-haiku-5-5",
+            "weight": 1.0
+          },
+          {
+            "kind": "provides",
+            "source": "provider:anthropic",
+            "target": "model:anthropic/claude-sonnet-5",
+            "weight": 1.0
+          },
+          {
+            "kind": "provides",
+            "source": "provider:custom:abc",
+            "target": "model:custom:abc/local-7b",
+            "weight": 1.0
+          }
+        ],
+        "level": "models",
+        "nodes": [
+          {
+            "drill": "models",
+            "group": 4,
+            "id": "hub:models",
+            "kind": "hub",
+            "label": "Models",
+            "labelled": true,
+            "meta": {
+              "billable": 6200,
+              "calls": 9,
+              "models": 3
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 4,
+            "id": "provider:anthropic",
+            "kind": "provider",
+            "label": "anthropic",
+            "labelled": true,
+            "meta": {
+              "billable": 6185
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 4,
+            "id": "provider:custom:abc",
+            "kind": "provider",
+            "label": "custom:abc",
+            "labelled": true,
+            "meta": {
+              "billable": 15
+            },
+            "size": 1.635183221777295,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "model:anthropic/claude-haiku-5-5",
+            "kind": "model",
+            "label": "claude-haiku-5-5",
+            "labelled": true,
+            "meta": {
+              "billable": 1185,
+              "cacheRead": 4000,
+              "cacheWrite": 100,
+              "calls": 3,
+              "input": 990,
+              "model": "claude-haiku-5-5",
+              "output": 195,
+              "provider": "anthropic",
+              "runs": 2
+            },
+            "size": 2.662091073430745,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "model:anthropic/claude-sonnet-5",
+            "kind": "model",
+            "label": "claude-sonnet-5",
+            "labelled": true,
+            "meta": {
+              "billable": 5000,
+              "cacheRead": 16000,
+              "cacheWrite": 200,
+              "calls": 5,
+              "input": 4000,
+              "model": "claude-sonnet-5",
+              "output": 700,
+              "provider": "anthropic",
+              "runs": 2
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "model:custom:abc/local-7b",
+            "kind": "model",
+            "label": "local-7b",
+            "labelled": true,
+            "meta": {
+              "billable": 15,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 1,
+              "input": 10,
+              "model": "local-7b",
+              "output": 5,
+              "provider": "custom:abc",
+              "runs": 0
+            },
+            "size": 1.6510416195282667,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "caller:api",
+            "kind": "caller",
+            "label": "api",
+            "labelled": true,
+            "meta": {
+              "billable": 5100,
+              "cacheRead": 20000,
+              "cacheWrite": 300,
+              "calls": 7,
+              "input": 4000,
+              "output": 800,
+              "runs": 2
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "caller:auto-task",
+            "kind": "caller",
+            "label": "auto-task",
+            "labelled": true,
+            "meta": {
+              "billable": 1100,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 2,
+              "input": 1000,
+              "output": 100,
+              "runs": 2
+            },
+            "size": 2.640814505958305,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "endpoint:",
+            "kind": "endpoint",
+            "label": "(no endpoint)",
+            "labelled": true,
+            "meta": {
+              "billable": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 1,
+              "input": 0,
+              "output": 0,
+              "runs": 0
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "endpoint:/agent/v2/stream",
+            "kind": "endpoint",
+            "label": "/agent/v2/stream",
+            "labelled": true,
+            "meta": {
+              "billable": 5100,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 6,
+              "input": 0,
+              "output": 0,
+              "runs": 0
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "endpoint:/kb/loop/agent-run",
+            "kind": "endpoint",
+            "label": "/kb/loop/agent-run",
+            "labelled": true,
+            "meta": {
+              "billable": 1100,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 2,
+              "input": 0,
+              "output": 0,
+              "runs": 0
+            },
+            "size": 2.640814505958305,
+            "status": null
+          }
+        ],
+        "title": "Models"
+      },
+      "routines": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:routines",
+            "target": "routines:disabled",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:routines",
+            "target": "routines:enabled",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:disabled",
+            "target": "routine:r-a",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:enabled",
+            "target": "routine:r-b",
+            "weight": 1.0
+          }
+        ],
+        "level": "routines",
+        "nodes": [
+          {
+            "drill": "routines",
+            "group": 6,
+            "id": "hub:routines",
+            "kind": "hub",
+            "label": "Routines",
+            "labelled": true,
+            "meta": {
+              "enabled": 1,
+              "routines": 2
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routines:enabled",
+            "kind": "routine",
+            "label": "Enabled",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routines:disabled",
+            "kind": "routine",
+            "label": "Disabled",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:r-a",
+            "kind": "routine",
+            "label": "Digest",
+            "labelled": true,
+            "meta": {
+              "enabled": false,
+              "lastRunAt": null,
+              "nextRunAt": null,
+              "schedule": null
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:r-b",
+            "kind": "routine",
+            "label": "Nightly graph",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "lastRunAt": null,
+              "nextRunAt": "2026-10-28T02:00:00Z",
+              "schedule": "Nightly"
+            },
+            "size": 1.0,
+            "status": "ok"
+          }
+        ],
+        "title": "Routines"
+      },
+      "skills": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:skills",
+            "target": "skillSource:kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:skills",
+            "target": "skillSource:project",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:s-1",
+            "target": "skillSource:kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:s-2",
+            "target": "skillSource:project",
+            "weight": 1.0
+          }
+        ],
+        "level": "skills",
+        "nodes": [
+          {
+            "drill": "skills",
+            "group": 3,
+            "id": "hub:skills",
+            "kind": "hub",
+            "label": "Skills",
+            "labelled": true,
+            "meta": {
+              "skills": 2,
+              "sources": 2
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "skillSource:kit",
+            "kind": "skillSource",
+            "label": "kit",
+            "labelled": true,
+            "meta": {
+              "count": 1,
+              "source": "kit"
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "skillSource:project",
+            "kind": "skillSource",
+            "label": "project",
+            "labelled": true,
+            "meta": {
+              "count": 1,
+              "source": "project"
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:s-1",
+            "kind": "skill",
+            "label": "alpha",
+            "labelled": true,
+            "meta": {
+              "description": "Explores",
+              "name": "alpha",
+              "source": "kit"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:s-2",
+            "kind": "skill",
+            "label": "zeta",
+            "labelled": true,
+            "meta": {
+              "description": null,
+              "name": "zeta",
+              "source": "project"
+            },
+            "size": 1.0,
+            "status": null
+          }
+        ],
+        "title": "Skills"
+      }
+    },
+    "os": {
+      "edges": [
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "chatTurn:chat-9",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "liveSession:live-4",
+          "weight": 1.0
+        },
+        {
+          "kind": "relates",
+          "source": "hub:code",
+          "target": "feature:code_graph_3d",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:code_graph_3d",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:file_explorer",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:terminal",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:graph-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:workspace-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "relates",
+          "source": "hub:knowledge",
+          "target": "hub:code",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:knowledge",
+          "target": "meetings",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:knowledge",
+          "target": "reviews",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:knowledge",
+          "target": "source:code",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:knowledge",
+          "target": "source:email",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/work/llm-ide",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:models",
+          "target": "model:anthropic/claude-haiku-5-5",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:models",
+          "target": "model:anthropic/claude-sonnet-5",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:models",
+          "target": "model:custom:abc/local-7b",
+          "weight": 1.0
+        },
+        {
+          "kind": "relates",
+          "source": "hub:routines",
+          "target": "hub:models",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:r-a",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:r-b",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:skills",
+          "target": "skillSource:kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:skills",
+          "target": "skillSource:project",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:graph-kit",
+          "target": "feature:code_graph_3d",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:workspace-kit",
+          "target": "feature:file_explorer",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:workspace-kit",
+          "target": "feature:terminal",
+          "weight": 1.0
+        }
+      ],
+      "level": "os",
+      "nodes": [
+        {
+          "drill": "code",
+          "group": 0,
+          "id": "hub:code",
+          "kind": "hub",
+          "label": "Code",
+          "labelled": true,
+          "meta": {
+            "communities": 0,
+            "keptNodes": 0,
+            "members": 0,
+            "more": 0,
+            "totalNodes": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "knowledge",
+          "group": 1,
+          "id": "hub:knowledge",
+          "kind": "hub",
+          "label": "Knowledge",
+          "labelled": true,
+          "meta": {
+            "meetings": 4,
+            "members": 4,
+            "more": 0,
+            "outcomes": 6,
+            "outcomesTerminal": 4,
+            "pendingReviews": 3,
+            "sources": 5
+          },
+          "size": 4.0,
+          "status": "warn"
+        },
+        {
+          "drill": null,
+          "group": 1,
+          "id": "meetings",
+          "kind": "sourceKind",
+          "label": "Meetings",
+          "labelled": true,
+          "meta": {
+            "count": 4
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 1,
+          "id": "reviews",
+          "kind": "activity",
+          "label": "Pending reviews",
+          "labelled": true,
+          "meta": {
+            "count": 3
+          },
+          "size": 1.0,
+          "status": "warn"
+        },
+        {
+          "drill": null,
+          "group": 1,
+          "id": "source:email",
+          "kind": "sourceKind",
+          "label": "email",
+          "labelled": true,
+          "meta": {
+            "count": 3,
+            "lastIndexedAt": "2026-10-26 10:00:00"
+          },
+          "size": 2.7227062322935724,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 1,
+          "id": "source:code",
+          "kind": "sourceKind",
+          "label": "code",
+          "labelled": true,
+          "meta": {
+            "count": 2,
+            "lastIndexedAt": null
+          },
+          "size": 2.3652123889719707,
+          "status": null
+        },
+        {
+          "drill": "memory",
+          "group": 2,
+          "id": "hub:memory",
+          "kind": "hub",
+          "label": "Memory",
+          "labelled": true,
+          "meta": {
+            "active": 8,
+            "facts": 10,
+            "members": 1,
+            "more": 0,
+            "repos": 1,
+            "superseded": 2
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/work/llm-ide",
+          "kind": "memoryRepo",
+          "label": "llm-ide",
+          "labelled": true,
+          "meta": {
+            "active": 8,
+            "facts": 10,
+            "lastConfirmedAt": "2026-10-27 08:00:00",
+            "repoRoot": "/work/llm-ide",
+            "superseded": 2
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": "skills",
+          "group": 3,
+          "id": "hub:skills",
+          "kind": "hub",
+          "label": "Skills",
+          "labelled": true,
+          "meta": {
+            "members": 2,
+            "more": 0,
+            "skills": 2,
+            "sources": 2
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 3,
+          "id": "skillSource:kit",
+          "kind": "skillSource",
+          "label": "kit",
+          "labelled": true,
+          "meta": {
+            "count": 1,
+            "source": "kit"
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 3,
+          "id": "skillSource:project",
+          "kind": "skillSource",
+          "label": "project",
+          "labelled": true,
+          "meta": {
+            "count": 1,
+            "source": "project"
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": "models",
+          "group": 4,
+          "id": "hub:models",
+          "kind": "hub",
+          "label": "Models",
+          "labelled": true,
+          "meta": {
+            "billable": 6200,
+            "calls": 9,
+            "members": 3,
+            "models": 3,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 4,
+          "id": "model:anthropic/claude-sonnet-5",
+          "kind": "model",
+          "label": "claude-sonnet-5",
+          "labelled": true,
+          "meta": {
+            "billable": 5000,
+            "cacheRead": 16000,
+            "cacheWrite": 200,
+            "calls": 5,
+            "input": 4000,
+            "model": "claude-sonnet-5",
+            "output": 700,
+            "provider": "anthropic",
+            "runs": 2
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 4,
+          "id": "model:anthropic/claude-haiku-5-5",
+          "kind": "model",
+          "label": "claude-haiku-5-5",
+          "labelled": true,
+          "meta": {
+            "billable": 1185,
+            "cacheRead": 4000,
+            "cacheWrite": 100,
+            "calls": 3,
+            "input": 990,
+            "model": "claude-haiku-5-5",
+            "output": 195,
+            "provider": "anthropic",
+            "runs": 2
+          },
+          "size": 2.662091073430745,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 4,
+          "id": "model:custom:abc/local-7b",
+          "kind": "model",
+          "label": "local-7b",
+          "labelled": true,
+          "meta": {
+            "billable": 15,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 1,
+            "input": 10,
+            "model": "local-7b",
+            "output": 5,
+            "provider": "custom:abc",
+            "runs": 0
+          },
+          "size": 1.6510416195282667,
+          "status": null
+        },
+        {
+          "drill": "agents",
+          "group": 5,
+          "id": "hub:agents",
+          "kind": "hub",
+          "label": "Agents",
+          "labelled": true,
+          "meta": {
+            "agentRuns": 0,
+            "chatTurns": 1,
+            "liveSessions": 1,
+            "members": 2,
+            "more": 0,
+            "running": 2
+          },
+          "size": 4.0,
+          "status": "running"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "chatTurn:chat-9",
+          "kind": "chatTurn",
+          "label": "Chat chat-9",
+          "labelled": true,
+          "meta": {
+            "cancelPath": "/agent/v2/cancel",
+            "cancellable": true,
+            "startedAt": "2026-10-27 09:00:00"
+          },
+          "size": 1.0,
+          "status": "running"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "liveSession:live-4",
+          "kind": "liveSession",
+          "label": "Live live-4",
+          "labelled": true,
+          "meta": {
+            "cancelPath": null,
+            "cancellable": false,
+            "captionCount": 12,
+            "lastWrite": null,
+            "meetingTitle": null,
+            "startedAt": null
+          },
+          "size": 1.0,
+          "status": "running"
+        },
+        {
+          "drill": "routines",
+          "group": 6,
+          "id": "hub:routines",
+          "kind": "hub",
+          "label": "Routines",
+          "labelled": true,
+          "meta": {
+            "enabled": 1,
+            "members": 2,
+            "more": 0,
+            "routines": 2
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:r-a",
+          "kind": "routine",
+          "label": "Digest",
+          "labelled": true,
+          "meta": {
+            "enabled": false,
+            "lastRunAt": null,
+            "nextRunAt": null,
+            "schedule": null
+          },
+          "size": 1.0,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:r-b",
+          "kind": "routine",
+          "label": "Nightly graph",
+          "labelled": true,
+          "meta": {
+            "enabled": true,
+            "lastRunAt": null,
+            "nextRunAt": "2026-10-28T02:00:00Z",
+            "schedule": "Nightly"
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": "kits",
+          "group": 7,
+          "id": "hub:kits",
+          "kind": "hub",
+          "label": "Kits",
+          "labelled": true,
+          "meta": {
+            "checksOk": false,
+            "enabled": 1,
+            "features": 3,
+            "kits": 2,
+            "members": 5,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "warn"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:code_graph_3d",
+          "kind": "feature",
+          "label": "code_graph_3d",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:file_explorer",
+          "kind": "feature",
+          "label": "file_explorer",
+          "labelled": true,
+          "meta": {
+            "enabled": false
+          },
+          "size": 1.0,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:terminal",
+          "kind": "feature",
+          "label": "terminal",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:graph-kit",
+          "kind": "kit",
+          "label": "graph-kit",
+          "labelled": true,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "code_graph_3d"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:workspace-kit",
+          "kind": "kit",
+          "label": "workspace-kit",
+          "labelled": true,
+          "meta": {
+            "enabled": false,
+            "requires": [
+              "file_explorer",
+              "terminal"
+            ]
+          },
+          "size": 1.0,
+          "status": "off"
+        }
+      ],
+      "title": "OS"
+    }
+  },
+  "input": {
+    "code": null,
+    "routines": [
+      {
+        "enabled": true,
+        "id": "r-b",
+        "nextRunAt": "2026-10-28T02:00:00Z",
+        "schedule": "Nightly",
+        "title": "Nightly graph"
+      },
+      {
+        "enabled": false,
+        "id": "r-a",
+        "schedule": null,
+        "title": "Digest"
+      }
+    ],
+    "skills": [
+      {
+        "id": "s-2",
+        "name": "zeta",
+        "source": "project"
+      },
+      {
+        "description": "Explores",
+        "id": "s-1",
+        "name": "alpha",
+        "source": "kit"
+      }
+    ],
+    "snapshot": {
+      "knowledge": {
+        "codeGraph": [
+          {
+            "commitSha": "f00ba4",
+            "generatedAt": "2026-10-27 01:00:00",
+            "repoId": "llm-ide"
+          }
+        ],
+        "meetings": {
+          "count": 4
+        },
+        "outcomes": {
+          "byState": {
+            "closed": 1,
+            "merged": 3,
+            "open": 2
+          },
+          "terminal": 4,
+          "total": 6
+        },
+        "pendingReviews": 3,
+        "projectMemory": [
+          {
+            "active": 8,
+            "facts": 10,
+            "lastConfirmedAt": "2026-10-27 08:00:00",
+            "repoRoot": "/work/llm-ide",
+            "superseded": 2
+          }
+        ],
+        "sources": {
+          "byKind": [
+            {
+              "count": 3,
+              "kind": "email",
+              "lastIndexedAt": "2026-10-26 10:00:00"
+            },
+            {
+              "count": 2,
+              "kind": "code",
+              "lastIndexedAt": null
+            }
+          ],
+          "total": 5
+        }
+      },
+      "running": {
+        "chatTurns": [
+          {
+            "cancel": {
+              "body": {
+                "chatSessionId": "chat-9"
+              },
+              "method": "POST",
+              "path": "/agent/v2/cancel"
+            },
+            "chatSessionId": "chat-9",
+            "startedAt": "2026-10-27 09:00:00"
+          }
+        ],
+        "liveSessions": [
+          {
+            "cancel": null,
+            "captionCount": 12,
+            "meetingTitle": null,
+            "sessionId": "live-4"
+          }
+        ],
+        "meetingAgentRuns": []
+      },
+      "system": {
+        "checks": {
+          "claude": false,
+          "claudeError": "claude CLI not found",
+          "db": true,
+          "skills": true
+        },
+        "features": [
+          "code_graph_3d",
+          "terminal"
+        ],
+        "kits": [
+          {
+            "enabled": false,
+            "id": "workspace-kit",
+            "requires": [
+              "file_explorer",
+              "terminal"
+            ]
+          },
+          {
+            "enabled": true,
+            "id": "graph-kit",
+            "requires": [
+              "code_graph_3d"
+            ]
+          }
+        ],
+        "status": "degraded"
+      },
+      "tokens": {
+        "byEndpoint": [
+          {
+            "billable": 1100,
+            "calls": 2,
+            "endpoint": "/kb/loop/agent-run"
+          },
+          {
+            "billable": 0,
+            "calls": 1,
+            "endpoint": null
+          },
+          {
+            "billable": 5100,
+            "calls": 6,
+            "endpoint": "/agent/v2/stream"
+          }
+        ],
+        "byModel": [
+          {
+            "billable": 5000,
+            "cacheRead": 16000,
+            "cacheWrite": 200,
+            "calls": 5,
+            "input": 4000,
+            "model": "claude-sonnet-5",
+            "output": 700,
+            "provider": "anthropic",
+            "runs": 2
+          },
+          {
+            "billable": 15,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 1,
+            "input": 10,
+            "model": "local-7b",
+            "output": 5,
+            "provider": "custom:abc",
+            "runs": 0
+          },
+          {
+            "billable": 1185,
+            "cacheRead": 4000,
+            "cacheWrite": 100,
+            "calls": 3,
+            "input": 990,
+            "model": "claude-haiku-5-5",
+            "output": 195,
+            "provider": "anthropic",
+            "runs": 2
+          }
+        ],
+        "bySource": [
+          {
+            "billable": 1100,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 2,
+            "input": 1000,
+            "output": 100,
+            "runs": 2,
+            "source": "auto-task"
+          },
+          {
+            "billable": 5100,
+            "cacheRead": 20000,
+            "cacheWrite": 300,
+            "calls": 7,
+            "input": 4000,
+            "output": 800,
+            "runs": 2,
+            "source": "api"
+          }
+        ],
+        "totals": {
+          "billable": 6200,
+          "cacheRead": 20000,
+          "cacheWrite": 300,
+          "calls": 9,
+          "input": 5000,
+          "output": 900,
+          "runs": 4
+        }
+      }
+    }
+  }
+}

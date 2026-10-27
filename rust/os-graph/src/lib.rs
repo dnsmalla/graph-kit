@@ -3,6 +3,7 @@
 //! * [`builder`] — `build_system_graph`: categorize, detect communities, cap, ring.
 //! * [`orbit`] — `orbit_layout`: deterministic 3D orbit layout (mulberry32 + relaxation).
 //! * [`models`] / [`snapshot`] — the canonical graph model and the slice of `OsSnapshot` read.
+//! * [`viz`] — `VizGraph`: the whole OS as one graph plus one graph per part.
 //! * [`api`] — JSON-in/JSON-out entry points used by the optional `wasm` feature.
 //!
 //! Behaviour is pinned by unit tests and by `tests/parity.rs`, which checks frozen golden
@@ -14,6 +15,7 @@ pub mod builder;
 pub mod models;
 pub mod orbit;
 pub mod snapshot;
+pub mod viz;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
@@ -29,3 +31,8 @@ pub use orbit::{
 };
 pub use snapshot::ActivityId;
 pub use snapshot::OsSnapshot;
+pub use snapshot::OsSnapshotFull;
+pub use viz::{
+    build_hub_graph, build_os_graph, build_os_view, code_summary, CodeSummary, CommunitySummary,
+    OsView, OsVizInput, Routine, Skill, VizEdge, VizGraph, VizNode, HUB_KEYS,
+};

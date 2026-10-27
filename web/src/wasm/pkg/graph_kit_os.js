@@ -19,6 +19,31 @@ export function __wbg_reset_state () {
 }
 
 /**
+ * @param {string} input_json
+ * @returns {string}
+ */
+export function build_os_view_json(input_json) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(input_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        __wbg_call_guard();
+        wasm.build_os_view_json(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred2_0 = r0;
+        deferred2_1 = r1;
+        return getStringFromWasm0(r0, r1);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        __wbg_call_guard();
+        wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
  * @param {string} snapshot_json
  * @param {string} project_json
  * @param {string} opts_json
@@ -46,6 +71,32 @@ export function build_system_graph_json(snapshot_json, project_json, opts_json) 
         wasm.__wbindgen_add_to_stack_pointer(16);
         __wbg_call_guard();
         wasm.__wbindgen_export(deferred4_0, deferred4_1, 1);
+    }
+}
+
+/**
+ * @param {string} system_graph_json
+ * @param {number} top
+ * @returns {string}
+ */
+export function code_summary_json(system_graph_json, top) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(system_graph_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        __wbg_call_guard();
+        wasm.code_summary_json(retptr, ptr0, len0, top);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred2_0 = r0;
+        deferred2_1 = r1;
+        return getStringFromWasm0(r0, r1);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        __wbg_call_guard();
+        wasm.__wbindgen_export(deferred2_0, deferred2_1, 1);
     }
 }
 
@@ -84,6 +135,34 @@ export function orbit_layout_json(system_graph_json, opts_json) {
 export function start() {
     __wbg_call_guard();
     wasm.start();
+}
+
+/**
+ * @param {string} viz_json
+ * @param {string} opts_json
+ * @returns {string}
+ */
+export function viz_layout_json(viz_json, opts_json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(viz_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(opts_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
+        const len1 = WASM_VECTOR_LEN;
+        __wbg_call_guard();
+        wasm.viz_layout_json(retptr, ptr0, len0, ptr1, len1);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred3_0 = r0;
+        deferred3_1 = r1;
+        return getStringFromWasm0(r0, r1);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        __wbg_call_guard();
+        wasm.__wbindgen_export(deferred3_0, deferred3_1, 1);
+    }
 }
 function __wbg_get_imports() {
     const import0 = {

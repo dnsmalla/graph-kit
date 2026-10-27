@@ -1,0 +1,310 @@
+{
+  "expected": {
+    "hubs": {
+      "agents": {
+        "edges": [],
+        "level": "agents",
+        "nodes": [
+          {
+            "drill": "agents",
+            "group": 5,
+            "id": "hub:agents",
+            "kind": "hub",
+            "label": "Agents",
+            "labelled": true,
+            "meta": {
+              "agentRuns": 0,
+              "chatTurns": 0,
+              "liveSessions": 0,
+              "running": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Agents"
+      },
+      "kits": {
+        "edges": [],
+        "level": "kits",
+        "nodes": [
+          {
+            "drill": "kits",
+            "group": 7,
+            "id": "hub:kits",
+            "kind": "hub",
+            "label": "Kits",
+            "labelled": true,
+            "meta": {
+              "checksOk": false,
+              "enabled": 0,
+              "features": 0,
+              "kits": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Kits"
+      },
+      "knowledge": {
+        "edges": [],
+        "level": "knowledge",
+        "nodes": [
+          {
+            "drill": "knowledge",
+            "group": 1,
+            "id": "hub:knowledge",
+            "kind": "hub",
+            "label": "Knowledge",
+            "labelled": true,
+            "meta": {
+              "meetings": 0,
+              "outcomes": 0,
+              "outcomesTerminal": 0,
+              "pendingReviews": 0,
+              "sources": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Knowledge"
+      },
+      "memory": {
+        "edges": [],
+        "level": "memory",
+        "nodes": [
+          {
+            "drill": "memory",
+            "group": 2,
+            "id": "hub:memory",
+            "kind": "hub",
+            "label": "Memory",
+            "labelled": true,
+            "meta": {
+              "active": 0,
+              "facts": 0,
+              "repos": 0,
+              "superseded": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Memory"
+      },
+      "models": {
+        "edges": [],
+        "level": "models",
+        "nodes": [
+          {
+            "drill": "models",
+            "group": 4,
+            "id": "hub:models",
+            "kind": "hub",
+            "label": "Models",
+            "labelled": true,
+            "meta": {
+              "billable": 0,
+              "calls": 0,
+              "models": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Models"
+      },
+      "routines": {
+        "edges": [],
+        "level": "routines",
+        "nodes": [
+          {
+            "drill": "routines",
+            "group": 6,
+            "id": "hub:routines",
+            "kind": "hub",
+            "label": "Routines",
+            "labelled": true,
+            "meta": {
+              "enabled": 0,
+              "routines": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Routines"
+      },
+      "skills": {
+        "edges": [],
+        "level": "skills",
+        "nodes": [
+          {
+            "drill": "skills",
+            "group": 3,
+            "id": "hub:skills",
+            "kind": "hub",
+            "label": "Skills",
+            "labelled": true,
+            "meta": {
+              "skills": 0,
+              "sources": 0
+            },
+            "size": 4.0,
+            "status": "off"
+          }
+        ],
+        "title": "Skills"
+      }
+    },
+    "os": {
+      "edges": [],
+      "level": "os",
+      "nodes": [
+        {
+          "drill": "code",
+          "group": 0,
+          "id": "hub:code",
+          "kind": "hub",
+          "label": "Code",
+          "labelled": true,
+          "meta": {
+            "communities": 0,
+            "keptNodes": 0,
+            "members": 0,
+            "more": 0,
+            "totalNodes": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "knowledge",
+          "group": 1,
+          "id": "hub:knowledge",
+          "kind": "hub",
+          "label": "Knowledge",
+          "labelled": true,
+          "meta": {
+            "meetings": 0,
+            "members": 0,
+            "more": 0,
+            "outcomes": 0,
+            "outcomesTerminal": 0,
+            "pendingReviews": 0,
+            "sources": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "memory",
+          "group": 2,
+          "id": "hub:memory",
+          "kind": "hub",
+          "label": "Memory",
+          "labelled": true,
+          "meta": {
+            "active": 0,
+            "facts": 0,
+            "members": 0,
+            "more": 0,
+            "repos": 0,
+            "superseded": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "skills",
+          "group": 3,
+          "id": "hub:skills",
+          "kind": "hub",
+          "label": "Skills",
+          "labelled": true,
+          "meta": {
+            "members": 0,
+            "more": 0,
+            "skills": 0,
+            "sources": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "models",
+          "group": 4,
+          "id": "hub:models",
+          "kind": "hub",
+          "label": "Models",
+          "labelled": true,
+          "meta": {
+            "billable": 0,
+            "calls": 0,
+            "members": 0,
+            "models": 0,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "agents",
+          "group": 5,
+          "id": "hub:agents",
+          "kind": "hub",
+          "label": "Agents",
+          "labelled": true,
+          "meta": {
+            "agentRuns": 0,
+            "chatTurns": 0,
+            "liveSessions": 0,
+            "members": 0,
+            "more": 0,
+            "running": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "routines",
+          "group": 6,
+          "id": "hub:routines",
+          "kind": "hub",
+          "label": "Routines",
+          "labelled": true,
+          "meta": {
+            "enabled": 0,
+            "members": 0,
+            "more": 0,
+            "routines": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        },
+        {
+          "drill": "kits",
+          "group": 7,
+          "id": "hub:kits",
+          "kind": "hub",
+          "label": "Kits",
+          "labelled": true,
+          "meta": {
+            "checksOk": false,
+            "enabled": 0,
+            "features": 0,
+            "kits": 0,
+            "members": 0,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "off"
+        }
+      ],
+      "title": "OS"
+    }
+  },
+  "input": {}
+}

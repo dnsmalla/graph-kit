@@ -1,0 +1,2830 @@
+{
+  "expected": {
+    "hubs": {
+      "agents": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "agentRun:live-1",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "chatTurn:chat-1",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "liveSession:live-1",
+            "weight": 1.0
+          }
+        ],
+        "level": "agents",
+        "nodes": [
+          {
+            "drill": "agents",
+            "group": 5,
+            "id": "hub:agents",
+            "kind": "hub",
+            "label": "Agents",
+            "labelled": true,
+            "meta": {
+              "agentRuns": 1,
+              "chatTurns": 1,
+              "liveSessions": 1,
+              "running": 3
+            },
+            "size": 4.0,
+            "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "chatTurn:chat-1",
+            "kind": "chatTurn",
+            "label": "Chat chat-1",
+            "labelled": true,
+            "meta": {
+              "cancelPath": "/agent/v2/cancel",
+              "cancellable": true,
+              "startedAt": "2026-10-26T13:56:08.693Z"
+            },
+            "size": 1.0,
+            "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "agentRun:live-1",
+            "kind": "agentRun",
+            "label": "Agent run live-1",
+            "labelled": true,
+            "meta": {
+              "cancelPath": "/kb/agent/stop",
+              "cancellable": true,
+              "lastTickAt": null,
+              "planId": null,
+              "startedAt": "2026-10-26T13:56:08.695Z"
+            },
+            "size": 1.0,
+            "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "liveSession:live-1",
+            "kind": "liveSession",
+            "label": "Weekly sync",
+            "labelled": true,
+            "meta": {
+              "cancelPath": null,
+              "cancellable": false,
+              "captionCount": 2,
+              "lastWrite": "2026-10-26T13:56:08.695Z",
+              "meetingTitle": "Weekly sync",
+              "startedAt": "2026-10-26T13:56:08.694Z"
+            },
+            "size": 1.0,
+            "status": "running"
+          }
+        ],
+        "title": "Agents"
+      },
+      "kits": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:claude",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:db",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "check:skills",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:agent_chat",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:auto_tasks",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:code_graph_3d",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:doc_gen",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:file_explorer",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:gantt_issues",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:mobile_sync",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "feature:terminal",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:agent-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:automation-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:capture-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:docs-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:graph-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:knowledge-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:os-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:sync-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:work-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:kits",
+            "target": "kit:workspace-kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:agent-kit",
+            "target": "feature:agent_chat",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:automation-kit",
+            "target": "feature:auto_tasks",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:docs-kit",
+            "target": "feature:doc_gen",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:graph-kit",
+            "target": "feature:code_graph_3d",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:sync-kit",
+            "target": "feature:mobile_sync",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:work-kit",
+            "target": "feature:gantt_issues",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:workspace-kit",
+            "target": "feature:file_explorer",
+            "weight": 1.0
+          },
+          {
+            "kind": "requires",
+            "source": "kit:workspace-kit",
+            "target": "feature:terminal",
+            "weight": 1.0
+          }
+        ],
+        "level": "kits",
+        "nodes": [
+          {
+            "drill": "kits",
+            "group": 7,
+            "id": "hub:kits",
+            "kind": "hub",
+            "label": "Kits",
+            "labelled": true,
+            "meta": {
+              "checksOk": true,
+              "enabled": 10,
+              "features": 8,
+              "kits": 10
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:agent-kit",
+            "kind": "kit",
+            "label": "agent-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "agent_chat"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:automation-kit",
+            "kind": "kit",
+            "label": "automation-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "auto_tasks"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:capture-kit",
+            "kind": "kit",
+            "label": "capture-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": []
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:docs-kit",
+            "kind": "kit",
+            "label": "docs-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "doc_gen"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:graph-kit",
+            "kind": "kit",
+            "label": "graph-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "code_graph_3d"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:knowledge-kit",
+            "kind": "kit",
+            "label": "knowledge-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": []
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:os-kit",
+            "kind": "kit",
+            "label": "os-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": []
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:sync-kit",
+            "kind": "kit",
+            "label": "sync-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "mobile_sync"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:work-kit",
+            "kind": "kit",
+            "label": "work-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "gantt_issues"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "kit:workspace-kit",
+            "kind": "kit",
+            "label": "workspace-kit",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "requires": [
+                "file_explorer",
+                "terminal"
+              ]
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:agent_chat",
+            "kind": "feature",
+            "label": "agent_chat",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:auto_tasks",
+            "kind": "feature",
+            "label": "auto_tasks",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:code_graph_3d",
+            "kind": "feature",
+            "label": "code_graph_3d",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:doc_gen",
+            "kind": "feature",
+            "label": "doc_gen",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:file_explorer",
+            "kind": "feature",
+            "label": "file_explorer",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:gantt_issues",
+            "kind": "feature",
+            "label": "gantt_issues",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:mobile_sync",
+            "kind": "feature",
+            "label": "mobile_sync",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "feature:terminal",
+            "kind": "feature",
+            "label": "terminal",
+            "labelled": true,
+            "meta": {
+              "enabled": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:db",
+            "kind": "check",
+            "label": "db",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:claude",
+            "kind": "check",
+            "label": "claude CLI",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "check:skills",
+            "kind": "check",
+            "label": "skills",
+            "labelled": true,
+            "meta": {
+              "error": null,
+              "ok": true
+            },
+            "size": 1.0,
+            "status": "ok"
+          }
+        ],
+        "title": "Kits"
+      },
+      "knowledge": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "codegraph:example-repo",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "outcome:merged",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "outcome:open",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "reviews",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:knowledge",
+            "target": "source:code",
+            "weight": 1.0
+          }
+        ],
+        "level": "knowledge",
+        "nodes": [
+          {
+            "drill": "knowledge",
+            "group": 1,
+            "id": "hub:knowledge",
+            "kind": "hub",
+            "label": "Knowledge",
+            "labelled": true,
+            "meta": {
+              "meetings": 0,
+              "outcomes": 2,
+              "outcomesTerminal": 1,
+              "pendingReviews": 1,
+              "sources": 1
+            },
+            "size": 4.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "source:code",
+            "kind": "sourceKind",
+            "label": "code",
+            "labelled": true,
+            "meta": {
+              "count": 1,
+              "lastIndexedAt": "2026-10-26 13:56:08"
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "reviews",
+            "kind": "activity",
+            "label": "Pending reviews",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 1.0,
+            "status": "warn"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "outcome:merged",
+            "kind": "activity",
+            "label": "merged",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "outcome:open",
+            "kind": "activity",
+            "label": "open",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "codegraph:example-repo",
+            "kind": "codeCluster",
+            "label": "example-repo",
+            "labelled": true,
+            "meta": {
+              "commitSha": "abc1234",
+              "generatedAt": "2026-10-26 09:00:00"
+            },
+            "size": 1.0,
+            "status": null
+          }
+        ],
+        "title": "Knowledge"
+      },
+      "memory": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:memory",
+            "target": "memory:/example/repo",
+            "weight": 1.0
+          }
+        ],
+        "level": "memory",
+        "nodes": [
+          {
+            "drill": "memory",
+            "group": 2,
+            "id": "hub:memory",
+            "kind": "hub",
+            "label": "Memory",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 1,
+              "repos": 1,
+              "superseded": 0
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "memory:/example/repo",
+            "kind": "memoryRepo",
+            "label": "repo",
+            "labelled": true,
+            "meta": {
+              "active": 1,
+              "facts": 1,
+              "lastConfirmedAt": "2026-10-26 22:56:08",
+              "repoRoot": "/example/repo",
+              "superseded": 0
+            },
+            "size": 3.0,
+            "status": "ok"
+          }
+        ],
+        "title": "Memory"
+      },
+      "models": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "caller:api",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "caller:cli",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "endpoint:/agent/v2/stream",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "endpoint:/kb/loop/agent-run",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:models",
+            "target": "provider:anthropic",
+            "weight": 1.0
+          },
+          {
+            "kind": "provides",
+            "source": "provider:anthropic",
+            "target": "model:anthropic/claude-haiku-5-5",
+            "weight": 1.0
+          },
+          {
+            "kind": "provides",
+            "source": "provider:anthropic",
+            "target": "model:anthropic/claude-sonnet-5",
+            "weight": 1.0
+          }
+        ],
+        "level": "models",
+        "nodes": [
+          {
+            "drill": "models",
+            "group": 4,
+            "id": "hub:models",
+            "kind": "hub",
+            "label": "Models",
+            "labelled": true,
+            "meta": {
+              "billable": 2800,
+              "calls": 2,
+              "models": 2
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 4,
+            "id": "provider:anthropic",
+            "kind": "provider",
+            "label": "anthropic",
+            "labelled": true,
+            "meta": {
+              "billable": 2800
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "model:anthropic/claude-haiku-5-5",
+            "kind": "model",
+            "label": "claude-haiku-5-5",
+            "labelled": true,
+            "meta": {
+              "billable": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 1,
+              "input": 0,
+              "model": "claude-haiku-5-5",
+              "output": 0,
+              "provider": "anthropic",
+              "runs": 1
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 3,
+            "id": "model:anthropic/claude-sonnet-5",
+            "kind": "model",
+            "label": "claude-sonnet-5",
+            "labelled": true,
+            "meta": {
+              "billable": 2800,
+              "cacheRead": 8000,
+              "cacheWrite": 400,
+              "calls": 1,
+              "input": 1200,
+              "model": "claude-sonnet-5",
+              "output": 300,
+              "provider": "anthropic",
+              "runs": 1
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "caller:api",
+            "kind": "caller",
+            "label": "api",
+            "labelled": true,
+            "meta": {
+              "billable": 2800,
+              "cacheRead": 8000,
+              "cacheWrite": 400,
+              "calls": 1,
+              "input": 1200,
+              "output": 300,
+              "runs": 1
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "caller:cli",
+            "kind": "caller",
+            "label": "cli",
+            "labelled": true,
+            "meta": {
+              "billable": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 1,
+              "input": 0,
+              "output": 0,
+              "runs": 1
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "endpoint:/agent/v2/stream",
+            "kind": "endpoint",
+            "label": "/agent/v2/stream",
+            "labelled": true,
+            "meta": {
+              "billable": 2800,
+              "cacheRead": 8000,
+              "cacheWrite": 400,
+              "calls": 1,
+              "input": 1200,
+              "output": 300,
+              "runs": 1
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "endpoint:/kb/loop/agent-run",
+            "kind": "endpoint",
+            "label": "/kb/loop/agent-run",
+            "labelled": true,
+            "meta": {
+              "billable": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "calls": 1,
+              "input": 0,
+              "output": 0,
+              "runs": 1
+            },
+            "size": 1.0,
+            "status": null
+          }
+        ],
+        "title": "Models"
+      },
+      "routines": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:routines",
+            "target": "routines:disabled",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:routines",
+            "target": "routines:enabled",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:disabled",
+            "target": "routine:routine-digest",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:disabled",
+            "target": "routine:routine-triage",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:enabled",
+            "target": "routine:routine-docs",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:enabled",
+            "target": "routine:routine-graph",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "routines:enabled",
+            "target": "routine:routine-regression",
+            "weight": 1.0
+          }
+        ],
+        "level": "routines",
+        "nodes": [
+          {
+            "drill": "routines",
+            "group": 6,
+            "id": "hub:routines",
+            "kind": "hub",
+            "label": "Routines",
+            "labelled": true,
+            "meta": {
+              "enabled": 3,
+              "routines": 5
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routines:enabled",
+            "kind": "routine",
+            "label": "Enabled",
+            "labelled": true,
+            "meta": {
+              "count": 3
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routines:disabled",
+            "kind": "routine",
+            "label": "Disabled",
+            "labelled": true,
+            "meta": {
+              "count": 2
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:routine-digest",
+            "kind": "routine",
+            "label": "Weekly digest",
+            "labelled": true,
+            "meta": {
+              "enabled": false,
+              "lastRunAt": null,
+              "nextRunAt": null,
+              "schedule": null
+            },
+            "size": 1.0,
+            "status": "off"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:routine-docs",
+            "kind": "routine",
+            "label": "Doc freshness check",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "lastRunAt": "2026-10-26T23:30:00Z",
+              "nextRunAt": "2026-11-02T23:30:00Z",
+              "schedule": "Mondays at 08:30"
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:routine-graph",
+            "kind": "routine",
+            "label": "Rebuild code graph",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "lastRunAt": "2026-10-27T02:00:00Z",
+              "nextRunAt": "2026-10-28T02:00:00Z",
+              "schedule": "Nightly"
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:routine-regression",
+            "kind": "routine",
+            "label": "Regression sweep",
+            "labelled": true,
+            "meta": {
+              "enabled": true,
+              "lastRunAt": "2026-10-27T00:00:00Z",
+              "nextRunAt": "2026-10-28T00:00:00Z",
+              "schedule": "Every weekday at 09:00"
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "routine:routine-triage",
+            "kind": "routine",
+            "label": "Issue triage",
+            "labelled": true,
+            "meta": {
+              "enabled": false,
+              "lastRunAt": "2026-10-20T10:00:00Z",
+              "nextRunAt": null,
+              "schedule": "Every hour"
+            },
+            "size": 1.0,
+            "status": "off"
+          }
+        ],
+        "title": "Routines"
+      },
+      "skills": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:skills",
+            "target": "skillSource:",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:skills",
+            "target": "skillSource:kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:skills",
+            "target": "skillSource:project",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-brainstorming",
+            "target": "skillSource:kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-code-review",
+            "target": "skillSource:project",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-glossary",
+            "target": "skillSource:project",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-meeting-summary",
+            "target": "skillSource:",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-release-notes",
+            "target": "skillSource:project",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-systematic-debugging",
+            "target": "skillSource:kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-test-driven",
+            "target": "skillSource:kit",
+            "weight": 1.0
+          },
+          {
+            "kind": "source",
+            "source": "skill:skill-writing-plans",
+            "target": "skillSource:kit",
+            "weight": 1.0
+          }
+        ],
+        "level": "skills",
+        "nodes": [
+          {
+            "drill": "skills",
+            "group": 3,
+            "id": "hub:skills",
+            "kind": "hub",
+            "label": "Skills",
+            "labelled": true,
+            "meta": {
+              "skills": 8,
+              "sources": 3
+            },
+            "size": 4.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "skillSource:",
+            "kind": "skillSource",
+            "label": "unsourced",
+            "labelled": true,
+            "meta": {
+              "count": 1,
+              "source": ""
+            },
+            "size": 1.8613531161467862,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "skillSource:kit",
+            "kind": "skillSource",
+            "label": "kit",
+            "labelled": true,
+            "meta": {
+              "count": 4,
+              "source": "kit"
+            },
+            "size": 3.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "skillSource:project",
+            "kind": "skillSource",
+            "label": "project",
+            "labelled": true,
+            "meta": {
+              "count": 3,
+              "source": "project"
+            },
+            "size": 2.7227062322935724,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-meeting-summary",
+            "kind": "skill",
+            "label": "meeting-summary",
+            "labelled": true,
+            "meta": {
+              "description": "Condenses a captured meeting into decisions, tasks and open questions.",
+              "name": "meeting-summary",
+              "source": ""
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-brainstorming",
+            "kind": "skill",
+            "label": "brainstorming",
+            "labelled": true,
+            "meta": {
+              "description": "Explores intent and design before any creative work begins.",
+              "name": "brainstorming",
+              "source": "kit"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-systematic-debugging",
+            "kind": "skill",
+            "label": "systematic-debugging",
+            "labelled": true,
+            "meta": {
+              "description": "Reproduce, isolate and fix before proposing any change to behaviour.",
+              "name": "systematic-debugging",
+              "source": "kit"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-test-driven",
+            "kind": "skill",
+            "label": "test-driven-development",
+            "labelled": true,
+            "meta": {
+              "description": "Writes the failing test first, then the smallest change that passes it.",
+              "name": "test-driven-development",
+              "source": "kit"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-writing-plans",
+            "kind": "skill",
+            "label": "writing-plans",
+            "labelled": true,
+            "meta": {
+              "description": "Turns a spec into a step-by-step implementation plan with checkpoints.",
+              "name": "writing-plans",
+              "source": "kit"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-code-review",
+            "kind": "skill",
+            "label": "code-review",
+            "labelled": true,
+            "meta": {
+              "description": "Reviews a diff for correctness, security and missing edge cases.",
+              "name": "code-review",
+              "source": "project"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-glossary",
+            "kind": "skill",
+            "label": "glossary",
+            "labelled": true,
+            "meta": {
+              "description": "Keeps the project terms and their definitions in one place.",
+              "name": "glossary",
+              "source": "project"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "skill:skill-release-notes",
+            "kind": "skill",
+            "label": "release-notes",
+            "labelled": true,
+            "meta": {
+              "description": "Summarises merged changes into release notes grouped by area.",
+              "name": "release-notes",
+              "source": "project"
+            },
+            "size": 1.0,
+            "status": null
+          }
+        ],
+        "title": "Skills"
+      }
+    },
+    "os": {
+      "edges": [
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "agentRun:live-1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "chatTurn:chat-1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "liveSession:live-1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:code",
+          "target": "cluster:0",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:code",
+          "target": "cluster:1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:code",
+          "target": "cluster:2",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:code",
+          "target": "cluster:3",
+          "weight": 1.0
+        },
+        {
+          "kind": "relates",
+          "source": "hub:code",
+          "target": "feature:code_graph_3d",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:agent_chat",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:auto_tasks",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:code_graph_3d",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:doc_gen",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:file_explorer",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:gantt_issues",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:mobile_sync",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "feature:terminal",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:agent-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:automation-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:capture-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:docs-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:graph-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:knowledge-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:os-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:sync-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:work-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:kits",
+          "target": "kit:workspace-kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "relates",
+          "source": "hub:knowledge",
+          "target": "hub:code",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:knowledge",
+          "target": "reviews",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:knowledge",
+          "target": "source:code",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:memory",
+          "target": "memory:/example/repo",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:models",
+          "target": "model:anthropic/claude-haiku-5-5",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:models",
+          "target": "model:anthropic/claude-sonnet-5",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:routine-digest",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:routine-docs",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:routine-graph",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:routine-regression",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:routines",
+          "target": "routine:routine-triage",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:skills",
+          "target": "skillSource:",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:skills",
+          "target": "skillSource:kit",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:skills",
+          "target": "skillSource:project",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:agent-kit",
+          "target": "feature:agent_chat",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:automation-kit",
+          "target": "feature:auto_tasks",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:docs-kit",
+          "target": "feature:doc_gen",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:graph-kit",
+          "target": "feature:code_graph_3d",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:sync-kit",
+          "target": "feature:mobile_sync",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:work-kit",
+          "target": "feature:gantt_issues",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:workspace-kit",
+          "target": "feature:file_explorer",
+          "weight": 1.0
+        },
+        {
+          "kind": "requires",
+          "source": "kit:workspace-kit",
+          "target": "feature:terminal",
+          "weight": 1.0
+        }
+      ],
+      "level": "os",
+      "nodes": [
+        {
+          "drill": "code",
+          "group": 0,
+          "id": "hub:code",
+          "kind": "hub",
+          "label": "Code",
+          "labelled": true,
+          "meta": {
+            "communities": 8,
+            "keptNodes": 2500,
+            "members": 4,
+            "more": 0,
+            "totalNodes": 2500
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 0,
+          "id": "cluster:0",
+          "kind": "codeCluster",
+          "label": "Cluster 1 · fn12",
+          "labelled": true,
+          "meta": {
+            "dominantCategory": "code",
+            "index": 0,
+            "size": 340,
+            "topLabels": [
+              "fn12",
+              "fn44",
+              "fn7"
+            ]
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 0,
+          "id": "cluster:1",
+          "kind": "codeCluster",
+          "label": "Cluster 2 · fn101",
+          "labelled": true,
+          "meta": {
+            "dominantCategory": "code",
+            "index": 1,
+            "size": 320,
+            "topLabels": [
+              "fn101",
+              "fn9",
+              "fn88"
+            ]
+          },
+          "size": 2.979272094597608,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 0,
+          "id": "cluster:2",
+          "kind": "codeCluster",
+          "label": "Cluster 3 · fn3",
+          "labelled": true,
+          "meta": {
+            "dominantCategory": "code",
+            "index": 2,
+            "size": 310,
+            "topLabels": [
+              "fn3",
+              "fn27",
+              "fn60"
+            ]
+          },
+          "size": 2.9684185799480725,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 0,
+          "id": "cluster:3",
+          "kind": "codeCluster",
+          "label": "Cluster 4 · doc6",
+          "labelled": true,
+          "meta": {
+            "dominantCategory": "docs",
+            "index": 3,
+            "size": 290,
+            "topLabels": [
+              "doc6",
+              "doc66",
+              "doc126"
+            ]
+          },
+          "size": 2.945623317777871,
+          "status": null
+        },
+        {
+          "drill": "knowledge",
+          "group": 1,
+          "id": "hub:knowledge",
+          "kind": "hub",
+          "label": "Knowledge",
+          "labelled": true,
+          "meta": {
+            "meetings": 0,
+            "members": 2,
+            "more": 0,
+            "outcomes": 2,
+            "outcomesTerminal": 1,
+            "pendingReviews": 1,
+            "sources": 1
+          },
+          "size": 4.0,
+          "status": "warn"
+        },
+        {
+          "drill": null,
+          "group": 1,
+          "id": "reviews",
+          "kind": "activity",
+          "label": "Pending reviews",
+          "labelled": true,
+          "meta": {
+            "count": 1
+          },
+          "size": 1.0,
+          "status": "warn"
+        },
+        {
+          "drill": null,
+          "group": 1,
+          "id": "source:code",
+          "kind": "sourceKind",
+          "label": "code",
+          "labelled": true,
+          "meta": {
+            "count": 1,
+            "lastIndexedAt": "2026-10-26 13:56:08"
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": "memory",
+          "group": 2,
+          "id": "hub:memory",
+          "kind": "hub",
+          "label": "Memory",
+          "labelled": true,
+          "meta": {
+            "active": 1,
+            "facts": 1,
+            "members": 1,
+            "more": 0,
+            "repos": 1,
+            "superseded": 0
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 2,
+          "id": "memory:/example/repo",
+          "kind": "memoryRepo",
+          "label": "repo",
+          "labelled": true,
+          "meta": {
+            "active": 1,
+            "facts": 1,
+            "lastConfirmedAt": "2026-10-26 22:56:08",
+            "repoRoot": "/example/repo",
+            "superseded": 0
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": "skills",
+          "group": 3,
+          "id": "hub:skills",
+          "kind": "hub",
+          "label": "Skills",
+          "labelled": true,
+          "meta": {
+            "members": 3,
+            "more": 0,
+            "skills": 8,
+            "sources": 3
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 3,
+          "id": "skillSource:kit",
+          "kind": "skillSource",
+          "label": "kit",
+          "labelled": true,
+          "meta": {
+            "count": 4,
+            "source": "kit"
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 3,
+          "id": "skillSource:project",
+          "kind": "skillSource",
+          "label": "project",
+          "labelled": true,
+          "meta": {
+            "count": 3,
+            "source": "project"
+          },
+          "size": 2.7227062322935724,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 3,
+          "id": "skillSource:",
+          "kind": "skillSource",
+          "label": "unsourced",
+          "labelled": true,
+          "meta": {
+            "count": 1,
+            "source": ""
+          },
+          "size": 1.8613531161467862,
+          "status": null
+        },
+        {
+          "drill": "models",
+          "group": 4,
+          "id": "hub:models",
+          "kind": "hub",
+          "label": "Models",
+          "labelled": true,
+          "meta": {
+            "billable": 2800,
+            "calls": 2,
+            "members": 2,
+            "models": 2,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 4,
+          "id": "model:anthropic/claude-sonnet-5",
+          "kind": "model",
+          "label": "claude-sonnet-5",
+          "labelled": true,
+          "meta": {
+            "billable": 2800,
+            "cacheRead": 8000,
+            "cacheWrite": 400,
+            "calls": 1,
+            "input": 1200,
+            "model": "claude-sonnet-5",
+            "output": 300,
+            "provider": "anthropic",
+            "runs": 1
+          },
+          "size": 3.0,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 4,
+          "id": "model:anthropic/claude-haiku-5-5",
+          "kind": "model",
+          "label": "claude-haiku-5-5",
+          "labelled": true,
+          "meta": {
+            "billable": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 1,
+            "input": 0,
+            "model": "claude-haiku-5-5",
+            "output": 0,
+            "provider": "anthropic",
+            "runs": 1
+          },
+          "size": 1.0,
+          "status": null
+        },
+        {
+          "drill": "agents",
+          "group": 5,
+          "id": "hub:agents",
+          "kind": "hub",
+          "label": "Agents",
+          "labelled": true,
+          "meta": {
+            "agentRuns": 1,
+            "chatTurns": 1,
+            "liveSessions": 1,
+            "members": 3,
+            "more": 0,
+            "running": 3
+          },
+          "size": 4.0,
+          "status": "running"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "agentRun:live-1",
+          "kind": "agentRun",
+          "label": "Agent run live-1",
+          "labelled": true,
+          "meta": {
+            "cancelPath": "/kb/agent/stop",
+            "cancellable": true,
+            "lastTickAt": null,
+            "planId": null,
+            "startedAt": "2026-10-26T13:56:08.695Z"
+          },
+          "size": 1.0,
+          "status": "running"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "chatTurn:chat-1",
+          "kind": "chatTurn",
+          "label": "Chat chat-1",
+          "labelled": true,
+          "meta": {
+            "cancelPath": "/agent/v2/cancel",
+            "cancellable": true,
+            "startedAt": "2026-10-26T13:56:08.693Z"
+          },
+          "size": 1.0,
+          "status": "running"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "liveSession:live-1",
+          "kind": "liveSession",
+          "label": "Weekly sync",
+          "labelled": true,
+          "meta": {
+            "cancelPath": null,
+            "cancellable": false,
+            "captionCount": 2,
+            "lastWrite": "2026-10-26T13:56:08.695Z",
+            "meetingTitle": "Weekly sync",
+            "startedAt": "2026-10-26T13:56:08.694Z"
+          },
+          "size": 1.0,
+          "status": "running"
+        },
+        {
+          "drill": "routines",
+          "group": 6,
+          "id": "hub:routines",
+          "kind": "hub",
+          "label": "Routines",
+          "labelled": true,
+          "meta": {
+            "enabled": 3,
+            "members": 5,
+            "more": 0,
+            "routines": 5
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:routine-digest",
+          "kind": "routine",
+          "label": "Weekly digest",
+          "labelled": true,
+          "meta": {
+            "enabled": false,
+            "lastRunAt": null,
+            "nextRunAt": null,
+            "schedule": null
+          },
+          "size": 1.0,
+          "status": "off"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:routine-docs",
+          "kind": "routine",
+          "label": "Doc freshness check",
+          "labelled": true,
+          "meta": {
+            "enabled": true,
+            "lastRunAt": "2026-10-26T23:30:00Z",
+            "nextRunAt": "2026-11-02T23:30:00Z",
+            "schedule": "Mondays at 08:30"
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:routine-graph",
+          "kind": "routine",
+          "label": "Rebuild code graph",
+          "labelled": true,
+          "meta": {
+            "enabled": true,
+            "lastRunAt": "2026-10-27T02:00:00Z",
+            "nextRunAt": "2026-10-28T02:00:00Z",
+            "schedule": "Nightly"
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:routine-regression",
+          "kind": "routine",
+          "label": "Regression sweep",
+          "labelled": true,
+          "meta": {
+            "enabled": true,
+            "lastRunAt": "2026-10-27T00:00:00Z",
+            "nextRunAt": "2026-10-28T00:00:00Z",
+            "schedule": "Every weekday at 09:00"
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 6,
+          "id": "routine:routine-triage",
+          "kind": "routine",
+          "label": "Issue triage",
+          "labelled": true,
+          "meta": {
+            "enabled": false,
+            "lastRunAt": "2026-10-20T10:00:00Z",
+            "nextRunAt": null,
+            "schedule": "Every hour"
+          },
+          "size": 1.0,
+          "status": "off"
+        },
+        {
+          "drill": "kits",
+          "group": 7,
+          "id": "hub:kits",
+          "kind": "hub",
+          "label": "Kits",
+          "labelled": true,
+          "meta": {
+            "checksOk": true,
+            "enabled": 10,
+            "features": 8,
+            "kits": 10,
+            "members": 18,
+            "more": 0
+          },
+          "size": 4.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:agent_chat",
+          "kind": "feature",
+          "label": "agent_chat",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:auto_tasks",
+          "kind": "feature",
+          "label": "auto_tasks",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:code_graph_3d",
+          "kind": "feature",
+          "label": "code_graph_3d",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:doc_gen",
+          "kind": "feature",
+          "label": "doc_gen",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:file_explorer",
+          "kind": "feature",
+          "label": "file_explorer",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:gantt_issues",
+          "kind": "feature",
+          "label": "gantt_issues",
+          "labelled": true,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:mobile_sync",
+          "kind": "feature",
+          "label": "mobile_sync",
+          "labelled": false,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "feature:terminal",
+          "kind": "feature",
+          "label": "terminal",
+          "labelled": false,
+          "meta": {
+            "enabled": true
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:agent-kit",
+          "kind": "kit",
+          "label": "agent-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "agent_chat"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:automation-kit",
+          "kind": "kit",
+          "label": "automation-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "auto_tasks"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:capture-kit",
+          "kind": "kit",
+          "label": "capture-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": []
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:docs-kit",
+          "kind": "kit",
+          "label": "docs-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "doc_gen"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:graph-kit",
+          "kind": "kit",
+          "label": "graph-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "code_graph_3d"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:knowledge-kit",
+          "kind": "kit",
+          "label": "knowledge-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": []
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:os-kit",
+          "kind": "kit",
+          "label": "os-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": []
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:sync-kit",
+          "kind": "kit",
+          "label": "sync-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "mobile_sync"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:work-kit",
+          "kind": "kit",
+          "label": "work-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "gantt_issues"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 7,
+          "id": "kit:workspace-kit",
+          "kind": "kit",
+          "label": "workspace-kit",
+          "labelled": false,
+          "meta": {
+            "enabled": true,
+            "requires": [
+              "file_explorer",
+              "terminal"
+            ]
+          },
+          "size": 1.0,
+          "status": "ok"
+        }
+      ],
+      "title": "OS"
+    }
+  },
+  "input": {
+    "code": {
+      "communities": [
+        {
+          "dominantCategory": "code",
+          "index": 0,
+          "size": 340,
+          "topLabels": [
+            "fn12",
+            "fn44",
+            "fn7"
+          ]
+        },
+        {
+          "dominantCategory": "code",
+          "index": 1,
+          "size": 320,
+          "topLabels": [
+            "fn101",
+            "fn9",
+            "fn88"
+          ]
+        },
+        {
+          "dominantCategory": "code",
+          "index": 2,
+          "size": 310,
+          "topLabels": [
+            "fn3",
+            "fn27",
+            "fn60"
+          ]
+        },
+        {
+          "dominantCategory": "docs",
+          "index": 3,
+          "size": 290,
+          "topLabels": [
+            "doc6",
+            "doc66",
+            "doc126"
+          ]
+        }
+      ],
+      "communityCount": 8,
+      "keptNodes": 2500,
+      "totalNodes": 2500
+    },
+    "routines": [
+      {
+        "enabled": true,
+        "id": "routine-regression",
+        "lastRunAt": "2026-10-27T00:00:00Z",
+        "nextRunAt": "2026-10-28T00:00:00Z",
+        "schedule": "Every weekday at 09:00",
+        "title": "Regression sweep"
+      },
+      {
+        "enabled": true,
+        "id": "routine-docs",
+        "lastRunAt": "2026-10-26T23:30:00Z",
+        "nextRunAt": "2026-11-02T23:30:00Z",
+        "schedule": "Mondays at 08:30",
+        "title": "Doc freshness check"
+      },
+      {
+        "enabled": true,
+        "id": "routine-graph",
+        "lastRunAt": "2026-10-27T02:00:00Z",
+        "nextRunAt": "2026-10-28T02:00:00Z",
+        "schedule": "Nightly",
+        "title": "Rebuild code graph"
+      },
+      {
+        "enabled": false,
+        "id": "routine-triage",
+        "lastRunAt": "2026-10-20T10:00:00Z",
+        "nextRunAt": null,
+        "schedule": "Every hour",
+        "title": "Issue triage"
+      },
+      {
+        "enabled": false,
+        "id": "routine-digest",
+        "lastRunAt": null,
+        "nextRunAt": null,
+        "schedule": null,
+        "title": "Weekly digest"
+      }
+    ],
+    "skills": [
+      {
+        "description": "Explores intent and design before any creative work begins.",
+        "id": "skill-brainstorming",
+        "name": "brainstorming",
+        "source": "kit"
+      },
+      {
+        "description": "Turns a spec into a step-by-step implementation plan with checkpoints.",
+        "id": "skill-writing-plans",
+        "name": "writing-plans",
+        "source": "kit"
+      },
+      {
+        "description": "Reproduce, isolate and fix before proposing any change to behaviour.",
+        "id": "skill-systematic-debugging",
+        "name": "systematic-debugging",
+        "source": "kit"
+      },
+      {
+        "description": "Writes the failing test first, then the smallest change that passes it.",
+        "id": "skill-test-driven",
+        "name": "test-driven-development",
+        "source": "kit"
+      },
+      {
+        "description": "Reviews a diff for correctness, security and missing edge cases.",
+        "id": "skill-code-review",
+        "name": "code-review",
+        "source": "project"
+      },
+      {
+        "description": "Summarises merged changes into release notes grouped by area.",
+        "id": "skill-release-notes",
+        "name": "release-notes",
+        "source": "project"
+      },
+      {
+        "description": "Keeps the project terms and their definitions in one place.",
+        "id": "skill-glossary",
+        "name": "glossary",
+        "source": "project"
+      },
+      {
+        "description": "Condenses a captured meeting into decisions, tasks and open questions.",
+        "id": "skill-meeting-summary",
+        "name": "meeting-summary"
+      }
+    ],
+    "snapshot": {
+      "activity": {
+        "items": [
+          {
+            "createdAt": "2026-10-26 13:56:08",
+            "detail": null,
+            "id": 2,
+            "kind": "knowledge_updated",
+            "link": null,
+            "title": "Ingested 3 notes"
+          },
+          {
+            "createdAt": "2026-10-26 13:56:08",
+            "detail": {
+              "meetingId": "m-1"
+            },
+            "id": 1,
+            "kind": "meeting_added",
+            "link": "https://example.com/meeting/m-1",
+            "title": "Weekly sync"
+          }
+        ],
+        "unread": 2
+      },
+      "apiVersion": 79,
+      "generatedAt": "2026-10-26T13:56:08.696Z",
+      "knowledge": {
+        "codeGraph": [
+          {
+            "commitSha": "abc1234",
+            "generatedAt": "2026-10-26 09:00:00",
+            "repoId": "example-repo"
+          }
+        ],
+        "meetings": {
+          "count": 0
+        },
+        "outcomes": {
+          "byState": {
+            "merged": 1,
+            "open": 1
+          },
+          "terminal": 1,
+          "total": 2
+        },
+        "pendingReviews": 1,
+        "projectMemory": [
+          {
+            "active": 1,
+            "facts": 1,
+            "lastConfirmedAt": "2026-10-26 22:56:08",
+            "repoRoot": "/example/repo",
+            "superseded": 0
+          }
+        ],
+        "sources": {
+          "byKind": [
+            {
+              "count": 1,
+              "kind": "code",
+              "lastIndexedAt": "2026-10-26 13:56:08"
+            }
+          ],
+          "total": 1
+        }
+      },
+      "macOnly": {
+        "autoTasks": "on this Mac",
+        "loop": "on this Mac"
+      },
+      "running": {
+        "chatTurns": [
+          {
+            "cancel": {
+              "body": {
+                "chatSessionId": "chat-1"
+              },
+              "method": "POST",
+              "path": "/agent/v2/cancel"
+            },
+            "chatSessionId": "chat-1",
+            "startedAt": "2026-10-26T13:56:08.693Z"
+          }
+        ],
+        "liveSessions": [
+          {
+            "cancel": null,
+            "captionCount": 2,
+            "lastWrite": "2026-10-26T13:56:08.695Z",
+            "meetingTitle": "Weekly sync",
+            "sessionId": "live-1",
+            "startedAt": "2026-10-26T13:56:08.694Z"
+          }
+        ],
+        "meetingAgentRuns": [
+          {
+            "cancel": {
+              "body": {
+                "sessionId": "live-1"
+              },
+              "method": "POST",
+              "path": "/kb/agent/stop"
+            },
+            "lastTickAt": null,
+            "planId": null,
+            "sessionId": "live-1",
+            "startedAt": "2026-10-26T13:56:08.695Z"
+          }
+        ]
+      },
+      "system": {
+        "checks": {
+          "claude": true,
+          "db": true,
+          "skills": true
+        },
+        "features": null,
+        "kits": [
+          {
+            "enabled": true,
+            "id": "os-kit",
+            "requires": []
+          },
+          {
+            "enabled": true,
+            "id": "knowledge-kit",
+            "requires": []
+          },
+          {
+            "enabled": true,
+            "id": "agent-kit",
+            "requires": [
+              "agent_chat"
+            ]
+          },
+          {
+            "enabled": true,
+            "id": "capture-kit",
+            "requires": []
+          },
+          {
+            "enabled": true,
+            "id": "graph-kit",
+            "requires": [
+              "code_graph_3d"
+            ]
+          },
+          {
+            "enabled": true,
+            "id": "docs-kit",
+            "requires": [
+              "doc_gen"
+            ]
+          },
+          {
+            "enabled": true,
+            "id": "work-kit",
+            "requires": [
+              "gantt_issues"
+            ]
+          },
+          {
+            "enabled": true,
+            "id": "workspace-kit",
+            "requires": [
+              "file_explorer",
+              "terminal"
+            ]
+          },
+          {
+            "enabled": true,
+            "id": "automation-kit",
+            "requires": [
+              "auto_tasks"
+            ]
+          },
+          {
+            "enabled": true,
+            "id": "sync-kit",
+            "requires": [
+              "mobile_sync"
+            ]
+          }
+        ],
+        "status": "ok"
+      },
+      "tokens": {
+        "byEndpoint": [
+          {
+            "billable": 2800,
+            "cacheRead": 8000,
+            "cacheWrite": 400,
+            "calls": 1,
+            "endpoint": "/agent/v2/stream",
+            "input": 1200,
+            "output": 300,
+            "runs": 1
+          },
+          {
+            "billable": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 1,
+            "endpoint": "/kb/loop/agent-run",
+            "input": 0,
+            "output": 0,
+            "runs": 1
+          }
+        ],
+        "byModel": [
+          {
+            "billable": 2800,
+            "cacheRead": 8000,
+            "cacheWrite": 400,
+            "calls": 1,
+            "input": 1200,
+            "model": "claude-sonnet-5",
+            "output": 300,
+            "provider": "anthropic",
+            "runs": 1
+          },
+          {
+            "billable": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 1,
+            "input": 0,
+            "model": "claude-haiku-5-5",
+            "output": 0,
+            "provider": "anthropic",
+            "runs": 1
+          }
+        ],
+        "bySource": [
+          {
+            "billable": 2800,
+            "cacheRead": 8000,
+            "cacheWrite": 400,
+            "calls": 1,
+            "input": 1200,
+            "output": 300,
+            "runs": 1,
+            "source": "api"
+          },
+          {
+            "billable": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "calls": 1,
+            "input": 0,
+            "output": 0,
+            "runs": 1,
+            "source": "cli"
+          }
+        ],
+        "since": "2026-10-27 00:00:00",
+        "totals": {
+          "billable": 2800,
+          "cacheRead": 8000,
+          "cacheWrite": 400,
+          "calls": 2,
+          "input": 1200,
+          "output": 300,
+          "runs": 2
+        },
+        "turnComposition": {
+          "avgFenceTokens": 400,
+          "avgFirstCallPromptTokens": 8200,
+          "avgPrefixTokens": 3500,
+          "avgToolResultTokens": 400,
+          "turns": 1
+        },
+        "window": "day",
+        "windowDays": 1
+      }
+    }
+  }
+}
