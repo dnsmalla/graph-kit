@@ -43,6 +43,22 @@ Below 1100px the columns stack: the brain first, then the left and right
 panels. Category colours are the `--os-cat-*` tokens in `src/os-tokens.css`; the
 light theme uses darker shades so each swatch keeps 3:1 against its surface.
 
+### Brain controls
+
+The brain (`OrbitView`, a three.js view) uses three's own `OrbitControls`:
+
+- **Orbit:** left-drag. **Pan:** right-drag, or shift-drag. **Zoom:** wheel or trackpad scroll (zooms to the cursor), and pinch (WebKit `gesturechange`; the page does not zoom). Damping is on. Zoom is limited to 0.3 to 6 layout radii.
+- **Auto-rotate:** one turn in about 40 s. It pauses while the user interacts and resumes 4 s after. It is off under reduced motion. The core and the recent ring turn together, the ring slightly faster.
+- **Toolbar** (top right of the brain): Zoom in, Zoom out, Reset view, Pause or Play rotation, and Colour by Kind or Cluster.
+- **Keyboard** (the canvas has focus, with a visible focus ring): `+` and `-` zoom, `0` resets the view, Space pauses or plays.
+- **Click** selects a node. **Double-click** flies the camera to it (about 400 ms) and selects it. `OrbitView.focusNode(id)` flies to any core node or ring item (the search box uses it), and `OrbitView.setSelection(id | null)` highlights the selected node and its direct neighbours: the rest dims to alpha 0.15, the touching edges draw brighter. The highlight writes the existing buffers in place; no geometry is rebuilt.
+- **Colour by Cluster** colours each node by its community (largest first) from the ten `--os-cluster-1..10` tokens (`src/os-tokens.css`, darker in the light theme). Switching is in place too.
+- **Search:** a type-ahead box above the brain matches core node labels and ids (case-insensitive, the top 8). Up and Down move, Enter chooses (it flies to the node and selects it), Escape clears.
+
+The render loop runs only while something moves (auto-rotation, damping, a focus flight). A still view does not request frames.
+
+`OrbitPanel` takes `selectedId`, `colorBy` with `onColorByChange`, and an imperative `ref` (`OrbitPanelHandle.focusNode`). The fake-renderer tests in `test/orbit.test.mjs` cover the controls, the loop and the selection without WebGL.
+
 `src/systemGraph.ts` is the only module that calls the pure core, in two parts so a
 change refresh never redraws the project: `computeCore(project)` (memoised on the
 project's identity) and `computeRing(snapshot)` (memoised on the ring's ids, times,

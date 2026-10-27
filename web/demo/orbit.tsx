@@ -1,8 +1,11 @@
 // Demo for the orbit "brain" view: the shared synthetic project graph from
 // demo/fixture.ts (every value is generated) plus a 16-item activity snapshot.
 // The core and the ring come from systemGraph.ts, the same path the page uses.
+// The demo keeps the selection and the colour mode, as the page does: a click or a
+// double-click (which also flies the camera) selects, and the toolbar switches colours.
+import { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { OrbitPanel } from '../src/orbit/index';
+import { OrbitPanel, type OrbitColorMode, type OrbitPick } from '../src/orbit/index';
 import { computeCore, computeRing, SYSTEM_VIEW_LIMITS } from '../src/systemGraph';
 import type { OsSnapshot } from '../src/types';
 import { buildDemoProjectGraph, fixtureSnapshot } from './fixture';
@@ -26,17 +29,31 @@ function buildSnapshot(): OsSnapshot {
 const core = computeCore(buildDemoProjectGraph(), SYSTEM_VIEW_LIMITS);
 const ring = computeRing(buildSnapshot(), SYSTEM_VIEW_LIMITS);
 
+function Demo() {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [colorBy, setColorBy] = useState<OrbitColorMode>('kind');
+  const caption = useMemo(
+    () => `Demo: synthetic graph, ${core.graph.core.length} core nodes, ${ring.items.length} ring items`,
+    [],
+  );
+  return (
+    <>
+      <OrbitPanel
+        core={core}
+        ring={ring}
+        selectedId={selectedId}
+        colorBy={colorBy}
+        onColorByChange={setColorBy}
+        onSelect={(item: OrbitPick) => {
+          setSelectedId(item.id);
+          console.info('select', item);
+        }}
+      />
+      <div className="orbit-caption">{caption}</div>
+    </>
+  );
+}
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Orbit demo: #root is missing from demo/orbit.html');
-createRoot(root).render(
-  <>
-    <OrbitPanel
-      core={core}
-      ring={ring}
-      onSelect={(item) => console.info('select', item)}
-    />
-    <div className="orbit-caption">
-      Demo: synthetic graph, {core.graph.core.length} core nodes, {ring.items.length} ring items
-    </div>
-  </>,
-);
+createRoot(root).render(<Demo />);

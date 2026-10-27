@@ -19,6 +19,8 @@ let scene;
 let panel;
 let orbit;
 let view;
+let search;
+let nodeSearch;
 
 before(async () => {
   server = await createServer({
@@ -34,6 +36,8 @@ before(async () => {
   panel = await server.ssrLoadModule('/src/orbit/OrbitPanel.tsx');
   orbit = await server.ssrLoadModule(WASM);
   view = await server.ssrLoadModule('/src/orbit/OrbitView.ts');
+  search = await server.ssrLoadModule('/src/orbit/search.ts');
+  nodeSearch = await server.ssrLoadModule('/src/components/NodeSearch.tsx');
 });
 
 after(async () => {
@@ -265,6 +269,19 @@ function fakeElement(tag, size = {}) {
     textContent: '',
     parent: null,
     children: [],
+    attrs: {},
+    setAttribute(k, v) {
+      el.attrs[k] = String(v);
+    },
+    getAttribute(k) {
+      return el.attrs[k] ?? null;
+    },
+    getRootNode() {
+      return globalThis.document;
+    },
+    get ownerDocument() {
+      return globalThis.document;
+    },
     clientWidth: size.width ?? 0,
     clientHeight: size.height ?? 0,
     addEventListener(type, fn) {
@@ -361,7 +378,8 @@ describe('OrbitView (fake renderer)', () => {
     const doc = fakeElement('document');
     doc.hidden = false;
     doc.documentElement = fakeElement('html');
-    doc.createElement = (tag) => fakeElement(tag);
+    // The canvas needs a size: zoom-to-cursor divides by the canvas rectangle.
+    doc.createElement = (tag) => fakeElement(tag, tag === 'canvas' ? { width: 400, height: 300 } : {});
     globalThis.document = doc;
     observers = [];
     globalThis.ResizeObserver = class {
@@ -623,4 +641,407 @@ describe('OrbitView (fake renderer)', () => {
     make({ onFallback: () => working++ });
     assert.equal(working, 0, 'WebGL present: no fallback callback');
   });
+
+  /** Camera distance from the orbit centre. */
+  const dist = (v) => v.camera.position.distanceTo(v.controls.target);
+  /** Runs queued frames until none are left (or 40 rounds): the loop settles when nothing moves. */
+  function settle(t0 = 0) {
+    for (let i = 0; i < 40 && frames.size > 0; i++) runFrames(t0 + i * 16);
+  }
+
+  it('creates OrbitControls on the canvas, with damping and zoom limits, and disposes them', () => {
+    const v = make();
+    assert.ok(v.controls, 'controls exist');
+    assert.equal(v.controls.enableDamping, true);
+    assert.ok(v.controls.minDistance > 0);
+    assert.ok(v.controls.maxDistance > v.controls.minDistance);
+    const canvas = renderers[0].domElement;
+    assert.equal(canvas.tabIndex, 0, 'the canvas takes keyboard focus');
+    assert.ok(canvas.listenerCount('wheel') >= 1, 'controls listen for the wheel');
+    v.dispose();
+    assert.equal(canvas.listenerCount('wheel'), 0);
+    assert.equal(canvas.listenerCount('gesturechange'), 0);
+    assert.equal(canvas.listenerCount('keydown'), 0);
+  });
+
+  it('wheel and trackpad pinch change the camera distance, within the zoom bounds, and stop the page zooming', () => {
+    const v = make();
+    const g = chainGraph(40);
+    v.setGraph(g, orbit.orbitLayout(g));
+    const canvas = renderers[0].domElement;
+    const { minDistance, maxDistance } = v.controls;
+    let prevented = 0;
+    const off = () => ({ preventDefault: () => prevented++ });
+
+    const d0 = dist(v);
+    canvas.dispatch('wheel', { ...off(), deltaY: -120, deltaMode: 0, clientX: 200, clientY: 150, ctrlKey: false });
+    runFrames(0);
+    assert.ok(dist(v) < d0, 'wheel up zooms in');
+    assert.ok(prevented >= 1, 'the wheel default is prevented');
+
+    for (let i = 0; i < 200; i++) canvas.dispatch('wheel', { ...off(), deltaY: -500, deltaMode: 0, clientX: 200, clientY: 150, ctrlKey: false });
+    runFrames(0);
+    assert.ok(dist(v) >= minDistance - 1e-9, 'never closer than the minimum');
+
+    const beforeGesture = prevented;
+    canvas.dispatch('gesturestart', off());
+    canvas.dispatch('gesturechange', { ...off(), scale: 0.5 });
+    assert.ok(dist(v) <= maxDistance + 1e-9, 'a pinch out is capped at the maximum');
+    canvas.dispatch('gesturechange', { ...off(), scale: 1000 });
+    assert.ok(Math.abs(dist(v) - minDistance) < 1e-6, 'a pinch in is capped at the minimum');
+    canvas.dispatch('gesturechange', { ...off(), scale: 0.0 }); // not a usable scale: ignored, distance unchanged
+    assert.ok(Math.abs(dist(v) - minDistance) < 1e-6);
+    canvas.dispatch('gestureend', off());
+    assert.equal(prevented - beforeGesture, 5, 'every gesture event is prevented (start, three changes, end)');
+  });
+
+  it('reset restores the framed camera pose and the orbit centre', () => {
+    const v = make();
+    const g = chainGraph(40);
+    v.setGraph(g, orbit.orbitLayout(g));
+    const pose = v.camera.position.toArray();
+    const target = v.controls.target.toArray();
+    v.zoomIn();
+    v.zoomIn();
+    v.camera.position.x += 3;
+    v.controls.update();
+    assert.notDeepEqual(v.camera.position.toArray(), pose);
+    v.resetView();
+    assert.deepEqual(v.camera.position.toArray(), pose);
+    assert.deepEqual(v.controls.target.toArray(), target);
+  });
+
+  it('zoomIn and zoomOut move the distance by a step, inside the bounds', () => {
+    const v = make();
+    const g = chainGraph(40);
+    v.setGraph(g, orbit.orbitLayout(g));
+    const d0 = dist(v);
+    v.zoomIn();
+    assert.ok(Math.abs(dist(v) - d0 / 1.25) < 1e-6);
+    v.zoomOut();
+    v.zoomOut();
+    assert.ok(Math.abs(dist(v) - d0 * 1.25) < 1e-6);
+    for (let i = 0; i < 100; i++) v.zoomIn();
+    assert.ok(dist(v) >= v.controls.minDistance - 1e-9);
+  });
+
+  it('pause stops the auto-rotation, play resumes it, and a paused view idles', () => {
+    const v = make({ rotationSpeed: 0.05 });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    runFrames(0);
+    assert.equal(v.controls.autoRotate, true, 'the view rotates by default');
+    assert.equal(frames.size, 1, 'a rotating view keeps a frame armed');
+    assert.equal(v.toggleRotation(), true, 'toggle reports paused');
+    assert.equal(v.controls.autoRotate, false);
+    settle(100);
+    assert.equal(frames.size, 0, 'paused: nothing re-arms');
+    assert.equal(v.toggleRotation(), false);
+    assert.equal(v.controls.autoRotate, true);
+    assert.equal(frames.size, 1, 'play re-arms the loop');
+  });
+
+  it('auto-rotation makes one turn in about 40 s', () => {
+    const v = make({ rotationSpeed: 0.05 });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    const speed = v.controls.autoRotateSpeed;
+    // One call of update(dt) turns the camera by (2*PI/60) * speed * dt radians.
+    assert.ok(Math.abs(((2 * Math.PI) / 60) * speed * 40 - 2 * Math.PI) < 1e-9);
+  });
+
+  it('the loop idles when nothing moves: a settled view does not re-arm frames', () => {
+    let requests = 0;
+    const v = make({
+      reducedMotion: true,
+      requestFrame: (cb) => {
+        requests++;
+        const id = nextFrameId++;
+        frames.set(id, cb);
+        return id;
+      },
+    });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    settle();
+    assert.equal(frames.size, 0, 'settled: no frame queued');
+    const before = requests;
+    settle();
+    runFrames(5000);
+    assert.equal(requests, before, 'no request was made while idle');
+  });
+
+  it('reduced motion: no auto-rotation, but zoom still works', () => {
+    const v = make({ reducedMotion: true });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    runFrames(0);
+    assert.equal(v.controls.autoRotate, false);
+    const d0 = dist(v);
+    v.zoomIn();
+    assert.ok(dist(v) < d0);
+  });
+
+  it('setSelection updates the attributes in place and dims the non-neighbours', () => {
+    const v = make({ reducedMotion: true });
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    const geo = v.corePoints.geometry;
+    const alpha = geo.attributes.aAlpha.array;
+    const sizes = geo.attributes.aSize.array;
+    const positions = geo.attributes.position.array;
+    const edgeColors = v.coreGroup.children.find((o) => o.isLineSegments).geometry.attributes.color.array;
+    // Node order is a, b, c, d. Core edges: a-b, a-c, b-d, c-d, a-d. Selecting c: its neighbours are a and d.
+    v.setSelection('c');
+    assert.equal(v.corePoints.geometry, geo, 'no new geometry');
+    assert.equal(geo.attributes.aAlpha.array, alpha, 'the alpha buffer is the same object');
+    assert.equal(geo.attributes.position.array, positions, 'positions are untouched');
+    assert.equal(alpha[2], 1, 'the selected node stays bright');
+    assert.equal(alpha[0], 1, 'a neighbour stays bright');
+    assert.equal(alpha[3], 1, 'a neighbour stays bright');
+    assert.ok(Math.abs(alpha[1] - 0.15) < 1e-6, 'a non-neighbour dims');
+    assert.ok(Math.abs(sizes[2] - 1.5 * 1.8) < 1e-4, 'the selected node grows');
+    assert.ok(Math.abs(sizes[0] - 4 * 1.35) < 1e-4, 'a neighbour grows less');
+    const edgeAlpha = Array.from({ length: edgeColors.length / 4 }, (_, i) => edgeColors[i * 4 + 3]);
+    assert.ok(edgeAlpha.includes(4), 'edges touching the selection are brighter');
+    assert.ok(edgeAlpha.includes(0.25), 'the other edges dim');
+    v.setSelection(null);
+    assert.ok(Array.from(alpha).every((a) => a === 1), 'clearing restores every node');
+    assert.ok(Array.from(sizes).every((s, i) => Math.abs(s - v.baseSizes[i]) < 1e-6), 'clearing restores the sizes');
+    assert.ok(edgeAlpha.length > 0 && Array.from(edgeColors).filter((_, i) => i % 4 === 3).every((a) => a === 1));
+  });
+
+  it('a ring selection highlights its ring point and dims the other ring points', () => {
+    const v = make({ reducedMotion: true });
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    v.setRing(graph.ring, layout.ring);
+    v.setSelection('activity:2');
+    const alpha = v.ringPoints.geometry.attributes.aAlpha.array;
+    assert.equal(alpha[1], 1);
+    assert.ok(Math.abs(alpha[0] - 0.15) < 1e-6);
+  });
+
+  it('focusNode moves the orbit centre to the node and leaves the selection alone', () => {
+    const v = make({ reducedMotion: true });
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    assert.equal(v.focusNode('missing'), false);
+    assert.equal(v.focusNode('c'), true);
+    for (let t = 0; t <= 500; t += 100) runFrames(t);
+    const p = layout.core.get('c');
+    const target = v.controls.target;
+    assert.ok(Math.abs(target.x - p.x) < 1e-4, 'x');
+    assert.ok(Math.abs(target.y - p.y) < 1e-4, 'y');
+    assert.ok(Math.abs(target.z - p.z) < 1e-4, 'z');
+    assert.ok(dist(v) >= v.controls.minDistance - 1e-9 && dist(v) <= v.controls.maxDistance + 1e-9);
+    assert.equal(v.selectedId, null, 'focusing does not select');
+  });
+
+  it('a focus flight is eased over about 400 ms, not a jump', () => {
+    const v = make({ reducedMotion: true });
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    const start = v.controls.target.clone();
+    v.focusNode('c');
+    runFrames(0);
+    runFrames(200);
+    const mid = v.controls.target.clone();
+    assert.ok(mid.distanceTo(start) > 0, 'the target has moved part way');
+    assert.ok(mid.distanceTo(layout.core.get('c')) > 0, 'but has not arrived');
+    runFrames(400);
+    runFrames(450);
+    assert.ok(v.controls.target.distanceTo(start) > 0);
+    assert.equal(frames.size, 0, 'the flight ends and the loop idles');
+  });
+
+  it('colour mode switch recolours the core in place', () => {
+    const v = make();
+    const graph = sampleGraph();
+    v.setGraph(graph, orbit.orbitLayout(graph));
+    const attr = v.corePoints.geometry.attributes.aColor;
+    const arr = attr.array;
+    const kindA = Array.from(arr.slice(0, 3));
+    v.setColorMode('cluster');
+    assert.equal(v.corePoints.geometry.attributes.aColor, attr, 'same attribute');
+    assert.equal(attr.array, arr, 'same buffer');
+    const round = (xs) => xs.map((x) => Math.round(x * 1e4) / 1e4);
+    // a is community 0 (palette slot 1), c is community 1 (slot 2).
+    assert.deepEqual(round(Array.from(arr.slice(0, 3))), round(scene.hexToRgb01(scene.DEFAULT_CLUSTER_COLORS[0])));
+    assert.deepEqual(round(Array.from(arr.slice(6, 9))), round(scene.hexToRgb01(scene.DEFAULT_CLUSTER_COLORS[1])));
+    v.setColorMode('kind');
+    assert.deepEqual(Array.from(arr.slice(0, 3)), kindA, 'back to the category colour');
+  });
+
+  it('keyboard: plus and minus zoom, 0 resets, space pauses, other keys are ignored', () => {
+    const v = make();
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    const canvas = renderers[0].domElement;
+    const d0 = dist(v);
+    let prevented = 0;
+    const key = (k, extra = {}) => ({ key: k, metaKey: false, ctrlKey: false, altKey: false, preventDefault: () => prevented++, ...extra });
+    canvas.dispatch('keydown', key('+'));
+    assert.ok(dist(v) < d0, '+ zooms in');
+    canvas.dispatch('keydown', key('-'));
+    canvas.dispatch('keydown', key('-'));
+    assert.ok(dist(v) > d0, '- zooms out');
+    canvas.dispatch('keydown', key('0'));
+    assert.ok(Math.abs(dist(v) - d0) < 1e-9, '0 resets');
+    canvas.dispatch('keydown', key(' '));
+    assert.equal(v.isRotationPaused(), true, 'space pauses');
+    canvas.dispatch('keydown', key('x'));
+    canvas.dispatch('keydown', key('+', { metaKey: true }));
+    assert.equal(prevented, 5, 'only the five handled keys are prevented');
+    assert.equal(v.isRotationPaused(), true);
+  });
+
+  it('orbitKeyAction maps the keys and nothing else', () => {
+    assert.equal(view.orbitKeyAction('+'), 'zoomIn');
+    assert.equal(view.orbitKeyAction('='), 'zoomIn');
+    assert.equal(view.orbitKeyAction('-'), 'zoomOut');
+    assert.equal(view.orbitKeyAction('0'), 'reset');
+    assert.equal(view.orbitKeyAction(' '), 'togglePause');
+    assert.equal(view.orbitKeyAction('a'), null);
+    assert.equal(view.orbitKeyAction('Enter'), null);
+  });
 });
+
+describe('colour and selection helpers', () => {
+  it('colorToHex reads hex and CSS rgb() in both the percent and number forms', () => {
+    assert.equal(scene.colorToHex('#5B8DEF'), '#5b8def');
+    assert.equal(scene.colorToHex('#abc'), '#aabbcc');
+    assert.equal(scene.colorToHex('rgb(100% 0% 50%)'), '#ff0080');
+    assert.equal(scene.colorToHex('rgb(255, 0, 128)'), '#ff0080');
+    assert.equal(scene.colorToHex(' rgb(36% 55% 94%) '), '#5c8cf0');
+    assert.equal(scene.colorToHex(''), null);
+    assert.equal(scene.colorToHex('oklch(0.7 0.1 200)'), null);
+  });
+
+  it('the cluster palette has ten distinct colours and clusterColor wraps every ten clusters', () => {
+    const pal = scene.DEFAULT_CLUSTER_COLORS;
+    assert.equal(pal.length, 10);
+    assert.equal(new Set(pal).size, 10);
+    assert.equal(scene.clusterColor(0, pal), pal[0]);
+    assert.equal(scene.clusterColor(10, pal), pal[0]);
+    assert.equal(scene.clusterColor(13, pal), pal[3]);
+  });
+
+  it('clusterSummary counts nodes per community, largest community first', () => {
+    const nodes = [{ community: 1 }, { community: 0 }, { community: 1 }, { community: 2 }];
+    assert.deepEqual(scene.clusterSummary(nodes), [
+      { community: 0, count: 1 },
+      { community: 1, count: 2 },
+      { community: 2, count: 1 },
+    ]);
+  });
+
+  it('buildEdgeData returns the same positions as buildEdgeBuffer, plus endpoint indexes', () => {
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    const index = new Map(['a', 'b', 'c', 'd'].map((id, i) => [id, i]));
+    const data = scene.buildEdgeData(graph, layout, index);
+    assert.deepEqual(Array.from(data.positions), Array.from(scene.buildEdgeBuffer(graph, layout)));
+    assert.equal(data.ends.length, graph.edges.length * 2);
+    assert.deepEqual(Array.from(data.ends.slice(0, 2)), [0, 2], 'a-c is the heaviest edge');
+  });
+
+  it('searchCoreNodes ranks label prefix, then label substring, then id; case-insensitive; capped', () => {
+    const graph = {
+      core: [
+        { id: 'x1', label: 'Alpha', category: 'code', community: 0, degree: 1 },
+        { id: 'x2', label: 'Beta alpha', category: 'docs', community: 0, degree: 1 },
+        { id: 'alpha-id', label: 'zeta', category: 'tests', community: 0, degree: 1 },
+        { id: 'y', label: 'Gamma', category: 'other', community: 0, degree: 1 },
+      ],
+      edges: [],
+      ring: [],
+      truncated: { totalNodes: 4, keptNodes: 4, keptCommunities: 1 },
+    };
+    assert.deepEqual(search.searchCoreNodes(graph, 'ALPHA').map((h) => h.id), ['x1', 'x2', 'alpha-id']);
+    assert.deepEqual(search.searchCoreNodes(graph, '  '), []);
+    assert.deepEqual(search.searchCoreNodes(null, 'alpha'), []);
+    assert.equal(search.searchCoreNodes(graph, 'a', 2).length, 2);
+    assert.equal(search.SEARCH_LIMIT, 8);
+  });
+});
+
+describe('toolbar and search (SSR)', () => {
+  const noop = () => {};
+  const toolbarProps = (extra = {}) => ({
+    colorBy: 'kind',
+    paused: false,
+    rotationDisabled: false,
+    onZoomIn: noop,
+    onZoomOut: noop,
+    onReset: noop,
+    onTogglePause: noop,
+    onColorByChange: noop,
+    ...extra,
+  });
+
+  it('the toolbar has labelled zoom, reset and pause buttons and a Colour by group', () => {
+    const html = renderToString(createElement(panel.OrbitToolbar, toolbarProps()));
+    for (const label of ['Zoom in', 'Zoom out', 'Reset view', 'Pause rotation']) {
+      assert.match(html, new RegExp(`aria-label="${label}"`));
+    }
+    assert.match(html, /role="group" aria-label="Colour by"/);
+    assert.match(html, /aria-pressed="true"[^>]*>Kind</);
+    assert.match(html, /aria-pressed="false"[^>]*>Cluster</);
+  });
+
+  it('the toolbar shows Play when paused, marks Cluster when colouring by cluster, and disables pause under reduced motion', () => {
+    const html = renderToString(createElement(panel.OrbitToolbar, toolbarProps({ paused: true, colorBy: 'cluster', rotationDisabled: true })));
+    assert.match(html, /aria-label="Play rotation"/);
+    assert.match(html, /aria-pressed="true"[^>]*>Cluster</);
+    assert.match(html, /disabled=""/);
+  });
+
+  it('the panel renders the toolbar', () => {
+    const html = renderToString(createElement(panel.OrbitPanel, { core: null, ring: null }));
+    assert.match(html, /aria-label="Zoom in"/);
+    assert.match(html, /role="toolbar"/);
+  });
+
+  it('SearchResults renders a listbox with one option per hit and marks the active one', () => {
+    const results = [
+      { id: 'a', label: 'Alpha', category: 'code' },
+      { id: 'b', label: 'Beta', category: 'docs' },
+    ];
+    const html = renderToString(createElement(nodeSearch.SearchResults, { results, activeIndex: 1, listId: 'L', onChoose: noop }));
+    assert.match(html, /role="listbox"/);
+    assert.equal((html.match(/role="option"/g) ?? []).length, 2);
+    assert.match(html, /id="L-1" role="option" aria-selected="true"/);
+    assert.match(html, /id="L-0" role="option" aria-selected="false"/);
+  });
+
+  it('SearchResults says when nothing matches', () => {
+    const html = renderToString(createElement(nodeSearch.SearchResults, { results: [], activeIndex: 0, listId: 'L', onChoose: noop }));
+    assert.match(html, /role="status"/);
+    assert.match(html, /No matching nodes/);
+    assert.doesNotMatch(html, /role="listbox"/);
+  });
+
+  it('NodeSearch renders a combobox, closed until the user types', () => {
+    const graph = sampleGraphForSearch();
+    const html = renderToString(createElement(nodeSearch.NodeSearch, { graph, onChoose: noop }));
+    assert.match(html, /role="combobox"/);
+    assert.match(html, /aria-expanded="false"/);
+    assert.doesNotMatch(html, /role="listbox"/);
+    const empty = renderToString(createElement(nodeSearch.NodeSearch, { graph: null, onChoose: noop }));
+    assert.match(empty, /disabled=""/);
+  });
+});
+
+function sampleGraphForSearch() {
+  return {
+    core: [{ id: 'a', label: 'Alpha', category: 'code', community: 0, degree: 1 }],
+    edges: [],
+    ring: [],
+    truncated: { totalNodes: 1, keptNodes: 1, keptCommunities: 1 },
+  };
+}

@@ -8,6 +8,17 @@
   --os-cat-tests: rgb(31% 75% 53%);
   --os-cat-knowledge: rgb(76% 48% 90%);
   --os-cat-other: rgb(54% 58% 65%);
+  /* Cluster palette: ten hues for the "Cluster" colour mode (slot = community % 10). */
+  --os-cluster-1: rgb(36% 55% 94%);
+  --os-cluster-2: rgb(88% 70% 25%);
+  --os-cluster-3: rgb(31% 75% 53%);
+  --os-cluster-4: rgb(76% 48% 90%);
+  --os-cluster-5: rgb(94% 48% 42%);
+  --os-cluster-6: rgb(30% 77% 83%);
+  --os-cluster-7: rgb(95% 63% 78%);
+  --os-cluster-8: rgb(64% 84% 37%);
+  --os-cluster-9: rgb(56% 61% 100%);
+  --os-cluster-10: rgb(85% 66% 47%);
 }
 
 :root[data-theme="light"] {
@@ -16,4 +27,15 @@
   --os-cat-tests: rgb(12% 48% 30%);
   --os-cat-knowledge: rgb(49% 25% 72%);
   --os-cat-other: rgb(36% 39% 46%);
+  /* Cluster palette, darker shades: each keeps 3:1 against white. */
+  --os-cluster-1: rgb(12% 31% 71%);
+  --os-cluster-2: rgb(54% 36% 0%);
+  --os-cluster-3: rgb(9% 47% 29%);
+  --os-cluster-4: rgb(48% 25% 69%);
+  --os-cluster-5: rgb(70% 25% 18%);
+  --os-cluster-6: rgb(5% 45% 51%);
+  --os-cluster-7: rgb(64% 19% 42%);
+  --os-cluster-8: rgb(31% 48% 7%);
+  --os-cluster-9: rgb(23% 27% 71%);
+  --os-cluster-10: rgb(49% 31% 13%);
 }
