@@ -1,5 +1,6 @@
-//! Parity against the TypeScript oracle. Every `tests/golden/*.json` was written by
-//! `typescript/scripts/gen-os-golden.mjs` from the built TS. Here the Rust builder must
+//! Parity against frozen golden cases. Every `tests/golden/*.json` was recorded from the
+//! TypeScript implementation that this crate replaced (since removed); the goldens are now
+//! fixtures and this crate is canonical. Here the Rust builder must
 //! produce a system graph EXACTLY equal to the golden one, and the Rust orbit layout must
 //! match the golden coordinates within 1e-9. A case with `input.rawSystemGraph` skips the
 //! builder and runs the raw object through the JSON orbit boundary instead.
@@ -64,7 +65,7 @@ fn rust_matches_typescript_golden_cases() {
     let files = golden_files();
     assert!(
         files.len() >= 19,
-        "expected the golden cases in tests/golden (run `node typescript/scripts/gen-os-golden.mjs`), found {}",
+        "expected the golden cases in tests/golden (they are frozen fixtures; restore them from git), found {}",
         files.len()
     );
 

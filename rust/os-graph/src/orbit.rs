@@ -1,4 +1,4 @@
-//! Deterministic 3D "orbit" layout (port of `typescript/src/system/orbit.ts`).
+//! Deterministic 3D "orbit" layout (canonical; the TypeScript layout it was ported from is removed).
 //!
 //! Same algorithm, constants, floating-point expression order and iteration order as
 //! the TS, so the output is the same up to the last ulp of `sin`/`cos`/`cbrt` (V8 and
@@ -566,7 +566,7 @@ mod tests {
 
     #[test]
     fn mulberry32_matches_the_js_reference_values() {
-        // Values printed by the TS mulberry32 (node, typescript/dist/src/system/orbit.js).
+        // Values printed by the removed TS mulberry32 (node, typescript/dist/src/system/orbit.js).
         let mut one = mulberry32(1.0);
         let got: Vec<f64> = (0..3).map(|_| one()).collect();
         let want = [0.6270739405881613, 0.002735721180215478, 0.5274470399599522];

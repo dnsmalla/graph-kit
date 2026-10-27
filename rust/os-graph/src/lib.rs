@@ -5,8 +5,9 @@
 //! * [`models`] / [`snapshot`] — the canonical graph model and the slice of `OsSnapshot` read.
 //! * [`api`] — JSON-in/JSON-out entry points used by the optional `wasm` feature.
 //!
-//! Parity with the TypeScript oracle (`typescript/src/system/`) is enforced by
-//! `tests/parity.rs` against golden files written by `typescript/scripts/gen-os-golden.mjs`.
+//! Behaviour is pinned by unit tests and by `tests/parity.rs`, which checks frozen golden
+//! files in `tests/golden/`. The goldens were recorded from the TypeScript implementation
+//! before it was removed; to add a case, write the golden by hand or from this crate.
 
 pub mod api;
 pub mod builder;

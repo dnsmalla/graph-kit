@@ -14,49 +14,59 @@ graph core from `typescript/src/system/`:
 
 ## Status
 
-This crate is now the **canonical implementation** of the OS graph core. The TypeScript
-copy in `typescript/src/system/` is the **parity oracle** until the WASM build is wired
-into `web/`. That needs `rustup target add wasm32-unknown-unknown` and `wasm-bindgen-cli`,
-which are not installed on this machine yet. Until then, the TS copy is still what runs.
+This crate is the **canonical implementation** of the OS graph core. The TypeScript
+implementation it was ported from (`typescript/src/system/builder.ts` and `orbit.ts`) has
+been removed from the Node package. Its output is frozen in `os-graph/tests/golden/`.
 
-Parity is checked by `os-graph/tests/parity.rs` against golden files in
-`os-graph/tests/golden/`. The golden files are written by
-`typescript/scripts/gen-os-golden.mjs` from the built TS. The system graph must equal the
-TS output exactly. Orbit coordinates must match within 1e-9; the remaining difference is
-the last ulp of `sin`/`cos`/`cbrt` between V8 and Rust's libm.
+The page runs the crate as **embedded WASM**: `web/src/wasm/` holds the generated glue and
+the module as base64, and `web/src/systemGraph.ts` calls it. The wasm build is reproducible
+with the same rustc only, so it is committed; CI has no Rust.
+
+Parity is checked by `os-graph/tests/parity.rs` against the golden files. The system graph
+must equal the golden exactly. Orbit coordinates must match within 1e-9; the remaining
+difference is the last ulp of `sin`/`cos`/`cbrt` between the golden's recording engine and
+Rust's libm.
 
 ## Commands
 
 ```sh
 cd rust
-cargo test                 # unit tests + golden parity
-cargo test --release       # same, with the perf smoke tests timed against a 2 s budget
-cargo check --features wasm
-cargo clippy -- -D warnings
+rustup run stable cargo test --release         # unit tests + golden parity (perf smoke tests timed)
+rustup run stable cargo clippy --all-targets -- -D warnings
+rustup run stable cargo clippy --all-targets --features wasm -- -D warnings
 
-# Regenerate the golden files from the TS oracle (after `npx tsc -p tsconfig.json` in typescript/)
-node typescript/scripts/gen-os-golden.mjs   # run from the graph-kit repo root
+# WASM: rebuild the files web/ embeds (from the graph-kit root)
+scripts/build-os-wasm.sh          # writes web/src/wasm/pkg/ and web/src/wasm/bytes.ts
+scripts/build-os-wasm.sh --check  # builds into a temp dir and diffs; skipped if rustc differs
 ```
+
+Use `rustup run stable cargo` rather than a Homebrew `cargo` on PATH. The wasm build needs
+the `wasm32-unknown-unknown` target and the `wasm-bindgen` CLI matching `rust/Cargo.lock`
+(0.2.129).
 
 Dependencies: `serde` and `serde_json` only. `wasm-bindgen` and `console_error_panic_hook`
 are optional and enabled only by the `wasm` feature. The crate builds as `cdylib` (for
 wasm-bindgen) and `rlib` (for tests and Rust callers). The wasm entry points install the panic
 hook once, so a panic shows up in the browser console.
 
-## Where Rust deliberately differs from the TS
+The `[profile.release]` is tuned for size (`opt-level = "z"`, LTO, one codegen unit, strip,
+`panic = "abort"`), because the wasm ships inside the web bundle. Native results are the same
+under it; the goldens and parity test pass unchanged.
 
-The TS is the parity oracle, with two exceptions. Both are Rust-only guards and do not
+## Where Rust deliberately differs from the removed TypeScript
+
+The TypeScript was the parity oracle, with two exceptions. Both are Rust-only guards and do not
 change any output for inputs the page can produce.
 
 - **Iteration clamp.** `orbitOptions.iterations` is clamped to `MAX_ITERATIONS = 10_000`
-  (`orbit.rs`). The TS has no cap, so `iterations: 1e300` would hang the page. The goldens
-  stay below 10,000. The TS source is not changed.
+  (`orbit.rs`). The TypeScript had no cap, so `iterations: 1e300` would hang the page. The goldens
+  stay below 10,000.
 - **Radius clamp.** `coreRadius` and `ringRadius` are clamped to `MAX_RADIUS = 1e150`.
   Above that the squared norms overflow and coordinates would be non-finite. Radii the page
   can use are far below this. Non-finite output coordinates would be written as `null`, but
   the clamps keep every coordinate finite for every input.
 
-## JSON boundary (lenient, as the TS is)
+## JSON boundary (lenient, as the removed TS was)
 
 Inputs are read the way the TS reads them, never failing on a field it does not read:
 
@@ -85,8 +95,9 @@ Known limits of the JSON boundary:
 
 ## Goldens
 
-`tests/golden/` holds 19 cases. Two of them (`raw_orbit_sparse_communities`) go straight
-through the orbit JSON boundary with odd hand-written values. The rest run the whole
+`tests/golden/` holds 19 frozen cases. They are fixtures now: the TypeScript generator that
+wrote them has been removed. To add a case, write the JSON by hand (input plus the expected
+`systemGraph` and `orbit`) or generate it from this crate, then run `cargo test` to check it. One case (`raw_orbit_sparse_communities`) goes straight through the orbit JSON boundary with odd hand-written values. The rest run the whole
 builder plus layout. Coverage: every category and path key (with precedence), knowledge and
 other kinds, test-path separators and case, non-BMP id ordering, NUL-in-id key collisions,
 exact-fill and greedy caps, partial trim, ring dedupe with truncation, fractional and

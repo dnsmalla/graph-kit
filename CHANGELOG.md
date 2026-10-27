@@ -23,6 +23,13 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
   TypeScript trees are unchanged.
 
 ### Removed
+- **TypeScript OS graph core (`buildSystemGraph`, `orbitLayout`, `categorize`,
+  `detectCommunities`, `fibonacciSphere`, `mulberry32`) removed from the Node package.**
+  The canonical implementation is the Rust crate `rust/os-graph`, which the web page runs
+  as embedded WASM. The TypeScript types (`SystemGraph`, `SystemCoreNode`, `OrbitLayout`,
+  `OrbitOptions`, ...) remain exported from `system/types`. `SystemCoreNode.label` is now
+  optional (the Rust core leaves out a missing title). Parity goldens are frozen fixtures.
+
 **Breaking (Swift, GraphKit product).** Nine unreferenced public types — no
 consumer in this repository called any of them, and none appears in the
 `graph-engine.json` command contract. `GraphCore` is untouched.

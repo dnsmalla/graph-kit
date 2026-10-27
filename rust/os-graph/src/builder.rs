@@ -1,4 +1,4 @@
-//! System-view graph builder (port of `typescript/src/system/builder.ts`).
+//! System-view graph builder (canonical; the TypeScript builder it was ported from is removed).
 //!
 //! Pure and deterministic: a dense core made from the project's graph (categorized,
 //! community-labelled, capped) plus a ring of recent activity. Every ordering that the
