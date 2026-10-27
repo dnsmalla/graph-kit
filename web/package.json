@@ -1,0 +1,28 @@
+{
+  "name": "@dnsmalla/graph-kit-web",
+  "version": "0.1.0",
+  "private": false,
+  "description": "The Agentic OS (System) view as a React page, backed by a host through the OsHost interface",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "type-check": "tsc --noEmit",
+    "test": "node --test test/*.test.mjs"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "@vitejs/plugin-react": "6.1.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "6.0.3",
+    "vite": "8.2.2"
+  }
+}
