@@ -6,7 +6,7 @@ import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './t
 export type OsRange = 'day' | 'week';
 
 /** Screens the host can open. The page asks; the host decides what they are. */
-export type OsOpenTarget = 'loop' | 'autoTasks' | 'settings' | 'library';
+export type OsOpenTarget = 'loop' | 'autoTasks' | 'settings' | 'library' | 'explorer' | 'codeGraph';
 
 /** Thrown (or rejected) by a host when the session is refused (HTTP 401). */
 export class OsAuthError extends Error {
