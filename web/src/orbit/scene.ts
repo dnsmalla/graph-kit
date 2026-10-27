@@ -8,6 +8,7 @@ import type {
   OrbitLayout,
   SystemCoreNode,
   SystemGraph,
+  SystemRingItem,
   Vec3,
 } from "../../../typescript/src/system/index.js";
 
@@ -149,16 +150,21 @@ export interface RingLabel {
   z: number;
 }
 
-/** Ring items with their layout positions, in `graph.ring` order (first occurrence per id). */
-export function ringLabelPositions(graph: SystemGraph, layout: OrbitLayout): RingLabel[] {
+/** Ring items with their layout positions, in item order (first occurrence per id, items without a position dropped). */
+export function ringLabels(items: SystemRingItem[], positions: Map<string, Vec3>): RingLabel[] {
   const seen = new Set<string>();
   const out: RingLabel[] = [];
-  for (const item of graph.ring) {
+  for (const item of items) {
     if (seen.has(item.id)) continue;
     seen.add(item.id);
-    const p = layout.ring.get(item.id);
+    const p = positions.get(item.id);
     if (!p) continue;
     out.push({ id: item.id, label: item.label, kind: item.kind, x: p.x, y: p.y, z: p.z });
   }
   return out;
+}
+
+/** Ring items with their layout positions, in `graph.ring` order (first occurrence per id). */
+export function ringLabelPositions(graph: SystemGraph, layout: OrbitLayout): RingLabel[] {
+  return ringLabels(graph.ring, layout.ring);
 }

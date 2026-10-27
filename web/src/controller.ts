@@ -63,11 +63,86 @@ function isAuthError(err: unknown): boolean {
   return err instanceof OsAuthError || (err instanceof Error && err.name === 'OsAuthError');
 }
 
-/** A project graph is usable when it is an object with `nodes` and `edges` arrays. */
-function isProjectGraph(value: unknown): value is CGData {
-  if (!value || typeof value !== 'object') return false;
-  const v = value as { nodes?: unknown; edges?: unknown };
-  return Array.isArray(v.nodes) && Array.isArray(v.edges);
+type Obj = Record<string, unknown>;
+
+function isObject(value: unknown): value is Obj {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+/**
+ * Reduces a host's project graph to the shape the layout reads. Nodes without a
+ * string id are dropped, duplicate ids keep the first node, and edges need string
+ * endpoints (fromId / toId). Missing titles, kinds and metadata get safe defaults.
+ * Returns null when the value has no `nodes` and `edges` arrays at all.
+ */
+export function sanitizeProjectGraph(value: unknown): CGData | null {
+  if (!isObject(value) || !Array.isArray(value.nodes) || !Array.isArray(value.edges)) return null;
+  const seen = new Set<string>();
+  const nodes: CGData['nodes'] = [];
+  for (const raw of value.nodes) {
+    if (!isObject(raw) || !isId(raw.id) || seen.has(raw.id)) continue;
+    seen.add(raw.id);
+    nodes.push({
+      ...(raw as unknown as CGData['nodes'][number]),
+      id: raw.id,
+      title: typeof raw.title === 'string' ? raw.title : raw.id,
+      kind: (typeof raw.kind === 'string' ? raw.kind : 'other') as CGData['nodes'][number]['kind'],
+      metadata: isObject(raw.metadata) ? (raw.metadata as CGData['nodes'][number]['metadata']) : {},
+    });
+  }
+  const edges: CGData['edges'] = [];
+  for (const raw of value.edges) {
+    if (!isObject(raw) || !isId(raw.fromId) || !isId(raw.toId)) continue;
+    edges.push(raw as unknown as CGData['edges'][number]);
+  }
+  return { ...(value as object), nodes, edges } as unknown as CGData;
+}
+
+/** Skills with a string id and a name, first occurrence per id. */
+export function sanitizeSkills(value: unknown[]): OsSkill[] {
+  const seen = new Set<string>();
+  const out: OsSkill[] = [];
+  for (const raw of value) {
+    if (!isObject(raw) || !isId(raw.id) || typeof raw.name !== 'string' || seen.has(raw.id)) continue;
+    seen.add(raw.id);
+    out.push(raw as unknown as OsSkill);
+  }
+  return out;
+}
+
+/** Routines with a string id and a title, first occurrence per id. */
+export function sanitizeRoutines(value: unknown[]): OsRoutine[] {
+  const seen = new Set<string>();
+  const out: OsRoutine[] = [];
+  for (const raw of value) {
+    if (!isObject(raw) || !isId(raw.id) || typeof raw.title !== 'string' || seen.has(raw.id)) continue;
+    seen.add(raw.id);
+    out.push(raw as unknown as OsRoutine);
+  }
+  return out;
+}
+
+/** Activity rows without an id are dropped (the recent list and the ring key on it), first occurrence per id kept. */
+function sanitizeSnapshot(raw: OsSnapshot): OsSnapshot {
+  const activity: unknown = (raw as { activity?: unknown }).activity;
+  const items: unknown = isObject(activity) ? activity.items : undefined;
+  if (!isObject(activity) || !Array.isArray(items)) {
+    return { ...raw, activity: { ...(isObject(activity) ? activity : {}), items: [] } } as unknown as OsSnapshot;
+  }
+  const seen = new Set<string | number>();
+  const kept: unknown[] = [];
+  for (const item of items) {
+    if (!isObject(item)) continue;
+    const id = item.id;
+    if ((typeof id !== 'string' && typeof id !== 'number') || seen.has(id)) continue;
+    seen.add(id);
+    kept.push(item);
+  }
+  return { ...raw, activity: { ...activity, items: kept } } as unknown as OsSnapshot;
 }
 
 function isSelectionType(value: unknown): value is OsSelection['type'] {
@@ -207,8 +282,9 @@ export class OsController {
     const seq = ++this.requestSeq;
     this.set({ loading: true });
     try {
-      const data = await this.deps.host.loadState(this.state.range);
+      const raw = await this.deps.host.loadState(this.state.range);
       if (this.disposed || seq !== this.requestSeq) return;
+      const data = sanitizeSnapshot(raw);
       const wasSignedOut = this.state.signedOut;
       this.set({ data, loading: false, error: null, signedOut: false });
       // A refresh that clears a sign-out also re-establishes the feed the sign-out stopped.
@@ -254,6 +330,7 @@ export class OsController {
   /**
    * Loads the project graph, skills and routines. Each is independent: a failure
    * or a missing host method sets only that data set's status, never the page error.
+   * A refused session (OsAuthError) signs the view out, as for the state load.
    * Not called by change-feed refreshes (the graph is expensive to build).
    */
   loadExtras(): void {
@@ -280,42 +357,65 @@ export class OsController {
     this.cancelRefresh();
   }
 
+  /** Sets the project graph and drops a core selection whose node is not in it any more. */
+  private applyGraph(graph: CGData | null, status: ExtraStatus): void {
+    const selected = this.state.selected;
+    const gone =
+      selected !== null &&
+      selected.type === 'core' &&
+      (graph === null || !graph.nodes.some((node) => node.id === selected.id));
+    this.set(gone ? { projectGraph: graph, projectGraphStatus: status, selected: null } : { projectGraph: graph, projectGraphStatus: status });
+  }
+
   private async loadProjectGraph(): Promise<void> {
     const host = this.deps.host;
     const load = host.loadProjectGraph;
+    const seq = ++this.graphSeq;
     if (typeof load !== 'function') {
-      this.set({ projectGraph: null, projectGraphStatus: 'none' });
+      this.applyGraph(null, 'none');
       return;
     }
-    const seq = ++this.graphSeq;
     this.set({ projectGraphStatus: 'loading' });
     try {
       const raw: unknown = await load.call(host);
-      if (this.disposed || seq !== this.graphSeq) return;
-      if (isProjectGraph(raw)) this.set({ projectGraph: raw, projectGraphStatus: 'ready' });
-      else this.set({ projectGraph: null, projectGraphStatus: 'none' });
-    } catch {
-      if (this.disposed || seq !== this.graphSeq) return;
-      this.set({ projectGraph: null, projectGraphStatus: 'error' });
+      if (this.disposed) return;
+      if (seq !== this.graphSeq) return;
+      const graph = sanitizeProjectGraph(raw);
+      if (graph) this.applyGraph(graph, 'ready');
+      else this.applyGraph(null, 'none');
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      if (seq !== this.graphSeq) return;
+      this.applyGraph(null, 'error');
     }
   }
 
   private async loadSkills(): Promise<void> {
     const host = this.deps.host;
     const load = host.loadSkills;
+    const seq = ++this.skillsSeq;
     if (typeof load !== 'function') {
       this.set({ skills: null, skillsStatus: 'none' });
       return;
     }
-    const seq = ++this.skillsSeq;
     this.set({ skillsStatus: 'loading' });
     try {
       const raw: unknown = await load.call(host);
-      if (this.disposed || seq !== this.skillsSeq) return;
-      if (Array.isArray(raw)) this.set({ skills: raw as OsSkill[], skillsStatus: 'ready' });
+      if (this.disposed) return;
+      if (seq !== this.skillsSeq) return;
+      if (Array.isArray(raw)) this.set({ skills: sanitizeSkills(raw), skillsStatus: 'ready' });
       else this.set({ skills: null, skillsStatus: 'none' });
-    } catch {
-      if (this.disposed || seq !== this.skillsSeq) return;
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      if (seq !== this.skillsSeq) return;
       this.set({ skills: null, skillsStatus: 'error' });
     }
   }
@@ -323,19 +423,25 @@ export class OsController {
   private async loadRoutines(): Promise<void> {
     const host = this.deps.host;
     const load = host.loadRoutines;
+    const seq = ++this.routinesSeq;
     if (typeof load !== 'function') {
       this.set({ routines: null, routinesStatus: 'none' });
       return;
     }
-    const seq = ++this.routinesSeq;
     this.set({ routinesStatus: 'loading' });
     try {
       const raw: unknown = await load.call(host);
-      if (this.disposed || seq !== this.routinesSeq) return;
-      if (Array.isArray(raw)) this.set({ routines: raw as OsRoutine[], routinesStatus: 'ready' });
+      if (this.disposed) return;
+      if (seq !== this.routinesSeq) return;
+      if (Array.isArray(raw)) this.set({ routines: sanitizeRoutines(raw), routinesStatus: 'ready' });
       else this.set({ routines: null, routinesStatus: 'none' });
-    } catch {
-      if (this.disposed || seq !== this.routinesSeq) return;
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      if (seq !== this.routinesSeq) return;
       this.set({ routines: null, routinesStatus: 'error' });
     }
   }

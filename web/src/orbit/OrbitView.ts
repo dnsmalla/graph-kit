@@ -12,13 +12,16 @@ import type {
   CoreCategory,
   OrbitLayout,
   SystemGraph,
+  SystemRingItem,
+  Vec3,
 } from "../../../typescript/src/system/index.js";
 import {
   buildEdgeBuffer,
   buildPointBuffers,
   DEFAULT_CATEGORY_COLORS,
   isHexColor,
-  ringLabelPositions,
+  ringLabels,
+  type RingLabel,
   uniqueCoreNodes,
 } from "./scene";
 
@@ -53,6 +56,8 @@ export interface OrbitViewOptions {
   colors?: Partial<Record<CoreCategory, string>>;
   onHover?: (item: OrbitPick | null) => void;
   onSelect?: (item: OrbitPick) => void;
+  /** Called once when WebGL is unavailable and the view shows its text fallback. */
+  onFallback?: () => void;
   /** Builds the renderer on the canvas the view created. Default: WebGLRenderer. */
   createRenderer?: (canvas: HTMLCanvasElement) => RendererLike;
   /** Default: window.requestAnimationFrame. */
@@ -91,6 +96,8 @@ const REPICK_INTERVAL_MS = 150;
 /** Framing: sphere fit with a 25% margin, camera looking slightly down. */
 const FRAME_MARGIN = 1.25;
 const FRAME_ELEVATION = 0.35;
+/** The camera is re-framed when the core's node count moves by more than this fraction. */
+const REFRAME_CHANGE_RATIO = 0.2;
 
 const VERTEX_SHADER = `
 attribute float aSize;
@@ -122,10 +129,9 @@ interface CoreItem {
   category: CoreCategory;
 }
 
-interface RingItem {
-  id: string;
-  label: string;
-  kind: string;
+/** Identity of one ring item as the view draws it. A change of any field rebuilds the ring. */
+function ringSignature(items: SystemRingItem[]): string {
+  return items.map((i) => [i.id, i.at, i.label, i.kind].join("\u0001")).join("\u0002");
 }
 
 function resolveColors(
@@ -166,6 +172,7 @@ export class OrbitView {
   private readonly colors: Record<CoreCategory, string>;
   private readonly onHover?: (item: OrbitPick | null) => void;
   private readonly onSelect?: (item: OrbitPick) => void;
+  private readonly onFallback?: () => void;
   private readonly createRenderer: (canvas: HTMLCanvasElement) => RendererLike;
   private readonly requestFrame: (cb: FrameRequestCallback) => number;
   private readonly cancelFrame: (id: number) => void;
@@ -186,11 +193,16 @@ export class OrbitView {
   private graph: SystemGraph | null = null;
   private layout: OrbitLayout | null = null;
   private coreItems: CoreItem[] = [];
-  private ringItems: RingItem[] = [];
+  private ringItems: RingLabel[] = [];
+  private ringSig: string | null = null;
+  private ringRadius = 0;
   private corePoints: THREE.Points | null = null;
   private ringPoints: THREE.Points | null = null;
   private ringColorAttr: THREE.BufferAttribute | null = null;
   private radius = 1;
+  /** Core node count at the last framing, or null before the first framing. */
+  private framedCoreCount: number | null = null;
+  private ringCount = 0;
 
   private coreAngle = 0;
   private ringAngle = 0;
@@ -225,6 +237,7 @@ export class OrbitView {
     this.colors = resolveColors(opts.colors);
     this.onHover = opts.onHover;
     this.onSelect = opts.onSelect;
+    this.onFallback = opts.onFallback;
     this.createRenderer = opts.createRenderer ?? defaultCreateRenderer;
     this.requestFrame = opts.requestFrame ?? ((cb) => requestAnimationFrame(cb));
     this.cancelFrame = opts.cancelFrame ?? ((id) => cancelAnimationFrame(id));
@@ -236,6 +249,7 @@ export class OrbitView {
       renderer = this.createRenderer(document.createElement("canvas"));
     } catch {
       this.showFallback();
+      this.onFallback?.();
       return;
     }
     this.renderer = renderer;
@@ -276,14 +290,16 @@ export class OrbitView {
   }
 
   /**
-   * Replace the scene with a graph and its layout. Calling again with the same
-   * graph and layout objects is a no-op; a new object (even with equal content)
-   * rebuilds the buffers.
+   * Replace the core (the project's nodes and edges) with a graph and its layout.
+   * Calling again with the same objects is a no-op; a new object rebuilds the core
+   * buffers. The camera keeps its pose: it is framed on the first content and again
+   * only when the core's node count changes by more than 20% (or on refit()).
+   * The ring is not part of the core: it comes from setRing().
    */
   setGraph(graph: SystemGraph, layout: OrbitLayout): void {
     if (!this.renderer || this.disposed) return;
     if (graph === this.graph && layout === this.layout) return;
-    this.clearContent();
+    this.clearCore();
     this.graph = graph;
     this.layout = layout;
 
@@ -305,15 +321,33 @@ export class OrbitView {
       this.coreGroup.add(new THREE.LineSegments(geo, this.makeLineMaterial("edge")));
     }
 
-    const ring = ringLabelPositions(graph, layout);
-    this.ringItems = ring.map((r) => ({ id: r.id, label: r.label, kind: r.kind }));
+    this.radius = Math.max(layout.bounds.radius, this.ringRadius, 1);
+    this.setHover(null);
+    this.frameCore();
+    this.requestRender();
+  }
+
+  /**
+   * Replace the recent-activity ring. Only the ring's points and circle are rebuilt:
+   * the core and the camera are untouched, and a ring with the same ids and times
+   * (in the same order) is a no-op.
+   */
+  setRing(ring: SystemRingItem[], ringPositions: Map<string, Vec3>): void {
+    if (!this.renderer || this.disposed) return;
+    const sig = ringSignature(ring);
+    if (sig === this.ringSig) return;
+    this.ringSig = sig;
+    this.clearRing();
+    this.ringItems = ringLabels(ring, ringPositions);
+    this.ringCount = this.ringItems.length;
+
     let ringRadius = 0;
-    if (ring.length > 0) {
-      const positions = new Float32Array(ring.length * 3);
-      const rgb = new Float32Array(ring.length * 3);
-      const sizes = new Float32Array(ring.length).fill(RING_POINT_SIZE);
+    if (this.ringItems.length > 0) {
+      const positions = new Float32Array(this.ringItems.length * 3);
+      const rgb = new Float32Array(this.ringItems.length * 3);
+      const sizes = new Float32Array(this.ringItems.length).fill(RING_POINT_SIZE);
       const ringRgb = RING_RGB[this.theme];
-      ring.forEach((r, i) => {
+      this.ringItems.forEach((r, i) => {
         positions[i * 3] = r.x;
         positions[i * 3 + 1] = r.y;
         positions[i * 3 + 2] = r.z;
@@ -342,10 +376,34 @@ export class OrbitView {
       this.ringGroup.add(new THREE.LineLoop(geo, this.makeLineMaterial("ring")));
     }
 
-    this.radius = Math.max(layout.bounds.radius, 1);
-    this.setHover(null);
+    this.ringRadius = ringRadius;
+    this.radius = Math.max(this.layout?.bounds.radius ?? 0, this.ringRadius, 1);
+    this.frameCore();
+    this.requestRender();
+  }
+
+  /** Re-frame the camera on the current scene (for example after a project switch the view should follow). */
+  refit(): void {
+    if (!this.renderer || this.disposed) return;
+    this.framedCoreCount = this.coreItems.length;
     this.fitCamera();
     this.requestRender();
+  }
+
+  /**
+   * Frames the camera on the first content, and again when the core's node count
+   * changed by more than REFRAME_CHANGE_RATIO since the last framing.
+   */
+  private frameCore(): void {
+    const count = this.coreItems.length;
+    const hasContent = count > 0 || this.ringCount > 0;
+    if (!hasContent) return;
+    const previous = this.framedCoreCount;
+    const changed =
+      previous === null || Math.abs(count - previous) > REFRAME_CHANGE_RATIO * Math.max(previous, 1);
+    if (!changed) return;
+    this.framedCoreCount = count;
+    this.fitCamera();
   }
 
   /** Re-measure the container and re-frame the camera. */
@@ -408,7 +466,8 @@ export class OrbitView {
       canvas.removeEventListener("pointerleave", this.onPointerLeave);
     }
     this.hovering = false;
-    this.clearContent();
+    this.clearCore();
+    this.clearRing();
     if (this.renderer) {
       this.renderer.dispose();
       this.renderer.forceContextLoss();
@@ -481,27 +540,35 @@ export class OrbitView {
     this.camera.updateMatrixWorld();
   }
 
+  /** Removes a group's objects, disposing their buffers and dropping their materials from the restyle sets. */
   private clearGroup(group: THREE.Group): void {
     for (const obj of [...group.children]) {
       group.remove(obj);
-      const o = obj as { geometry?: THREE.BufferGeometry; material?: THREE.Material };
+      const o = obj as { geometry?: THREE.BufferGeometry; material?: THREE.ShaderMaterial | THREE.LineBasicMaterial };
       o.geometry?.dispose();
-      o.material?.dispose();
+      if (o.material) {
+        this.pointMaterials.delete(o.material as THREE.ShaderMaterial);
+        this.lineMaterials.delete(o.material as THREE.LineBasicMaterial);
+        o.material.dispose();
+      }
     }
   }
 
-  private clearContent(): void {
+  private clearCore(): void {
     this.clearGroup(this.coreGroup);
-    this.clearGroup(this.ringGroup);
-    this.pointMaterials.clear();
-    this.lineMaterials.clear();
     this.corePoints = null;
-    this.ringPoints = null;
-    this.ringColorAttr = null;
     this.coreItems = [];
-    this.ringItems = [];
     this.graph = null;
     this.layout = null;
+  }
+
+  private clearRing(): void {
+    this.clearGroup(this.ringGroup);
+    this.ringPoints = null;
+    this.ringColorAttr = null;
+    this.ringItems = [];
+    this.ringCount = 0;
+    this.ringRadius = 0;
   }
 
   private applyRotation(): void {

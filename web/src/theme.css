@@ -1,9 +1,8 @@
 /* Default design tokens. A host may load its own token sheet after this one to override them.
- * Copied from the LLM-IDE token build (tokens.generated.css); regenerate there, then re-copy. */
-/* GENERATED - do not edit.
- * Source: schema/design/tokens.json
- * Regenerate with `node scripts/gen-design-tokens.mjs` (or `make design-tokens`).
- * Check with `node scripts/gen-design-tokens.mjs --check` (part of `make contract-gates`).
+ * Copied from the host's token build. Do not edit here: regenerate it in the host's token
+ * build, then copy it over. */
+/* GENERATED in the host's token build - do not edit.
+ * The host's token source and its generator own this file; the page only copies it.
  *
  * :root holds the default theme's colours and the theme-independent tokens
  * (spacing, radius, type). Each [data-theme="<id>"] block overrides only the
@@ -118,24 +117,4 @@
   --tok-color-category-purple: rgb(76% 64% 100%);
   --tok-color-category-teal: rgb(52% 86% 90%);
   --tok-color-category-amber: rgb(95% 78% 45%);
-}
-
-/* ---- Agentic OS category colours (web-only; not in the generated token source) ----
- * The brain's node colours and the legend swatches. Values equal
- * DEFAULT_CATEGORY_COLORS in orbit/scene.ts for the dark and midnight themes; the
- * light theme uses darker shades so each swatch keeps 3:1 against the light surfaces. */
-:root {
-  --os-cat-code: rgb(36% 55% 94%);
-  --os-cat-docs: rgb(88% 70% 25%);
-  --os-cat-tests: rgb(31% 75% 53%);
-  --os-cat-knowledge: rgb(76% 48% 90%);
-  --os-cat-other: rgb(54% 58% 65%);
-}
-
-:root[data-theme="light"] {
-  --os-cat-code: rgb(18% 37% 77%);
-  --os-cat-docs: rgb(54% 38% 0%);
-  --os-cat-tests: rgb(12% 48% 30%);
-  --os-cat-knowledge: rgb(49% 25% 72%);
-  --os-cat-other: rgb(36% 39% 46%);
 }

@@ -40,14 +40,15 @@ status) sits above three columns, and the brain is the centre:
   Auto Tasks buttons sit in its header).
 
 Below 1100px the columns stack: the brain first, then the left and right
-panels. Category colours are the `--os-cat-*` tokens in `src/theme.css`; the
+panels. Category colours are the `--os-cat-*` tokens in `src/os-tokens.css`; the
 light theme uses darker shades so each swatch keeps 3:1 against its surface.
 
 `src/systemGraph.ts` is the only module that calls the pure core
-(`buildSystemGraph`, `orbitLayout`). `computeSystemView(snapshot, project)`
-memoises by the identity of the snapshot's activity and the project, and caps the
-core at 4000 nodes and the ring at 24 items. A Rust (WASM) core will replace the
-TypeScript one behind that module alone.
+(`buildSystemGraph`, `orbitLayout`), in two parts so a change refresh never redraws
+the project: `computeCore(project)` (memoised on the project's identity) and
+`computeRing(snapshot)` (memoised on the ring's ids, times, labels and kinds). The
+core is capped at 4000 nodes and the ring at 24 items. A Rust (WASM) core will
+replace the TypeScript one behind that module alone.
 
 ## Mounting
 
@@ -78,7 +79,7 @@ view.dispose();
 ```
 
 The host should load its own token sheet after the page's default
-`theme.css` (the page's own `styles.css` reads only `--tok-*` variables) to
+`theme.css` and `os-tokens.css` (the page's own `styles.css` reads only `--tok-*` variables) to
 override the default colours.
 
 ## Scripts

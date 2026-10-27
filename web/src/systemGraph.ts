@@ -1,8 +1,22 @@
 // The one place the page calls the System view's pure core (buildSystemGraph and
 // orbitLayout). The core is TypeScript today; the Rust crate (rust/os-graph) will
 // replace it behind WASM, and only this file changes when that lands.
+//
+// The view is split in two so a change-feed refresh never rebuilds the project:
+//   - computeCore(project): the project's nodes, edges and their 3D layout. It
+//     depends on the project alone, so it is memoised on that identity.
+//   - computeRing(snapshot): the recent-activity ring. Cheap (at most 24 items),
+//     memoised on the ring's ids, times and labels, so identical activity gives
+//     the same object.
 import type { CGData } from '../../typescript/src/models';
-import { buildSystemGraph, orbitLayout, type OrbitLayout, type SystemGraph } from '../../typescript/src/system/index';
+import {
+  buildSystemGraph,
+  orbitLayout,
+  type OrbitLayout,
+  type SystemGraph,
+  type SystemRingItem,
+  type Vec3,
+} from '../../typescript/src/system/index';
 import type { OsSnapshot } from './types';
 
 /** Hard caps the page applies. A caller can ask for less, never for more. */
@@ -11,51 +25,81 @@ export const SYSTEM_VIEW_LIMITS = { maxCoreNodes: 4000, maxRingItems: 24 } as co
 /** Seed of the orbit layout. Fixed so the same project always lays out the same way. */
 const LAYOUT_SEED = 1;
 
-export type SystemView = { graph: SystemGraph; layout: OrbitLayout };
-
+export type CoreView = { graph: SystemGraph; layout: OrbitLayout };
+export type RingView = { items: SystemRingItem[]; positions: Map<string, Vec3> };
 export type SystemViewOptions = { maxCoreNodes?: number; maxRingItems?: number };
 
-type Memo = {
-  activity: unknown;
-  project: CGData | null;
-  maxCoreNodes: number;
-  maxRingItems: number;
-  view: SystemView;
+const EMPTY_GRAPH: SystemGraph = {
+  core: [],
+  edges: [],
+  ring: [],
+  truncated: { totalNodes: 0, keptNodes: 0, keptCommunities: 0 },
 };
 
-/** Single-slot memo: the page renders one view at a time. */
-let memo: Memo | null = null;
+/** The core of "no project" (also what the page shows when drawing the project fails). */
+export const EMPTY_CORE_VIEW: CoreView = {
+  graph: EMPTY_GRAPH,
+  layout: { core: new Map(), ring: new Map(), communityCenters: [], bounds: { radius: 0 } },
+};
+
+/** The ring of "no activity". */
+export const EMPTY_RING_VIEW: RingView = { items: [], positions: new Map() };
 
 function capped(value: number | undefined, cap: number): number {
   if (value === undefined || !Number.isFinite(value)) return cap;
   return Math.min(Math.max(0, Math.floor(value)), cap);
 }
 
+type CoreMemo = { project: CGData | null; maxCoreNodes: number; view: CoreView };
+
+/** Single-slot memo: the page draws one project at a time. */
+let coreMemo: CoreMemo | null = null;
+
 /**
- * The brain view for one snapshot and one project. Memoised by the identity of
- * `snapshot.activity` and of `project` (and the caps): a re-render with the same
- * inputs returns the same object, so the orbit panel does not rebuild its scene.
+ * The project's core for the brain: nodes, edges and layout, with an empty ring.
+ * Memoised by the identity of `project` (and the node cap): a refresh that only
+ * changes the activity returns the same object and the orbit does not rebuild.
  */
-export function computeSystemView(
-  snapshot: OsSnapshot | null,
+export function computeCore(
   project: CGData | null,
   opts: SystemViewOptions = {},
-): SystemView {
+): CoreView {
   const maxCoreNodes = capped(opts.maxCoreNodes, SYSTEM_VIEW_LIMITS.maxCoreNodes);
-  const maxRingItems = capped(opts.maxRingItems, SYSTEM_VIEW_LIMITS.maxRingItems);
-  const activity = snapshot ? snapshot.activity : null;
-  if (
-    memo &&
-    memo.activity === activity &&
-    memo.project === project &&
-    memo.maxCoreNodes === maxCoreNodes &&
-    memo.maxRingItems === maxRingItems
-  ) {
-    return memo.view;
+  if (coreMemo && coreMemo.project === project && coreMemo.maxCoreNodes === maxCoreNodes) {
+    return coreMemo.view;
   }
-  const graph = buildSystemGraph(snapshot, project, { maxCoreNodes, maxRingItems });
+  const graph = buildSystemGraph(null, project, { maxCoreNodes, maxRingItems: 0 });
   const layout = orbitLayout(graph, { seed: LAYOUT_SEED });
-  const view = { graph, layout };
-  memo = { activity, project, maxCoreNodes, maxRingItems, view };
+  const view: CoreView = { graph, layout };
+  coreMemo = { project, maxCoreNodes, view };
+  return view;
+}
+
+type RingMemo = { key: string; view: RingView };
+
+let ringMemo: RingMemo | null = null;
+
+/** The ring's identity: every field the orbit and the recent list read. */
+function ringKey(items: SystemRingItem[]): string {
+  return items.map((item) => [item.id, item.at, item.label, item.kind].join('\u0001')).join('\u0002');
+}
+
+/**
+ * The recent-activity ring for a snapshot. Ring positions depend only on the
+ * ring's item count and order, so they are laid out on a ring-only graph. The
+ * same ring (same ids, times, labels and kinds) returns the same object.
+ */
+export function computeRing(
+  snapshot: OsSnapshot | null,
+  opts: SystemViewOptions = {},
+): RingView {
+  const maxRingItems = capped(opts.maxRingItems, SYSTEM_VIEW_LIMITS.maxRingItems);
+  const items = buildSystemGraph(snapshot, null, { maxCoreNodes: 0, maxRingItems }).ring;
+  const key = `${maxRingItems}\u0003${ringKey(items)}`;
+  if (ringMemo && ringMemo.key === key) return ringMemo.view;
+  const ringOnly: SystemGraph = { ...EMPTY_GRAPH, ring: items };
+  const layout = orbitLayout(ringOnly, { seed: LAYOUT_SEED });
+  const view: RingView = { items, positions: layout.ring };
+  ringMemo = { key, view };
   return view;
 }

@@ -182,6 +182,17 @@ describe('buildEdgeBuffer', () => {
   });
 });
 
+describe('ringLabels', () => {
+  it('keeps item order, drops duplicates and items without a position', () => {
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    const items = [...graph.ring, { id: 'activity:9', label: 'No position', kind: 'note', at: '', link: null }];
+    const labels = scene.ringLabels(items, layout.ring);
+    assert.deepEqual(labels.map((l) => l.id), ['activity:1', 'activity:2']);
+    assert.deepEqual({ x: labels[1].x, y: labels[1].y, z: labels[1].z }, layout.ring.get('activity:2'));
+  });
+});
+
 describe('ringLabelPositions', () => {
   it('matches layout.ring, de-duplicated, in graph order', () => {
     const graph = sampleGraph();
@@ -197,26 +208,42 @@ describe('ringLabelPositions', () => {
   });
 });
 
+/** The core and ring inputs OrbitPanel takes, built the way the page builds them. */
+function panelInputs(graph = sampleGraph()) {
+  const layout = orbit.orbitLayout(graph);
+  return {
+    core: { graph, layout },
+    ring: { items: graph.ring, positions: layout.ring },
+  };
+}
+
 describe('OrbitPanel (SSR)', () => {
   it('renders the empty state when there is no graph', () => {
-    const html = renderToString(createElement(panel.OrbitPanel, { graph: null, layout: null }));
+    const html = renderToString(createElement(panel.OrbitPanel, { core: null, ring: null }));
     assert.match(html, /No project graph yet/);
     assert.match(html, /class="orbit-panel"/);
   });
 
   it('renders the empty state when the graph has no core nodes', () => {
     const graph = { ...sampleGraph(), core: [], edges: [] };
-    const layout = orbit.orbitLayout(graph);
-    const html = renderToString(createElement(panel.OrbitPanel, { graph, layout }));
+    const html = renderToString(createElement(panel.OrbitPanel, { ...panelInputs(graph) }));
     assert.match(html, /No project graph yet/);
   });
 
+  it('hides the empty text while the caller says the load has not settled', () => {
+    const html = renderToString(createElement(panel.OrbitPanel, { core: null, ring: null, showEmpty: false }));
+    assert.doesNotMatch(html, /No project graph yet/);
+  });
+
+  it('the empty text is plain text, not a second status region', () => {
+    const html = renderToString(createElement(panel.OrbitPanel, { core: null, ring: null }));
+    assert.doesNotMatch(html, /role="status"/);
+  });
+
   it('does not throw during SSR with a real graph', () => {
-    const graph = sampleGraph();
-    const layout = orbit.orbitLayout(graph);
     let html = '';
     assert.doesNotThrow(() => {
-      html = renderToString(createElement(panel.OrbitPanel, { graph, layout, onSelect: () => {} }));
+      html = renderToString(createElement(panel.OrbitPanel, { ...panelInputs(), onSelect: () => {}, onFallback: () => {} }));
     });
     assert.match(html, /class="orbit-panel"/);
     assert.doesNotMatch(html, /No project graph yet/);
@@ -485,5 +512,114 @@ describe('OrbitView (fake renderer)', () => {
     assert.ok(v.corePoints.material.uniforms.uOpacity.value > 0.9);
     v.setTheme('dark');
     assert.equal(v.corePoints.material.blending, 2);
+  });
+
+  /** A core of `n` nodes in one community, chained so the layout has edges. */
+  function chainGraph(n, prefix = 'n') {
+    const nodes = Array.from({ length: n }, (_, i) => core(`${prefix}${i}`, 'code', 2, 0));
+    const edges = nodes.slice(1).map((node, i) => ({ source: nodes[i].id, target: node.id, weight: 1 }));
+    return { core: nodes, edges, ring: [], truncated: { totalNodes: n, keptNodes: n, keptCommunities: 1 } };
+  }
+
+  it('setRing rebuilds only the ring: core buffers, core children and the camera pose stay', () => {
+    const v = make();
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    const corePoints = v.corePoints;
+    const coreChildren = [...v.coreGroup.children];
+    const pose = v.camera.position.toArray();
+
+    v.setRing(graph.ring, layout.ring);
+    assert.equal(v.corePoints, corePoints, 'core points are the same object');
+    assert.deepEqual([...v.coreGroup.children], coreChildren, 'core group untouched');
+    assert.deepEqual(v.camera.position.toArray(), pose, 'camera did not move');
+    assert.ok(v.ringPoints, 'ring points built');
+    assert.equal(v.ringPoints.geometry.attributes.position.count, 2, 'one point per unique ring item');
+  });
+
+  it('setRing does not reset the hover', () => {
+    const picks = [];
+    const v = make({ onHover: (item) => picks.push(item) });
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    const before = picks.length;
+    v.setRing(graph.ring, layout.ring);
+    assert.equal(picks.length, before, 'no hover callback from a ring change');
+  });
+
+  it('setRing with the same ids and times is a no-op; a changed time rebuilds the ring', () => {
+    const v = make();
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    v.setRing(graph.ring, layout.ring);
+    const first = v.ringPoints;
+    v.setRing(graph.ring.map((item) => ({ ...item })), layout.ring);
+    assert.equal(v.ringPoints, first, 'equal content, new objects: no rebuild');
+    v.setRing(graph.ring.map((item, i) => (i === 0 ? { ...item, at: '2026-10-27T10:00:00Z' } : item)), layout.ring);
+    assert.notEqual(v.ringPoints, first, 'a changed time rebuilds');
+  });
+
+  it('setGraph keeps the ring that setRing drew', () => {
+    const v = make();
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setRing(graph.ring, layout.ring);
+    const ring = v.ringPoints;
+    assert.ok(ring, 'ring drawn before any core');
+    v.setGraph(graph, layout);
+    assert.equal(v.ringPoints, ring, 'core update leaves the ring in place');
+  });
+
+  it('setGraph with a new same-sized graph keeps the camera pose', () => {
+    const v = make();
+    const g = chainGraph(40);
+    v.setGraph(g, orbit.orbitLayout(g));
+    v.camera.position.set(1, 2, 3);
+    const same = chainGraph(40, 'm');
+    v.setGraph(same, orbit.orbitLayout(same, { seed: 7 }));
+    assert.deepEqual(v.camera.position.toArray(), [1, 2, 3], 'same size: the camera is not re-framed');
+  });
+
+  it('setGraph re-frames the camera when the core node count changes by more than 20%', () => {
+    const v = make();
+    const g = chainGraph(40);
+    v.setGraph(g, orbit.orbitLayout(g));
+    v.camera.position.set(1, 2, 3);
+    const big = chainGraph(60, 'b');
+    v.setGraph(big, orbit.orbitLayout(big));
+    assert.notDeepEqual(v.camera.position.toArray(), [1, 2, 3], 'a 50% larger core is framed again');
+  });
+
+  it('refit() frames the camera on the current scene on demand', () => {
+    const v = make();
+    const g = chainGraph(40);
+    v.setGraph(g, orbit.orbitLayout(g));
+    const pose = v.camera.position.toArray();
+    v.camera.position.set(1, 2, 3);
+    v.refit();
+    assert.deepEqual(v.camera.position.toArray(), pose);
+  });
+
+  it('calls onFallback once when WebGL is unavailable, and not when it is', () => {
+    let calls = 0;
+    const v = new view.OrbitView(container, {
+      createRenderer: () => {
+        throw new Error('no WebGL');
+      },
+      onFallback: () => {
+        calls++;
+      },
+    });
+    live.push(v);
+    assert.equal(calls, 1);
+    v.setRing(sampleGraph().ring, orbit.orbitLayout(sampleGraph()).ring);
+    assert.equal(calls, 1, 'not repeated by later calls');
+
+    let working = 0;
+    make({ onFallback: () => working++ });
+    assert.equal(working, 0, 'WebGL present: no fallback callback');
   });
 });

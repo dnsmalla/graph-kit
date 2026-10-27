@@ -4,6 +4,7 @@ import { OsController } from './controller';
 import type { OsHost } from './host';
 import { applyTheme } from './theme';
 import './theme.css';
+import './os-tokens.css';
 import './styles.css';
 
 export type MountOptions = {

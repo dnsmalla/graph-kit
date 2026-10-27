@@ -2,13 +2,24 @@
 // server rendering never touches window, document or WebGL.
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import type { OrbitLayout, SystemGraph } from "../../../typescript/src/system/index.js";
+import type {
+  OrbitLayout,
+  SystemGraph,
+  SystemRingItem,
+  Vec3,
+} from "../../../typescript/src/system/index.js";
 import { OrbitView, type OrbitPick, type OrbitTheme } from "./OrbitView";
 
 export interface OrbitPanelProps {
-  graph: SystemGraph | null;
-  layout: OrbitLayout | null;
+  /** The project's core. Compared by identity: pass a new object only when the project changes. */
+  core: { graph: SystemGraph; layout: OrbitLayout } | null;
+  /** The recent-activity ring. Compared by identity: pass a new object only when the ring changes. */
+  ring: { items: SystemRingItem[]; positions: Map<string, Vec3> } | null;
   onSelect?: (item: OrbitPick) => void;
+  /** Called once when WebGL is unavailable (the view then shows only its text fallback). */
+  onFallback?: () => void;
+  /** Show the "No project graph yet" text when there is no core. Default true. */
+  showEmpty?: boolean;
 }
 
 const EMPTY_GRAPH: SystemGraph = {
@@ -23,6 +34,8 @@ const EMPTY_LAYOUT: OrbitLayout = {
   communityCenters: [],
   bounds: { radius: 0 },
 };
+const EMPTY_POSITIONS: Map<string, Vec3> = new Map();
+const NO_RING: SystemRingItem[] = [];
 
 const TOOLTIP_OFFSET_PX = 14;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -45,22 +58,28 @@ function readTheme(): OrbitTheme {
 }
 
 /**
- * Renders the OrbitView. `graph` and `layout` are compared by identity: every
- * new object rebuilds all GPU buffers and re-sorts the edges, so callers must
- * memoise them (useMemo / state) and only pass a new object when the data changes.
+ * Renders the OrbitView. The core and the ring are separate inputs with separate
+ * effects: a ring change updates only the ring, and the core (with the camera and
+ * the hover) is rebuilt only when `core` changes. Both are compared by identity, so
+ * callers must memoise them.
  */
-export function OrbitPanel({ graph, layout, onSelect }: OrbitPanelProps) {
+export function OrbitPanel({ core, ring, onSelect, onFallback, showEmpty = true }: OrbitPanelProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<OrbitView | null>(null);
   const selectRef = useRef(onSelect);
+  const fallbackRef = useRef(onFallback);
   const [pick, setPick] = useState<OrbitPick | null>(null);
 
-  const hasCore = !!graph && graph.core.length > 0 && !!layout;
+  const hasCore = !!core && core.graph.core.length > 0;
 
   useEffect(() => {
     selectRef.current = onSelect;
   }, [onSelect]);
+
+  useEffect(() => {
+    fallbackRef.current = onFallback;
+  }, [onFallback]);
 
   // Create the view once per mount; follow the reduced-motion and theme settings
   // while mounted; dispose and detach every listener on unmount.
@@ -72,6 +91,7 @@ export function OrbitPanel({ graph, layout, onSelect }: OrbitPanelProps) {
       theme: readTheme(),
       onHover: (item) => setPick(item),
       onSelect: (item) => selectRef.current?.(item),
+      onFallback: () => fallbackRef.current?.(),
     });
     viewRef.current = view;
 
@@ -93,13 +113,21 @@ export function OrbitPanel({ graph, layout, onSelect }: OrbitPanelProps) {
     };
   }, []);
 
+  // Core: a new project clears the hover (the picked node may be gone) and rebuilds the core.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
     setPick(null);
-    if (graph && layout && graph.core.length > 0) view.setGraph(graph, layout);
+    if (core && core.graph.core.length > 0) view.setGraph(core.graph, core.layout);
     else view.setGraph(EMPTY_GRAPH, EMPTY_LAYOUT);
-  }, [graph, layout]);
+  }, [core]);
+
+  // Ring: only the ring points change; the hover and the camera stay as they are.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.setRing(ring ? ring.items : NO_RING, ring ? ring.positions : EMPTY_POSITIONS);
+  }, [ring]);
 
   const onMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const tip = tipRef.current;
@@ -123,10 +151,9 @@ export function OrbitPanel({ graph, layout, onSelect }: OrbitPanelProps) {
       onPointerLeave={() => setPick(null)}
     >
       <div ref={hostRef} className="orbit-host" style={{ width: "100%", height: "100%", minHeight: HOST_MIN_HEIGHT_PX }} />
-      {!hasCore && (
+      {!hasCore && showEmpty && (
         <div
           className="orbit-empty"
-          role="status"
           style={{
             position: "absolute",
             inset: 0,

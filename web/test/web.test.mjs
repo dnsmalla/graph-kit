@@ -647,7 +647,7 @@ describe('controller: project graph, skills, routines and selection', () => {
     await flush();
     pending[0].resolve(first);
     await flush();
-    assert.equal(controller.getSnapshot().projectGraph, second, 'the newer project wins');
+    assert.deepEqual(controller.getSnapshot().projectGraph, second, 'the newer project wins');
     assert.equal(controller.getSnapshot().projectGraphStatus, 'ready');
     controller.dispose();
   });
@@ -792,32 +792,331 @@ describe('rendering: the Agentic OS layout', () => {
   });
 });
 
-describe('system view: memoisation and caps', () => {
-  it('returns the same view for the same snapshot activity and project', () => {
-    const s = seeded();
-    const p = api.fixture.buildDemoProjectGraph();
-    const first = api.systemGraph.computeSystemView(s, p);
-    assert.equal(api.systemGraph.computeSystemView(s, p), first, 'same inputs, same object');
-    assert.notEqual(api.systemGraph.computeSystemView({ ...s, activity: { ...s.activity } }, p), first, 'new activity recomputes');
-    assert.notEqual(api.systemGraph.computeSystemView(s, { ...p }), first, 'new project recomputes');
+describe('rendering: accessibility, empty states and fallbacks', () => {
+  async function renderWith(overrides, snapshot = seeded()) {
+    const fake = fakeHost({ loadState: () => Promise.resolve(snapshot), ...overrides });
+    const { controller } = makeController({ host: fake.host, projectName: 'Demo project' });
+    controller.start();
+    await flush();
+    return { html: api.render.renderApp(controller), controller };
+  }
+
+  /** The markup of the Recent list only (the header's own buttons also carry aria-pressed). */
+  function recentList(html) {
+    const start = html.indexOf('os-recent-list');
+    return html.slice(start, html.indexOf('</ul>', start));
+  }
+
+  it('the recent row for the selection is aria-pressed, the others are not', async () => {
+    const snap = seeded();
+    const { controller } = await renderWith({}, snap);
+    const first = snap.activity.items[0];
+    controller.select({ type: 'ring', id: `activity:${first.id}`, label: first.title, detail: first.kind });
+    const list = recentList(api.render.renderApp(controller));
+    const rows = list.split('class="os-recent-item"').length - 1;
+    assert.ok(rows >= 2, 'the fixture has rows to compare');
+    assert.equal(list.split('aria-pressed="true"').length - 1, 1, 'exactly one row is pressed');
+    assert.equal(list.split('aria-pressed="false"').length - 1, rows - 1, 'the others are not pressed');
+    controller.dispose();
   });
 
-  it('caps the ring at 24 items and the core at 4000 nodes, and never raises a cap', () => {
+  it('with no selection every recent row is aria-pressed="false"', async () => {
+    const { html, controller } = await renderWith({});
+    const list = recentList(html);
+    assert.equal(list.split('aria-pressed="true"').length - 1, 0);
+    assert.ok(list.split('aria-pressed="false"').length - 1 >= 1);
+    controller.dispose();
+  });
+
+  it('the selection overlay is a polite live region and its heading can take focus', async () => {
+    const snap = seeded();
+    const { controller } = await renderWith({}, snap);
+    controller.select({ type: 'ring', id: `activity:${snap.activity.items[0].id}`, label: 'Picked', detail: 'merge' });
+    const html = api.render.renderApp(controller);
+    assert.match(html, /class="os-selection"[^>]*aria-live="polite"/);
+    assert.match(html, /id="os-selection-title"[^>]*tabindex="-1"/);
+    controller.dispose();
+  });
+
+  it('the Skills loading text is a live region', async () => {
+    const pending = deferred();
+    const { html, controller } = await renderWith({ loadSkills: () => pending.promise });
+    assert.match(html, /aria-live="polite"[^>]*>Loading skills/);
+    controller.dispose();
+  });
+
+  it('while the graph loads only the brain status shows; the empty text does not overlap it', async () => {
+    const pending = deferred();
+    const { html, controller } = await renderWith({ loadProjectGraph: () => pending.promise });
+    assert.ok(html.includes('Loading the project graph'));
+    assert.doesNotMatch(html, /No project graph yet/);
+    controller.dispose();
+  });
+
+  it('once the graph has settled with none, the empty text shows and is not a second status region', async () => {
+    const { html, controller } = await renderWith({});
+    assert.match(html, /No project graph yet/);
+    assert.doesNotMatch(html, /role="status"[^>]*>\s*No project graph yet/);
+    assert.doesNotMatch(html, /class="orbit-empty"[^>]*role="status"/);
+    controller.dispose();
+  });
+
+  it('a graph the layout cannot read shows "Could not draw the project graph" and the rest of the page', async () => {
+    const metadata = {};
+    Object.defineProperty(metadata, 'source_file', {
+      enumerable: true,
+      get() {
+        throw new Error('boom');
+      },
+    });
+    const raw = { nodes: [{ id: 'bad', title: 'Bad', kind: 'function', metadata }], edges: [] };
+    const { html, controller } = await renderWith({ loadProjectGraph: () => Promise.resolve(raw) });
+    assert.match(html, /Could not draw the project graph\./);
+    assert.ok(html.includes('Project brain') && html.includes('Recent'), 'the rest of the page renders');
+    assert.doesNotMatch(html, /Could not load the project graph/);
+    controller.dispose();
+  });
+
+  it('the recent list shows the whole ring when asked for 24 rows (the no-WebGL case), five by default', () => {
+    const template = seeded().activity.items[0];
+    const items = Array.from({ length: 12 }, (_, i) => ({ ...template, id: 500 - i, title: `Item ${i}` }));
+    const controller = makeController({ host: fakeHost().host }).controller;
+    const defaulted = api.render.renderRecent(items, controller);
+    assert.equal(defaulted.split('class="os-recent-item"').length - 1, 5);
+    const everything = api.render.renderRecent(items, controller, null, 24);
+    assert.equal(everything.split('class="os-recent-item"').length - 1, 12);
+    controller.dispose();
+  });
+});
+
+describe('system view: core and ring split', () => {
+  // Looked up at call time: the modules load in the before() hook.
+  const computeCore = (...args) => api.systemGraph.computeCore(...args);
+  const computeRing = (...args) => api.systemGraph.computeRing(...args);
+
+  it('computeCore is memoised on the project: an activity refresh does not rebuild it', () => {
+    const p = api.fixture.buildDemoProjectGraph();
+    const core = computeCore(p);
+    // A refresh: a new snapshot with different activity, same project.
+    const next = seeded();
+    next.activity.items = next.activity.items.slice(1);
+    computeRing(next);
+    computeRing(seeded());
+    assert.equal(computeCore(p), core, 'same project: the same core object');
+    assert.notEqual(computeCore({ ...p }), core, 'a new project object is laid out again');
+  });
+
+  it('computeCore has no ring and lays out every core node', () => {
+    const view = computeCore(api.fixture.buildDemoProjectGraph());
+    assert.equal(view.graph.ring.length, 0);
+    assert.ok(view.graph.core.length > 0);
+    for (const node of view.graph.core) assert.ok(view.layout.core.has(node.id), node.id);
+  });
+
+  it('computeRing returns the same object for the same ring, and a new one when an id, time, label or kind changes', () => {
+    const s = seeded();
+    const first = computeRing(s);
+    assert.equal(computeRing(structuredClone(s)), first, 'same activity in a new snapshot: same object');
+
+    const timeChanged = seeded();
+    timeChanged.activity.items[0] = { ...timeChanged.activity.items[0], createdAt: '2000-01-01T00:00:00Z' };
+    assert.notEqual(computeRing(timeChanged), first, 'a changed time');
+
+    const idChanged = seeded();
+    idChanged.activity.items[0] = { ...idChanged.activity.items[0], id: 99999 };
+    assert.notEqual(computeRing(idChanged), first, 'a changed id');
+
+    const titleChanged = seeded();
+    titleChanged.activity.items[0] = { ...titleChanged.activity.items[0], title: 'Renamed' };
+    assert.notEqual(computeRing(titleChanged), first, 'a changed label');
+  });
+
+  it('ring positions cover every ring item', () => {
+    const view = computeRing(seeded());
+    assert.ok(view.items.length > 0);
+    for (const item of view.items) assert.ok(view.positions.has(item.id), item.id);
+  });
+
+  it('caps the ring at 24 items and the core at the node cap, and never raises a cap', () => {
     const s = seeded();
     const template = s.activity.items[0];
     s.activity.items = Array.from({ length: 30 }, (_, i) => ({ ...template, id: 900 - i }));
-    const p = api.fixture.buildDemoProjectGraph();
-    assert.equal(api.systemGraph.computeSystemView(s, p).graph.ring.length, 24);
-    assert.equal(api.systemGraph.computeSystemView(s, p, { maxRingItems: 50 }).graph.ring.length, 24, 'a larger request is capped');
-    const small = api.systemGraph.computeSystemView(s, p, { maxCoreNodes: 100 });
+    assert.equal(computeRing(s).items.length, 24);
+    assert.equal(computeRing(s, { maxRingItems: 50 }).items.length, 24, 'a larger request is capped');
+    const small = computeCore(api.fixture.buildDemoProjectGraph(), { maxCoreNodes: 100 });
     assert.ok(small.graph.core.length <= 100);
   });
 
-  it('an empty input gives an empty view with a layout', () => {
-    const view = api.systemGraph.computeSystemView(null, null);
-    assert.equal(view.graph.core.length, 0);
-    assert.equal(view.graph.ring.length, 0);
-    assert.equal(view.layout.core.size, 0);
+  it('an empty input gives an empty core and an empty ring', () => {
+    const core = computeCore(null);
+    assert.equal(core.graph.core.length, 0);
+    assert.equal(core.layout.core.size, 0);
+    const ring = computeRing(null);
+    assert.equal(ring.items.length, 0);
+    assert.equal(ring.positions.size, 0);
+  });
+});
+
+describe('controller: host data validation', () => {
+  const demoGraph = () => api.fixture.buildDemoProjectGraph();
+
+  async function started(overrides) {
+    const fake = fakeHost({ loadState: () => Promise.resolve(seeded()), ...overrides });
+    const { controller } = makeController({ host: fake.host, projectName: 'Demo' });
+    controller.start();
+    await flush();
+    return { fake, controller };
+  }
+
+  it('drops nodes without a string id, keeps the first of duplicate ids, and drops edges with bad endpoints', async () => {
+    const good = demoGraph();
+    const first = good.nodes[0];
+    const second = good.nodes[1];
+    const raw = {
+      nodes: [
+        null,
+        'x',
+        { title: 'no id' },
+        { id: 42, title: 'numeric id' },
+        first,
+        { ...first, title: 'duplicate' },
+        { id: 'bare' },
+        second,
+      ],
+      edges: [
+        null,
+        { fromId: first.id },
+        { fromId: first.id, toId: 7 },
+        { fromId: first.id, toId: second.id, kind: 'imports', confidence: 'EXTRACTED' },
+      ],
+    };
+    const { controller } = await started({ loadProjectGraph: () => Promise.resolve(raw) });
+    const graph = controller.getSnapshot().projectGraph;
+    assert.equal(controller.getSnapshot().projectGraphStatus, 'ready');
+    assert.deepEqual(graph.nodes.map((n) => n.id), [first.id, 'bare', second.id]);
+    assert.equal(graph.nodes[0].title, first.title, 'the first node of a duplicate id wins');
+    assert.equal(graph.nodes[1].title, 'bare', 'a missing title falls back to the id');
+    assert.equal(graph.nodes[1].kind, 'other', 'a missing kind falls back to other');
+    assert.deepEqual(graph.nodes[1].metadata, {}, 'missing metadata becomes {}');
+    assert.equal(graph.edges.length, 1, 'only the edge with two string endpoints is kept');
+    assert.equal(api.systemGraph.computeCore(graph).graph.core.length, 3, 'the cleaned graph lays out');
+    controller.dispose();
+  });
+
+  it('a graph with only unusable nodes is ready and empty; null entries never reach the layout', async () => {
+    const { controller } = await started({ loadProjectGraph: () => Promise.resolve({ nodes: [null, 5], edges: [null] }) });
+    assert.equal(controller.getSnapshot().projectGraphStatus, 'ready');
+    assert.deepEqual(controller.getSnapshot().projectGraph.nodes, []);
+    controller.dispose();
+  });
+
+  it('skills need a string id and a name, and a duplicate id is shown once', async () => {
+    const skills = [
+      null,
+      { name: 'no id' },
+      { id: 'a', name: 'A' },
+      { id: 'a', name: 'A again' },
+      { id: 'b' },
+      { id: 3, name: 'numeric' },
+      { id: 'c', name: 'C' },
+    ];
+    const { controller } = await started({ loadSkills: () => Promise.resolve(skills) });
+    assert.deepEqual(controller.getSnapshot().skills.map((s) => s.id), ['a', 'c']);
+    assert.equal(controller.getSnapshot().skills[0].name, 'A', 'the first occurrence wins');
+    controller.dispose();
+  });
+
+  it('routines need a string id and a title, and a duplicate id is shown once', async () => {
+    const routines = [
+      { id: 'r1', title: 'R1', enabled: true },
+      { id: 'r1', title: 'duplicate', enabled: true },
+      { title: 'no id', enabled: true },
+      { id: 'r2', title: 5, enabled: true },
+      null,
+      { id: 'r3', title: 'R3', enabled: false },
+    ];
+    const { controller } = await started({ loadRoutines: () => Promise.resolve(routines) });
+    assert.deepEqual(controller.getSnapshot().routines.map((r) => r.id), ['r1', 'r3']);
+    controller.dispose();
+  });
+
+  it('activity rows without an id are dropped, and a duplicate id is shown once', async () => {
+    const snap = seeded();
+    const t = snap.activity.items[0];
+    snap.activity.items = [null, { ...t, id: undefined }, t, { ...t, title: 'duplicate' }, { ...t, id: t.id + 1000, title: 'second' }];
+    const { controller } = await started({ loadState: () => Promise.resolve(snap) });
+    const items = controller.getSnapshot().data.activity.items;
+    assert.deepEqual(items.map((i) => i.id), [t.id, t.id + 1000]);
+    assert.equal(items[0].title, t.title);
+    controller.dispose();
+  });
+
+  it('a snapshot without an activity list shows an empty ring, not an error', async () => {
+    const snap = seeded();
+    snap.activity = null;
+    const { controller } = await started({ loadState: () => Promise.resolve(snap) });
+    assert.equal(controller.getSnapshot().error, null);
+    assert.deepEqual(controller.getSnapshot().data.activity.items, []);
+    controller.dispose();
+  });
+
+  it('an OsAuthError from the graph, skills or routines signs the view out and is not a page error', async () => {
+    for (const name of ['loadProjectGraph', 'loadSkills', 'loadRoutines']) {
+      const { fake, controller } = await started({ [name]: () => Promise.reject(new api.host.OsAuthError()) });
+      const state = controller.getSnapshot();
+      assert.equal(state.signedOut, true, name);
+      assert.equal(state.error, null, `${name}: no page error`);
+      assert.equal(state.live, 'stopped', name);
+      assert.ok(fake.calls.unwatch >= 1, `${name}: the feed is stopped`);
+      controller.dispose();
+    }
+  });
+
+  it('a missing host method still drops an earlier in-flight load of the same data set', async () => {
+    const pending = [];
+    const fake = fakeHost({
+      loadProjectGraph: () => {
+        const d = deferred();
+        pending.push(d);
+        return d.promise;
+      },
+    });
+    const { controller } = makeController({ host: fake.host, projectName: 'A' });
+    controller.start();
+    fake.host.loadProjectGraph = undefined;
+    controller.configure({ projectName: 'B' });
+    assert.equal(controller.getSnapshot().projectGraphStatus, 'none');
+    pending[0].resolve(demoGraph());
+    await flush();
+    assert.equal(controller.getSnapshot().projectGraph, null, 'the stale graph is dropped');
+    assert.equal(controller.getSnapshot().projectGraphStatus, 'none');
+    controller.dispose();
+  });
+
+  it('a core selection is dropped when a reload no longer has its node, and kept while it does', async () => {
+    const g = demoGraph();
+    const keep = g.nodes[0].id;
+    let next = g;
+    const { controller } = await started({ loadProjectGraph: () => Promise.resolve(next) });
+    controller.select({ type: 'core', id: keep, label: 'Kept', detail: 'code' });
+    controller.retry();
+    await flush();
+    assert.equal(controller.getSnapshot().selected?.id, keep, 'the node is still in the graph');
+
+    next = { nodes: g.nodes.slice(1), edges: [] };
+    controller.retry();
+    await flush();
+    assert.equal(controller.getSnapshot().selected, null, 'the node is gone: the selection is dropped');
+    controller.dispose();
+  });
+
+  it('a ring selection is not dropped by a graph reload', async () => {
+    const { controller } = await started({ loadProjectGraph: () => Promise.resolve({ nodes: [], edges: [] }) });
+    controller.select({ type: 'ring', id: 'activity:2', label: 'Ring', detail: 'note' });
+    controller.retry();
+    await flush();
+    assert.equal(controller.getSnapshot().selected?.id, 'activity:2');
+    controller.dispose();
   });
 });
 
@@ -956,5 +1255,21 @@ describe('styles', () => {
     const theme = readFileSync(path.join(ROOT, 'src/theme.css'), 'utf8');
     assert.ok(theme.includes('--tok-color-accent:'));
     assert.ok(theme.includes(':root[data-theme="light"]'));
+  });
+
+  it('keeps the category colours in their own sheet, loaded after theme.css', () => {
+    const theme = readFileSync(path.join(ROOT, 'src/theme.css'), 'utf8');
+    const tokens = readFileSync(path.join(ROOT, 'src/os-tokens.css'), 'utf8');
+    const mount = readFileSync(path.join(ROOT, 'src/mount.tsx'), 'utf8');
+    assert.ok(!theme.includes('--os-cat-'), 'theme.css holds no page tokens');
+    assert.ok(tokens.includes('--os-cat-code:') && tokens.includes(':root[data-theme="light"]'));
+    assert.ok(mount.indexOf("'./theme.css'") < mount.indexOf("'./os-tokens.css'"), 'theme.css, then os-tokens.css');
+  });
+
+  it('the token and type headers do not name a product or its build paths', () => {
+    for (const file of ['src/theme.css', 'src/types.ts']) {
+      const text = readFileSync(path.join(ROOT, file), 'utf8');
+      assert.doesNotMatch(text, /LLM-IDE|schema\/design|tokens\.generated/, file);
+    }
   });
 });

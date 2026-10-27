@@ -1,9 +1,18 @@
-import { useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
+import type { CGData } from '../../typescript/src/models';
 import type { OsController, ViewState } from './controller';
 import type { OsRange } from './host';
-import type { OsLiveStatus } from './types';
+import type { OsLiveStatus, OsSnapshot } from './types';
 import { fmtTime } from './format';
-import { computeSystemView, SYSTEM_VIEW_LIMITS } from './systemGraph';
+import {
+  computeCore,
+  computeRing,
+  EMPTY_CORE_VIEW,
+  EMPTY_RING_VIEW,
+  type CoreView,
+  type RingView,
+  SYSTEM_VIEW_LIMITS,
+} from './systemGraph';
 import { Brain } from './components/Brain';
 import { Knowledge } from './components/Knowledge';
 import { Routines } from './components/Routines';
@@ -57,11 +66,27 @@ function Header({ state, controller }: { state: ViewState; controller: OsControl
   );
 }
 
+/**
+ * The brain's two inputs. The core depends on the project alone and the ring on
+ * the activity, so a change refresh rebuilds only the ring. A failure to draw
+ * either yields the empty view and `drawFailed`, never a crashed page.
+ */
+function drawViews(project: CGData | null, snapshot: OsSnapshot | null): { core: CoreView; ring: RingView; drawFailed: boolean } {
+  try {
+    return {
+      core: computeCore(project, SYSTEM_VIEW_LIMITS),
+      ring: computeRing(snapshot, SYSTEM_VIEW_LIMITS),
+      drawFailed: false,
+    };
+  } catch {
+    return { core: EMPTY_CORE_VIEW, ring: EMPTY_RING_VIEW, drawFailed: true };
+  }
+}
+
 export function App({ controller }: { controller: OsController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const data = state.data;
-  // Memoised inside computeSystemView, so re-renders with the same inputs reuse the view.
-  const view = data ? computeSystemView(data, state.projectGraph, SYSTEM_VIEW_LIMITS) : null;
+  const drawn = useMemo(() => drawViews(state.projectGraph, data), [state.projectGraph, data]);
 
   return (
     <div className="os">
@@ -78,9 +103,9 @@ export function App({ controller }: { controller: OsController }) {
         </p>
       ) : null}
 
-      {!data || !view ? <p className="empty">Loading the System view…</p> : null}
+      {!data ? <p className="empty">Loading the System view…</p> : null}
 
-      {data && view ? (
+      {data ? (
         <div className="os-stage">
           <div className="os-col os-col-left">
             <SystemMap system={data.system} controller={controller} />
@@ -92,7 +117,14 @@ export function App({ controller }: { controller: OsController }) {
             <SkillsDeck skills={state.skills} status={state.skillsStatus} />
           </div>
 
-          <Brain state={state} controller={controller} view={view} activity={data.activity.items} />
+          <Brain
+            state={state}
+            controller={controller}
+            core={drawn.core}
+            ring={drawn.ring}
+            drawFailed={drawn.drawFailed}
+            activity={data.activity.items}
+          />
 
           <div className="os-col os-col-right">
             <TokenFlow tokens={data.tokens} />

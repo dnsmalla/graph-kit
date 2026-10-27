@@ -27,7 +27,9 @@ export function SkillsDeck({ skills, status }: { skills: OsSkill[] | null; statu
       ) : status === 'ready' ? (
         <Empty>No skills yet. Skills you add to the project show up here.</Empty>
       ) : (
-        <p className="meta">Loading skills…</p>
+        <p className="meta" aria-live="polite">
+          Loading skills…
+        </p>
       )}
     </Card>
   );
