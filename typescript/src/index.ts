@@ -2,6 +2,7 @@
 // graph engine. Schema-compatible with the Swift package (see ../schema/SCHEMA.md).
 
 export * from "./models.js";
+export * from "./system/index.js";
 export {
   generateFromDir,
   generateFromFiles,
