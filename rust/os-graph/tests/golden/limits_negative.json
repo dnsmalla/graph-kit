@@ -1,0 +1,199 @@
+{
+ "input": {
+  "snapshot": {
+   "activity": {
+    "items": [
+     {
+      "id": 1.5,
+      "kind": "chat",
+      "title": "Ring 0",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:00:00"
+     },
+     {
+      "id": 1e+21,
+      "kind": "chat",
+      "title": "Ring 1",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:01:00"
+     },
+     {
+      "id": 1e-7,
+      "kind": "chat",
+      "title": "Ring 2",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:02:00"
+     },
+     {
+      "id": "str-id",
+      "kind": "chat",
+      "title": "Ring 3",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:03:00"
+     },
+     {
+      "id": 9007199254740992,
+      "kind": "chat",
+      "title": "Ring 4",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:04:00"
+     },
+     {
+      "id": 0,
+      "kind": "chat",
+      "title": "Ring 5",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:05:00"
+     },
+     {
+      "id": 0.000001,
+      "kind": "chat",
+      "title": "Ring 6",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:06:00"
+     },
+     {
+      "id": 12345678.5,
+      "kind": "chat",
+      "title": "Ring 7",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:07:00"
+     }
+    ]
+   }
+  },
+  "project": {
+   "nodes": [
+    {
+     "id": "�high.ts",
+     "title": "�high.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "😀smile.ts",
+     "title": "😀smile.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "private.ts",
+     "title": "private.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "𐀀linear.ts",
+     "title": "𐀀linear.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "￿.ts",
+     "title": "￿.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "plain.ts",
+     "title": "plain.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "😀pair.ts",
+     "title": "😀pair.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "�other.ts",
+     "title": "�other.ts",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "�high.ts",
+     "toId": "😀smile.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "😀smile.ts",
+     "toId": "private.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "private.ts",
+     "toId": "�high.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "𐀀linear.ts",
+     "toId": "￿.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "𐀀linear.ts",
+     "toId": "plain.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "😀pair.ts",
+     "toId": "�other.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "�other.ts",
+     "toId": "😀smile.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {
+   "maxCoreNodes": -4,
+   "maxRingItems": -3
+  },
+  "orbitOptions": {
+   "iterations": -2,
+   "ringRadius": -10,
+   "seed": -7
+  }
+ },
+ "systemGraph": {
+  "core": [],
+  "edges": [],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 8,
+   "keptNodes": 0,
+   "keptCommunities": 0
+  }
+ },
+ "orbit": {
+  "core": [],
+  "ring": [],
+  "communityCenters": [],
+  "bounds": {
+   "radius": 0
+  }
+ }
+}

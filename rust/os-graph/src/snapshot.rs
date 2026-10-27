@@ -17,11 +17,30 @@ pub struct OsActivity {
     pub items: Vec<OsActivityItem>,
 }
 
+/// The TS template literal `activity:${item.id}` formats the id with `String(id)`. A number
+/// (SQLite rowid) is kept as f64 and formatted the same way; a string is used verbatim.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ActivityId {
+    Number(f64),
+    Text(String),
+}
+
+impl ActivityId {
+    /// `String(id)` in JS.
+    pub fn to_js_string(&self) -> String {
+        match self {
+            ActivityId::Number(n) => crate::builder::js_number_string(*n),
+            ActivityId::Text(s) => s.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OsActivityItem {
-    /// SQLite rowid. Kept as f64 so the ring id is formatted exactly like the JS template literal.
-    pub id: f64,
+    /// Activity id: a JSON number or string (see [`ActivityId`]).
+    pub id: ActivityId,
     pub kind: String,
     pub title: String,
     #[serde(default)]

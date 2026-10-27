@@ -1,0 +1,299 @@
+{
+ "input": {
+  "snapshot": {
+   "activity": {
+    "items": [
+     {
+      "id": 1.5,
+      "kind": "chat",
+      "title": "Ring 0",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:00:00"
+     },
+     {
+      "id": 1e+21,
+      "kind": "chat",
+      "title": "Ring 1",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:01:00"
+     },
+     {
+      "id": 1e-7,
+      "kind": "chat",
+      "title": "Ring 2",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:02:00"
+     },
+     {
+      "id": "str-id",
+      "kind": "chat",
+      "title": "Ring 3",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:03:00"
+     },
+     {
+      "id": 9007199254740992,
+      "kind": "chat",
+      "title": "Ring 4",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:04:00"
+     },
+     {
+      "id": 0,
+      "kind": "chat",
+      "title": "Ring 5",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:05:00"
+     },
+     {
+      "id": 0.000001,
+      "kind": "chat",
+      "title": "Ring 6",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:06:00"
+     },
+     {
+      "id": 12345678.5,
+      "kind": "chat",
+      "title": "Ring 7",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:07:00"
+     }
+    ]
+   }
+  },
+  "project": {
+   "nodes": [
+    {
+     "id": "�high.ts",
+     "title": "�high.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "😀smile.ts",
+     "title": "😀smile.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "private.ts",
+     "title": "private.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "𐀀linear.ts",
+     "title": "𐀀linear.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "￿.ts",
+     "title": "￿.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "plain.ts",
+     "title": "plain.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "😀pair.ts",
+     "title": "😀pair.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "�other.ts",
+     "title": "�other.ts",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "�high.ts",
+     "toId": "😀smile.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "😀smile.ts",
+     "toId": "private.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "private.ts",
+     "toId": "�high.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "𐀀linear.ts",
+     "toId": "￿.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "𐀀linear.ts",
+     "toId": "plain.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "😀pair.ts",
+     "toId": "�other.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "�other.ts",
+     "toId": "😀smile.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {
+   "maxCoreNodes": 3.7,
+   "maxRingItems": 2.9
+  },
+  "orbitOptions": {
+   "iterations": 12.8,
+   "coreRadius": 50.5
+  }
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "😀smile.ts",
+    "label": "😀smile.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "private.ts",
+    "label": "private.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "�high.ts",
+    "label": "�high.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   }
+  ],
+  "edges": [
+   {
+    "source": "😀smile.ts",
+    "target": "private.ts",
+    "weight": 1
+   },
+   {
+    "source": "😀smile.ts",
+    "target": "�high.ts",
+    "weight": 1
+   },
+   {
+    "source": "private.ts",
+    "target": "�high.ts",
+    "weight": 1
+   }
+  ],
+  "ring": [
+   {
+    "id": "activity:1.5",
+    "label": "Ring 0",
+    "kind": "chat",
+    "at": "2026-10-27 11:00:00",
+    "link": null
+   },
+   {
+    "id": "activity:1e+21",
+    "label": "Ring 1",
+    "kind": "chat",
+    "at": "2026-10-27 11:01:00",
+    "link": null
+   }
+  ],
+  "truncated": {
+   "totalNodes": 8,
+   "keptNodes": 3,
+   "keptCommunities": 1
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "😀smile.ts",
+    {
+     "x": -1.722289479989438,
+     "y": -0.06476916243583863,
+     "z": -14.17659675126543
+    }
+   ],
+   [
+    "private.ts",
+    {
+     "x": -1.3767425231870694,
+     "y": 5.927053024746454,
+     "z": 15.776397334578647
+    }
+   ],
+   [
+    "�high.ts",
+    {
+     "x": -11.684680670292813,
+     "y": 5.9516383232201315,
+     "z": 6.434421858496531
+    }
+   ]
+  ],
+  "ring": [
+   [
+    "activity:1.5",
+    {
+     "x": 170,
+     "y": 0,
+     "z": 0
+    }
+   ],
+   [
+    "activity:1e+21",
+    {
+     "x": -170,
+     "y": 0,
+     "z": 2.0818995585505004e-14
+    }
+   ]
+  ],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 170
+  }
+ }
+}

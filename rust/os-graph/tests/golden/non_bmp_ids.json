@@ -1,0 +1,236 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": {
+   "nodes": [
+    {
+     "id": "�high.ts",
+     "title": "�high.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "😀smile.ts",
+     "title": "😀smile.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "private.ts",
+     "title": "private.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "𐀀linear.ts",
+     "title": "𐀀linear.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "￿.ts",
+     "title": "￿.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "plain.ts",
+     "title": "plain.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "😀pair.ts",
+     "title": "😀pair.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "�other.ts",
+     "title": "�other.ts",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "�high.ts",
+     "toId": "😀smile.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "😀smile.ts",
+     "toId": "private.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "private.ts",
+     "toId": "�high.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "𐀀linear.ts",
+     "toId": "￿.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "𐀀linear.ts",
+     "toId": "plain.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "😀pair.ts",
+     "toId": "�other.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "�other.ts",
+     "toId": "😀smile.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {
+   "maxCoreNodes": 5
+  },
+  "orbitOptions": {
+   "seed": 11
+  }
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "😀pair.ts",
+    "label": "😀pair.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "😀smile.ts",
+    "label": "😀smile.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "private.ts",
+    "label": "private.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "�high.ts",
+    "label": "�high.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "�other.ts",
+    "label": "�other.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   }
+  ],
+  "edges": [
+   {
+    "source": "😀pair.ts",
+    "target": "�other.ts",
+    "weight": 1
+   },
+   {
+    "source": "😀smile.ts",
+    "target": "private.ts",
+    "weight": 1
+   },
+   {
+    "source": "😀smile.ts",
+    "target": "�high.ts",
+    "weight": 1
+   },
+   {
+    "source": "😀smile.ts",
+    "target": "�other.ts",
+    "weight": 1
+   },
+   {
+    "source": "private.ts",
+    "target": "�high.ts",
+    "weight": 1
+   }
+  ],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 8,
+   "keptNodes": 5,
+   "keptCommunities": 1
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "😀pair.ts",
+    {
+     "x": -33.99459378957613,
+     "y": -25.340660548115427,
+     "z": 1.0907170802843682
+    }
+   ],
+   [
+    "😀smile.ts",
+    {
+     "x": -21.070625108211736,
+     "y": 0.7151684934301432,
+     "z": 27.32301712783518
+    }
+   ],
+   [
+    "private.ts",
+    {
+     "x": -5.416105528156891,
+     "y": -3.2025533632063627,
+     "z": -0.8635012301175173
+    }
+   ],
+   [
+    "�high.ts",
+    {
+     "x": 29.48540439719939,
+     "y": -20.104450434900578,
+     "z": -3.476339461884919
+    }
+   ],
+   [
+    "�other.ts",
+    {
+     "x": -19.884946494457846,
+     "y": -25.746058700289908,
+     "z": 13.852342873966759
+    }
+   ]
+  ],
+  "ring": [],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 42.414279997217044
+  }
+ }
+}

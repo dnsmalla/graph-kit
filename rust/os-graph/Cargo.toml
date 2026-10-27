@@ -8,13 +8,17 @@ publish = false
 [lib]
 name = "graph_kit_os"
 path = "src/lib.rs"
+# cdylib for wasm-bindgen (the `wasm` feature); rlib for `cargo test`, the parity gate and Rust callers.
+crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
 # Exposes the JSON-in/JSON-out API as wasm-bindgen exports (for web/ via WASM).
-wasm = ["dep:wasm-bindgen"]
+wasm = ["dep:wasm-bindgen", "dep:console_error_panic_hook"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 wasm-bindgen = { version = "0.2", optional = true }
+# Panic messages in the browser console (installed once by the wasm entry points).
+console_error_panic_hook = { version = "0.1", optional = true }

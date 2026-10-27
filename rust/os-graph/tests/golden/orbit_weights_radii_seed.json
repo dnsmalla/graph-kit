@@ -1,0 +1,718 @@
+{
+ "input": {
+  "snapshot": {
+   "activity": {
+    "items": [
+     {
+      "id": 40,
+      "kind": "chat",
+      "title": "Forty",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 13:00:00"
+     },
+     {
+      "id": 41,
+      "kind": "loop",
+      "title": "Forty-one",
+      "detail": null,
+      "link": "/l",
+      "createdAt": "2026-10-27 13:01:00"
+     },
+     {
+      "id": 42,
+      "kind": "chat",
+      "title": "Forty-two",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 13:02:00"
+     }
+    ]
+   }
+  },
+  "project": {
+   "nodes": [
+    {
+     "id": "grp/a/a1.ts",
+     "title": "a1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/a/a2.ts",
+     "title": "a2.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/a/a3.ts",
+     "title": "a3.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/a/a4.ts",
+     "title": "a4.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/a/a5.ts",
+     "title": "a5.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/a/a6.ts",
+     "title": "a6.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/b/b1.ts",
+     "title": "b1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/b/b2.ts",
+     "title": "b2.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/b/b3.ts",
+     "title": "b3.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/b/b4.ts",
+     "title": "b4.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/b/b5.ts",
+     "title": "b5.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/c/c1.ts",
+     "title": "c1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/c/c2.ts",
+     "title": "c2.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/c/c3.ts",
+     "title": "c3.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "grp/c/c4.ts",
+     "title": "c4.ts",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a2.ts",
+     "toId": "grp/a/a3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a3.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a4.ts",
+     "toId": "grp/a/a5.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a5.ts",
+     "toId": "grp/a/a6.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a6.ts",
+     "toId": "grp/a/a1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b1.ts",
+     "toId": "grp/b/b2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b2.ts",
+     "toId": "grp/b/b3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b3.ts",
+     "toId": "grp/b/b4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b4.ts",
+     "toId": "grp/b/b5.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b5.ts",
+     "toId": "grp/b/b1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/c/c1.ts",
+     "toId": "grp/c/c2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/c/c2.ts",
+     "toId": "grp/c/c3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/c/c3.ts",
+     "toId": "grp/c/c4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/c/c4.ts",
+     "toId": "grp/c/c1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a1.ts",
+     "toId": "grp/a/a4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b1.ts",
+     "toId": "grp/b/b3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b1.ts",
+     "toId": "grp/b/b3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b1.ts",
+     "toId": "grp/b/b3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b1.ts",
+     "toId": "grp/b/b3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/c/c1.ts",
+     "toId": "grp/c/c3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/a/a2.ts",
+     "toId": "grp/b/b2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "grp/b/b4.ts",
+     "toId": "grp/c/c2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {},
+  "orbitOptions": {
+   "coreRadius": 37.5,
+   "ringRadius": 90,
+   "seed": 4294967301,
+   "iterations": 25
+  }
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "grp/a/a1.ts",
+    "label": "a1.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 10
+   },
+   {
+    "id": "grp/a/a2.ts",
+    "label": "a2.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "grp/a/a3.ts",
+    "label": "a3.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "grp/a/a4.ts",
+    "label": "a4.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 10
+   },
+   {
+    "id": "grp/a/a5.ts",
+    "label": "a5.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "grp/a/a6.ts",
+    "label": "a6.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "grp/b/b1.ts",
+    "label": "b1.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 6
+   },
+   {
+    "id": "grp/b/b2.ts",
+    "label": "b2.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "grp/b/b3.ts",
+    "label": "b3.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 6
+   },
+   {
+    "id": "grp/b/b4.ts",
+    "label": "b4.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "grp/b/b5.ts",
+    "label": "b5.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "grp/c/c1.ts",
+    "label": "c1.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "grp/c/c2.ts",
+    "label": "c2.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "grp/c/c3.ts",
+    "label": "c3.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "grp/c/c4.ts",
+    "label": "c4.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   }
+  ],
+  "edges": [
+   {
+    "source": "grp/a/a1.ts",
+    "target": "grp/a/a2.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/a/a1.ts",
+    "target": "grp/a/a4.ts",
+    "weight": 8
+   },
+   {
+    "source": "grp/a/a1.ts",
+    "target": "grp/a/a6.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/a/a2.ts",
+    "target": "grp/a/a3.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/a/a2.ts",
+    "target": "grp/b/b2.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/a/a3.ts",
+    "target": "grp/a/a4.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/a/a4.ts",
+    "target": "grp/a/a5.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/a/a5.ts",
+    "target": "grp/a/a6.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/b/b1.ts",
+    "target": "grp/b/b2.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/b/b1.ts",
+    "target": "grp/b/b3.ts",
+    "weight": 4
+   },
+   {
+    "source": "grp/b/b1.ts",
+    "target": "grp/b/b5.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/b/b2.ts",
+    "target": "grp/b/b3.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/b/b3.ts",
+    "target": "grp/b/b4.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/b/b4.ts",
+    "target": "grp/b/b5.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/b/b4.ts",
+    "target": "grp/c/c2.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/c/c1.ts",
+    "target": "grp/c/c2.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/c/c1.ts",
+    "target": "grp/c/c3.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/c/c1.ts",
+    "target": "grp/c/c4.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/c/c2.ts",
+    "target": "grp/c/c3.ts",
+    "weight": 1
+   },
+   {
+    "source": "grp/c/c3.ts",
+    "target": "grp/c/c4.ts",
+    "weight": 1
+   }
+  ],
+  "ring": [
+   {
+    "id": "activity:40",
+    "label": "Forty",
+    "kind": "chat",
+    "at": "2026-10-27 13:00:00",
+    "link": null
+   },
+   {
+    "id": "activity:41",
+    "label": "Forty-one",
+    "kind": "loop",
+    "at": "2026-10-27 13:01:00",
+    "link": "/l"
+   },
+   {
+    "id": "activity:42",
+    "label": "Forty-two",
+    "kind": "chat",
+    "at": "2026-10-27 13:02:00",
+    "link": null
+   }
+  ],
+  "truncated": {
+   "totalNodes": 15,
+   "keptNodes": 15,
+   "keptCommunities": 1
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "grp/a/a1.ts",
+    {
+     "x": 1.7863259169570753,
+     "y": 8.18119787189479,
+     "z": 7.30320999053942
+    }
+   ],
+   [
+    "grp/a/a2.ts",
+    {
+     "x": -3.856957004670503,
+     "y": -3.1022595722873247,
+     "z": -8.038310443411582
+    }
+   ],
+   [
+    "grp/a/a3.ts",
+    {
+     "x": 9.10008075413388,
+     "y": -7.73424472165544,
+     "z": -1.089540906752288
+    }
+   ],
+   [
+    "grp/a/a4.ts",
+    {
+     "x": 0.45589789366966726,
+     "y": -5.39149377624589,
+     "z": 5.456656190943593
+    }
+   ],
+   [
+    "grp/a/a5.ts",
+    {
+     "x": -2.447256325392081,
+     "y": 0.4053172700091036,
+     "z": -8.868045185062066
+    }
+   ],
+   [
+    "grp/a/a6.ts",
+    {
+     "x": -1.1198321731710026,
+     "y": 6.094705823089223,
+     "z": 6.730542779754979
+    }
+   ],
+   [
+    "grp/b/b1.ts",
+    {
+     "x": -1.304732222658536,
+     "y": 11.152090928894049,
+     "z": 4.361470345693135
+    }
+   ],
+   [
+    "grp/b/b2.ts",
+    {
+     "x": -0.0024858677161980758,
+     "y": 3.419096261066913,
+     "z": 1.461654979546753
+    }
+   ],
+   [
+    "grp/b/b3.ts",
+    {
+     "x": -4.892772025199744,
+     "y": 3.212578213943937,
+     "z": -5.299191639127014
+    }
+   ],
+   [
+    "grp/b/b4.ts",
+    {
+     "x": 8.494983630179696,
+     "y": 5.59892868221768,
+     "z": -6.592952886891876
+    }
+   ],
+   [
+    "grp/b/b5.ts",
+    {
+     "x": -8.105389296723231,
+     "y": 8.21720356804206,
+     "z": -4.368297368795391
+    }
+   ],
+   [
+    "grp/c/c1.ts",
+    {
+     "x": -8.524852944194327,
+     "y": 5.0916084968524675,
+     "z": -5.762035675796936
+    }
+   ],
+   [
+    "grp/c/c2.ts",
+    {
+     "x": -0.3457073820377785,
+     "y": -5.312568503966097,
+     "z": 4.8444409738782666
+    }
+   ],
+   [
+    "grp/c/c3.ts",
+    {
+     "x": 3.0455655796024605,
+     "y": -12.172971276437345,
+     "z": -0.21667933040314358
+    }
+   ],
+   [
+    "grp/c/c4.ts",
+    {
+     "x": -5.5062951219724985,
+     "y": -6.769866861080494,
+     "z": -8.428385899284052
+    }
+   ]
+  ],
+  "ring": [
+   [
+    "activity:40",
+    {
+     "x": 90,
+     "y": 0,
+     "z": 0
+    }
+   ],
+   [
+    "activity:41",
+    {
+     "x": -44.99999999999998,
+     "y": 0,
+     "z": 77.94228634059948
+    }
+   ],
+   [
+    "activity:42",
+    {
+     "x": -45.00000000000004,
+     "y": 0,
+     "z": -77.94228634059947
+    }
+   ]
+  ],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 90.00000000000001
+  }
+ }
+}

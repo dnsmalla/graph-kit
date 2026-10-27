@@ -1,0 +1,1008 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": {
+   "nodes": [
+    {
+     "id": "src/a.ts",
+     "title": "a.ts",
+     "kind": "file",
+     "metadata": {
+      "source_file": "src/a.ts",
+      "source_path": "tests/a.test.ts"
+     }
+    },
+    {
+     "id": "src/b.ts",
+     "title": "b.ts",
+     "kind": "file",
+     "metadata": {
+      "source_file": "tests/b.ts",
+      "path": "docs/b.md"
+     }
+    },
+    {
+     "id": "src/c.ts",
+     "title": "c.ts",
+     "kind": "file",
+     "metadata": {
+      "file": "notes/c.TXT"
+     }
+    },
+    {
+     "id": "x/d",
+     "title": "d",
+     "kind": "file",
+     "metadata": {
+      "source_file": 5,
+      "path": null,
+      "file": "",
+      "source_path": "tests/d.ts"
+     }
+    },
+    {
+     "id": "x/e",
+     "title": "e",
+     "kind": "function",
+     "metadata": {
+      "source_file": "docs/e.md"
+     }
+    },
+    {
+     "id": "x/f",
+     "title": "f",
+     "kind": "function",
+     "metadata": {
+      "path": [
+       "x.md"
+      ]
+     }
+    },
+    {
+     "id": "docs/g.rst",
+     "title": "g.rst",
+     "kind": "function",
+     "metadata": {
+      "path": ""
+     }
+    },
+    {
+     "id": "h.ts",
+     "title": "unit-test helper",
+     "kind": "file",
+     "metadata": {
+      "source_file": "src/h.ts",
+      "path": "",
+      "file": "src/h.ts"
+     }
+    },
+    {
+     "id": "kn/1",
+     "title": "unit-test concept",
+     "kind": "noteConcept",
+     "metadata": {
+      "path": "tests/k.ts"
+     }
+    },
+    {
+     "id": "kn/2",
+     "title": "2",
+     "kind": "notePlaybook",
+     "metadata": {
+      "source_file": "tests/k2.ts"
+     }
+    },
+    {
+     "id": "kn/3",
+     "title": "3",
+     "kind": "noteHypothesis",
+     "metadata": {}
+    },
+    {
+     "id": "kn/4",
+     "title": "4",
+     "kind": "noteEvent",
+     "metadata": {}
+    },
+    {
+     "id": "kn/5",
+     "title": "5",
+     "kind": "noteSource",
+     "metadata": {}
+    },
+    {
+     "id": "kn/6",
+     "title": "6",
+     "kind": "article",
+     "metadata": {
+      "path": "docs/k6.md"
+     }
+    },
+    {
+     "id": "kn/7",
+     "title": "7",
+     "kind": "entity",
+     "metadata": {}
+    },
+    {
+     "id": "kn/8",
+     "title": "8",
+     "kind": "topic",
+     "metadata": {}
+    },
+    {
+     "id": "dp/1",
+     "title": "1",
+     "kind": "docPage",
+     "metadata": {
+      "path": "src/dp1.ts"
+     }
+    },
+    {
+     "id": "dp/2",
+     "title": "2",
+     "kind": "memoryDoc",
+     "metadata": {}
+    },
+    {
+     "id": "dp/3",
+     "title": "3",
+     "kind": "memoryChunk",
+     "metadata": {
+      "file": "tests/dp3.ts"
+     }
+    },
+    {
+     "id": "sk/1",
+     "title": "1",
+     "kind": "skill",
+     "metadata": {}
+    },
+    {
+     "id": "ag/1",
+     "title": "1",
+     "kind": "agent",
+     "metadata": {
+      "path": "tests/ag1.ts"
+     }
+    },
+    {
+     "id": "ot/1",
+     "title": "1",
+     "kind": "other",
+     "metadata": {}
+    },
+    {
+     "id": "ep/1",
+     "title": "1",
+     "kind": "endpoint",
+     "metadata": {
+      "path": "api/ep1.ts"
+     }
+    },
+    {
+     "id": "cl/1",
+     "title": "1",
+     "kind": "class",
+     "metadata": {}
+    },
+    {
+     "id": "Src/Spec-Utils.ts",
+     "title": "Spec-Utils.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "x_test_y.ts",
+     "title": "x_test_y.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "contest.ts",
+     "title": "contest.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "testing/a.ts",
+     "title": "a.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "my.TESTS.js",
+     "title": "my.TESTS.js",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "lib/__tests__/z.ts",
+     "title": "z.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "a/SPEC",
+     "title": "SPEC",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "tests",
+     "title": "tests",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "src/latest.ts",
+     "title": "latest.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "src/contest-plan.md",
+     "title": "contest-plan.md",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "src/a.ts",
+     "toId": "src/b.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "kn/1",
+     "toId": "src/a.ts",
+     "kind": "cites",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "sk/1",
+     "toId": "ot/1",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "ep/1",
+     "toId": "cl/1",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "Src/Spec-Utils.ts",
+     "toId": "contest.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "x_test_y.ts",
+     "toId": "my.TESTS.js",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "tests",
+     "toId": "a/SPEC",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "testing/a.ts",
+     "toId": "src/latest.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {},
+  "orbitOptions": {}
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "Src/Spec-Utils.ts",
+    "label": "Spec-Utils.ts",
+    "category": "tests",
+    "community": 1,
+    "degree": 1
+   },
+   {
+    "id": "a/SPEC",
+    "label": "SPEC",
+    "category": "tests",
+    "community": 2,
+    "degree": 1
+   },
+   {
+    "id": "ag/1",
+    "label": "1",
+    "category": "tests",
+    "community": 7,
+    "degree": 0
+   },
+   {
+    "id": "cl/1",
+    "label": "1",
+    "category": "code",
+    "community": 3,
+    "degree": 1
+   },
+   {
+    "id": "contest.ts",
+    "label": "contest.ts",
+    "category": "code",
+    "community": 1,
+    "degree": 1
+   },
+   {
+    "id": "docs/g.rst",
+    "label": "g.rst",
+    "category": "docs",
+    "community": 8,
+    "degree": 0
+   },
+   {
+    "id": "dp/1",
+    "label": "1",
+    "category": "docs",
+    "community": 9,
+    "degree": 0
+   },
+   {
+    "id": "dp/2",
+    "label": "2",
+    "category": "docs",
+    "community": 10,
+    "degree": 0
+   },
+   {
+    "id": "dp/3",
+    "label": "3",
+    "category": "docs",
+    "community": 11,
+    "degree": 0
+   },
+   {
+    "id": "ep/1",
+    "label": "1",
+    "category": "code",
+    "community": 3,
+    "degree": 1
+   },
+   {
+    "id": "h.ts",
+    "label": "unit-test helper",
+    "category": "code",
+    "community": 12,
+    "degree": 0
+   },
+   {
+    "id": "kn/1",
+    "label": "unit-test concept",
+    "category": "knowledge",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "kn/2",
+    "label": "2",
+    "category": "knowledge",
+    "community": 13,
+    "degree": 0
+   },
+   {
+    "id": "kn/3",
+    "label": "3",
+    "category": "knowledge",
+    "community": 14,
+    "degree": 0
+   },
+   {
+    "id": "kn/4",
+    "label": "4",
+    "category": "knowledge",
+    "community": 15,
+    "degree": 0
+   },
+   {
+    "id": "kn/5",
+    "label": "5",
+    "category": "knowledge",
+    "community": 16,
+    "degree": 0
+   },
+   {
+    "id": "kn/6",
+    "label": "6",
+    "category": "knowledge",
+    "community": 17,
+    "degree": 0
+   },
+   {
+    "id": "kn/7",
+    "label": "7",
+    "category": "knowledge",
+    "community": 18,
+    "degree": 0
+   },
+   {
+    "id": "kn/8",
+    "label": "8",
+    "category": "knowledge",
+    "community": 19,
+    "degree": 0
+   },
+   {
+    "id": "lib/__tests__/z.ts",
+    "label": "z.ts",
+    "category": "tests",
+    "community": 20,
+    "degree": 0
+   },
+   {
+    "id": "my.TESTS.js",
+    "label": "my.TESTS.js",
+    "category": "tests",
+    "community": 4,
+    "degree": 1
+   },
+   {
+    "id": "ot/1",
+    "label": "1",
+    "category": "other",
+    "community": 5,
+    "degree": 1
+   },
+   {
+    "id": "sk/1",
+    "label": "1",
+    "category": "other",
+    "community": 5,
+    "degree": 1
+   },
+   {
+    "id": "src/a.ts",
+    "label": "a.ts",
+    "category": "tests",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "src/b.ts",
+    "label": "b.ts",
+    "category": "docs",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "src/c.ts",
+    "label": "c.ts",
+    "category": "docs",
+    "community": 21,
+    "degree": 0
+   },
+   {
+    "id": "src/contest-plan.md",
+    "label": "contest-plan.md",
+    "category": "docs",
+    "community": 22,
+    "degree": 0
+   },
+   {
+    "id": "src/latest.ts",
+    "label": "latest.ts",
+    "category": "code",
+    "community": 6,
+    "degree": 1
+   },
+   {
+    "id": "testing/a.ts",
+    "label": "a.ts",
+    "category": "code",
+    "community": 6,
+    "degree": 1
+   },
+   {
+    "id": "tests",
+    "label": "tests",
+    "category": "tests",
+    "community": 2,
+    "degree": 1
+   },
+   {
+    "id": "x/d",
+    "label": "d",
+    "category": "tests",
+    "community": 23,
+    "degree": 0
+   },
+   {
+    "id": "x/e",
+    "label": "e",
+    "category": "docs",
+    "community": 24,
+    "degree": 0
+   },
+   {
+    "id": "x/f",
+    "label": "f",
+    "category": "code",
+    "community": 25,
+    "degree": 0
+   },
+   {
+    "id": "x_test_y.ts",
+    "label": "x_test_y.ts",
+    "category": "tests",
+    "community": 4,
+    "degree": 1
+   }
+  ],
+  "edges": [
+   {
+    "source": "Src/Spec-Utils.ts",
+    "target": "contest.ts",
+    "weight": 1
+   },
+   {
+    "source": "a/SPEC",
+    "target": "tests",
+    "weight": 1
+   },
+   {
+    "source": "cl/1",
+    "target": "ep/1",
+    "weight": 1
+   },
+   {
+    "source": "kn/1",
+    "target": "src/a.ts",
+    "weight": 1
+   },
+   {
+    "source": "my.TESTS.js",
+    "target": "x_test_y.ts",
+    "weight": 1
+   },
+   {
+    "source": "ot/1",
+    "target": "sk/1",
+    "weight": 1
+   },
+   {
+    "source": "src/a.ts",
+    "target": "src/b.ts",
+    "weight": 1
+   },
+   {
+    "source": "src/latest.ts",
+    "target": "testing/a.ts",
+    "weight": 1
+   }
+  ],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 34,
+   "keptNodes": 34,
+   "keptCommunities": 26
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "Src/Spec-Utils.ts",
+    {
+     "x": -23.682286064990215,
+     "y": 58.8582819594385,
+     "z": -13.120843241926817
+    }
+   ],
+   [
+    "a/SPEC",
+    {
+     "x": 0.6742420347898301,
+     "y": 69.55740058914441,
+     "z": -9.463406222355086
+    }
+   ],
+   [
+    "ag/1",
+    {
+     "x": -42.72965096786186,
+     "y": 37.72304479212069,
+     "z": -48.207123575270714
+    }
+   ],
+   [
+    "cl/1",
+    {
+     "x": -11.537473487472969,
+     "y": 60.68909969000574,
+     "z": 26.962038653944262
+    }
+   ],
+   [
+    "contest.ts",
+    {
+     "x": -19.06747948553941,
+     "y": 84.02563714746063,
+     "z": 23.00820038054115
+    }
+   ],
+   [
+    "docs/g.rst",
+    {
+     "x": 71.22746905668575,
+     "y": 29.65286156860573,
+     "z": 22.167285229727565
+    }
+   ],
+   [
+    "dp/1",
+    {
+     "x": -64.91542117322241,
+     "y": 31.812827676933075,
+     "z": 33.55862041913531
+    }
+   ],
+   [
+    "dp/2",
+    {
+     "x": 24.84503952317008,
+     "y": 16.073565748233957,
+     "z": -72.76085637569524
+    }
+   ],
+   [
+    "dp/3",
+    {
+     "x": 17.0163122979627,
+     "y": 21.458163834698972,
+     "z": 76.43538028180349
+    }
+   ],
+   [
+    "ep/1",
+    {
+     "x": 23.22404229354444,
+     "y": 43.14328455396275,
+     "z": 48.02815817838165
+    }
+   ],
+   [
+    "h.ts",
+    {
+     "x": -63.15576189516422,
+     "y": -11.498539528456762,
+     "z": -46.39217789916694
+    }
+   ],
+   [
+    "kn/1",
+    {
+     "x": 17.617831501668057,
+     "y": 66.78418124320378,
+     "z": 18.087540462020293
+    }
+   ],
+   [
+    "kn/2",
+    {
+     "x": 74.4580118838596,
+     "y": 6.034713353451137,
+     "z": -8.569607081139651
+    }
+   ],
+   [
+    "kn/3",
+    {
+     "x": -39.9005739274235,
+     "y": 5.258601353806794,
+     "z": 54.44276461820158
+    }
+   ],
+   [
+    "kn/4",
+    {
+     "x": -17.34874703327195,
+     "y": -18.43967662673927,
+     "z": -63.13933768005691
+    }
+   ],
+   [
+    "kn/5",
+    {
+     "x": 59.934197760753854,
+     "y": -16.897625944851256,
+     "z": 38.52333894794952
+    }
+   ],
+   [
+    "kn/6",
+    {
+     "x": -64.40133408545086,
+     "y": -13.468880673593993,
+     "z": 15.318423953274259
+    }
+   ],
+   [
+    "kn/7",
+    {
+     "x": 29.749464469419078,
+     "y": -20.365039002966824,
+     "z": -35.54872761993256
+    }
+   ],
+   [
+    "kn/8",
+    {
+     "x": 9.363061529277642,
+     "y": -40.119155223529425,
+     "z": 64.53494125564848
+    }
+   ],
+   [
+    "lib/__tests__/z.ts",
+    {
+     "x": -20.03098995193676,
+     "y": -50.858219790618065,
+     "z": -35.410630006084794
+    }
+   ],
+   [
+    "my.TESTS.js",
+    {
+     "x": -45.644330579724986,
+     "y": 51.633949113611976,
+     "z": 24.933731248960708
+    }
+   ],
+   [
+    "ot/1",
+    {
+     "x": 40.61592895035031,
+     "y": 51.36045481409891,
+     "z": -21.70143442963799
+    }
+   ],
+   [
+    "sk/1",
+    {
+     "x": 77.27238152384439,
+     "y": 28.21845282918359,
+     "z": -30.687658823528587
+    }
+   ],
+   [
+    "src/a.ts",
+    {
+     "x": -11.267355582401363,
+     "y": 48.66743769272975,
+     "z": -21.240057961004425
+    }
+   ],
+   [
+    "src/b.ts",
+    {
+     "x": 18.183606723130296,
+     "y": 63.62077390326939,
+     "z": -33.44435315058364
+    }
+   ],
+   [
+    "src/c.ts",
+    {
+     "x": 58.82041263506174,
+     "y": -40.353560644694014,
+     "z": 4.379212503509357
+    }
+   ],
+   [
+    "src/contest-plan.md",
+    {
+     "x": -45.001928964029716,
+     "y": -64.86533669488978,
+     "z": 20.746817627433522
+    }
+   ],
+   [
+    "src/latest.ts",
+    {
+     "x": 10.965612520632437,
+     "y": 44.86781816382477,
+     "z": 54.68194135667238
+    }
+   ],
+   [
+    "testing/a.ts",
+    {
+     "x": -23.968871267044275,
+     "y": 55.82921539122245,
+     "z": 79.42664489316132
+    }
+   ],
+   [
+    "tests",
+    {
+     "x": 15.348944102298237,
+     "y": 48.89961637667912,
+     "z": -45.76642359916667
+    }
+   ],
+   [
+    "x/d",
+    {
+     "x": 3.0409544375388506,
+     "y": -66.54720095477215,
+     "z": -46.584810505728875
+    }
+   ],
+   [
+    "x/e",
+    {
+     "x": 24.92447397126341,
+     "y": -53.78086590435658,
+     "z": 17.999217981315944
+    }
+   ],
+   [
+    "x/f",
+    {
+     "x": -1.6573919198083504,
+     "y": -64.98783260326417,
+     "z": -9.106556789565461
+    }
+   ],
+   [
+    "x_test_y.ts",
+    {
+     "x": -27.65056080266585,
+     "y": 68.40866883458722,
+     "z": -11.874325307898115
+    }
+   ]
+  ],
+  "ring": [],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 70,
+    "z": 0
+   },
+   {
+    "x": -20.2291880392043,
+    "y": 64.4,
+    "z": 18.531593328003762
+   },
+   {
+    "x": 3.3205206386480404,
+    "y": 58.8,
+    "z": -37.835620025160324
+   },
+   {
+    "x": 27.680691771405346,
+    "y": 53.2,
+    "z": 36.10456069607346
+   },
+   {
+    "x": -50.540269744179476,
+    "y": 47.599999999999994,
+    "z": -8.939862089852264
+   },
+   {
+    "x": 47.25029650949424,
+    "y": 42,
+    "z": -30.056770947074074
+   },
+   {
+    "x": -15.52216667678538,
+    "y": 36.4,
+    "z": 57.74168634234797
+   },
+   {
+    "x": -28.97254371706426,
+    "y": 30.799999999999997,
+    "z": -55.78486990719616
+   },
+   {
+    "x": 61.3439376779002,
+    "y": 25.2,
+    "z": 22.402707652645407
+   },
+   {
+    "x": -62.11602137246047,
+    "y": 19.6,
+    "z": 25.640590649515715
+   },
+   {
+    "x": 29.069779686908433,
+    "y": 13.999999999999996,
+    "z": -62.12043068874044
+   },
+   {
+    "x": 20.7984844775223,
+    "y": 8.4,
+    "z": 66.30884589131577
+   },
+   {
+    "x": -60.51631345872871,
+    "y": 2.8000000000000025,
+    "z": -35.0704406211968
+   },
+   {
+    "x": 68.31258841559226,
+    "y": -2.8000000000000025,
+    "z": -15.018330931294903
+   },
+   {
+    "x": -39.968143711043446,
+    "y": -8.400000000000007,
+    "z": 56.850571574025324
+   },
+   {
+    "x": -8.813997262017493,
+    "y": -13.999999999999996,
+    "z": -68.01700855128183
+   },
+   {
+    "x": 51.3844124946461,
+    "y": -19.6,
+    "z": 43.30683724979299
+   },
+   {
+    "x": -65.25089286061885,
+    "y": -25.200000000000006,
+    "z": 2.698329277912514
+   },
+   {
+    "x": 44.55690647504913,
+    "y": -30.799999999999997,
+    "z": -44.340073132255036
+   },
+   {
+    "x": -2.761862224126505,
+    "y": -36.4,
+    "z": 59.72781694533078
+   },
+   {
+    "x": -35.8797121179668,
+    "y": -42.00000000000001,
+    "z": -42.99588652803691
+   },
+   {
+    "x": 50.866486751417625,
+    "y": -47.599999999999994,
+    "z": 6.844013849186441
+   },
+   {
+    "x": -37.34463406394819,
+    "y": -53.2,
+    "z": 25.9834236895333
+   },
+   {
+    "x": 8.336132399711895,
+    "y": -58.800000000000004,
+    "z": -37.05494429377101
+   },
+   {
+    "x": 13.63980187959712,
+    "y": -64.39999999999999,
+    "z": 23.803272982624467
+   },
+   {
+    "x": 0,
+    "y": -70,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 100
+  }
+ }
+}

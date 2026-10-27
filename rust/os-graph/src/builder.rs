@@ -6,7 +6,7 @@
 //! with [`js_cmp`], which compares UTF-16 code units, so the output matches TS even for
 //! non-BMP identifiers.
 
-use crate::models::{CGData, CGEdge, CGNode};
+use crate::models::{lenient_f64, CGData, CGEdge, CGNode};
 use crate::snapshot::OsSnapshot;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -27,7 +27,10 @@ pub enum CoreCategory {
 #[serde(rename_all = "camelCase")]
 pub struct SystemCoreNode {
     pub id: String,
-    pub label: String,
+    /// The node title. Absent (and omitted from the JSON) when the node has no string title,
+    /// as the TS leaves `label` undefined in that case.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
     pub category: CoreCategory,
     /// Index into the community ordering: 0 = largest community.
     pub community: usize,
@@ -73,12 +76,17 @@ pub struct SystemGraph {
 
 /// Build options. Fields are `f64` so the JSON numbers the TS accepts (including
 /// fractions, which are floored, and negatives, which clamp to 0) behave identically.
+///
+/// Non-number values (including `null` and numeric strings) count as unset, as in the TS
+/// `?? default` after a `typeof` check; numeric strings are not coerced the way JS does.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BuildOptions {
     /// Maximum number of core nodes kept. Default 4000.
+    #[serde(default, deserialize_with = "lenient_f64")]
     pub max_core_nodes: Option<f64>,
     /// Maximum number of ring items. Default 24.
+    #[serde(default, deserialize_with = "lenient_f64")]
     pub max_ring_items: Option<f64>,
 }
 
@@ -110,13 +118,48 @@ pub(crate) fn js_cmp(a: &str, b: &str) -> Ordering {
     a.encode_utf16().cmp(b.encode_utf16())
 }
 
-/// `String(n)` for the JS number types the builder formats (ring item ids).
-fn js_number_string(v: f64) -> String {
-    if v.is_finite() && v.fract() == 0.0 && v.abs() < 1e21 {
-        format!("{}", v as i128)
-    } else {
-        format!("{v}")
+/// `String(n)` for a JS number (ring item ids). Shortest round-trip digits, laid out by the
+/// ECMAScript Number::toString rules: plain decimal for 1e-6 <= |n| < 1e21, otherwise
+/// exponent form such as `1e+21` or `1.5e-7`. `-0` gives `0`. Non-finite values give
+/// `NaN` / `Infinity` / `-Infinity` (not reachable from JSON).
+pub(crate) fn js_number_string(v: f64) -> String {
+    if v.is_nan() {
+        return "NaN".to_string();
     }
+    if v == 0.0 {
+        return "0".to_string();
+    }
+    if v.is_infinite() {
+        return if v > 0.0 { "Infinity" } else { "-Infinity" }.to_string();
+    }
+    let sign = if v < 0.0 { "-" } else { "" };
+    // `{:e}` gives the shortest round-trip digits as `d[.ddd]e<exp>`.
+    let sci = format!("{:e}", v.abs());
+    let (mantissa, exp) = sci
+        .split_once('e')
+        .expect("LowerExp always has an exponent");
+    let exp: i32 = exp.parse().expect("LowerExp exponent is an integer");
+    let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
+    let k = digits.len() as i32;
+    // n: the decimal point sits after n digits (ECMAScript's n, with value = digits * 10^(n-k)).
+    let n = exp + 1;
+    let body = if k <= n && n <= 21 {
+        format!("{digits}{}", "0".repeat((n - k) as usize))
+    } else if 0 < n && n <= 21 {
+        format!("{}.{}", &digits[..n as usize], &digits[n as usize..])
+    } else if -6 < n && n <= 0 {
+        format!("0.{}{digits}", "0".repeat((-n) as usize))
+    } else {
+        let e = n - 1;
+        let mantissa = if k == 1 {
+            digits.clone()
+        } else {
+            format!("{}.{}", &digits[..1], &digits[1..])
+        };
+        let e_sign = if e < 0 { "-" } else { "+" };
+        format!("{mantissa}e{e_sign}{}", e.abs())
+    };
+    format!("{sign}{body}")
 }
 
 /// Hand-written equivalent of `/(^|[\/._-])(test|tests|spec|__tests__)([\/._-]|$)/i`.
@@ -157,7 +200,7 @@ fn node_paths(node: &CGNode) -> Vec<&str> {
     ["source_file", "source_path", "path", "file"]
         .iter()
         .filter_map(|key| node.metadata.get(*key))
-        .filter_map(|v| v.as_str())
+        .map(String::as_str)
         .filter(|s| !s.is_empty())
         .collect()
 }
@@ -283,48 +326,48 @@ pub fn detect_communities(node_ids: &[&str], edges: &[(&str, &str)]) -> BTreeMap
         .collect()
 }
 
-/// Collapsed unordered pair. `source` < `target` in JS order.
-struct PairEdge {
-    source: String,
-    target: String,
-    weight: u64,
+/// Key of an unordered pair. Index pairs are used unless some id contains NUL: the TS keys
+/// pairs by the string `a\0b`, which can collide when ids contain NUL, and the text key
+/// reproduces those collisions exactly.
+#[derive(PartialEq, Eq, Hash)]
+enum PairKey {
+    Index(usize, usize),
+    Text(String),
 }
 
-/// Collapse parallel edges into unordered pairs; drop self-loops and dangling edges.
-/// The pair key is built exactly like the TS (`a\0b` with a < b), so even ids containing
-/// NUL collide the same way they do in TS.
-fn collapse_edges(node_ids: &HashSet<&str>, edges: &[CGEdge]) -> Vec<PairEdge> {
-    let mut position: HashMap<String, usize> = HashMap::new();
-    let mut pairs: Vec<PairEdge> = Vec::new();
+/// Collapse parallel edges into unordered pairs of node indices (`index` is the JS-sorted
+/// id order, so index order is JS order); drop self-loops, edges without string endpoints
+/// and dangling edges. Returns `(source, target, weight)` sorted by source then target.
+fn collapse_edges(ids: &[&str], edges: &[CGEdge]) -> Vec<(usize, usize, u64)> {
+    let index: HashMap<&str, usize> = ids.iter().enumerate().map(|(i, id)| (*id, i)).collect();
+    let nul_ids = ids.iter().any(|id| id.contains('\0'));
+    let mut position: HashMap<PairKey, usize> = HashMap::new();
+    let mut pairs: Vec<(usize, usize, u64)> = Vec::new();
     for e in edges {
-        if e.from_id == e.to_id {
+        let (Some(from), Some(to)) = (e.from_id.as_deref(), e.to_id.as_deref()) else {
             continue;
-        }
-        if !node_ids.contains(e.from_id.as_str()) || !node_ids.contains(e.to_id.as_str()) {
-            continue;
-        }
-        let key = if js_cmp(&e.from_id, &e.to_id) == Ordering::Less {
-            format!("{}\u{0}{}", e.from_id, e.to_id)
-        } else {
-            format!("{}\u{0}{}", e.to_id, e.from_id)
         };
-        if let Some(&i) = position.get(&key) {
-            pairs[i].weight += 1;
+        if from == to {
+            continue;
+        }
+        let (Some(&a), Some(&b)) = (index.get(from), index.get(to)) else {
+            continue;
+        };
+        let (lo, hi) = if a < b { (a, b) } else { (b, a) };
+        let key = if nul_ids {
+            PairKey::Text(format!("{}\u{0}{}", ids[lo], ids[hi]))
         } else {
-            let (source, target) = if js_cmp(&e.from_id, &e.to_id) == Ordering::Less {
-                (e.from_id.clone(), e.to_id.clone())
-            } else {
-                (e.to_id.clone(), e.from_id.clone())
-            };
-            position.insert(key, pairs.len());
-            pairs.push(PairEdge {
-                source,
-                target,
-                weight: 1,
-            });
+            PairKey::Index(lo, hi)
+        };
+        match position.get(&key) {
+            Some(&i) => pairs[i].2 += 1,
+            None => {
+                position.insert(key, pairs.len());
+                pairs.push((lo, hi, 1));
+            }
         }
     }
-    pairs.sort_by(|a, b| js_cmp(&a.source, &b.source).then_with(|| js_cmp(&a.target, &b.target)));
+    pairs.sort_by(|x, y| (x.0, x.1).cmp(&(y.0, y.1)));
     pairs
 }
 
@@ -369,7 +412,7 @@ pub fn build_system_graph(
     let ring: Vec<SystemRingItem> = items[..take_count(max_ring, items.len())]
         .iter()
         .map(|item| SystemRingItem {
-            id: format!("activity:{}", js_number_string(item.id)),
+            id: format!("activity:{}", item.id.to_js_string()),
             label: item.title.clone(),
             kind: item.kind.clone(),
             at: item.created_at.clone(),
@@ -384,17 +427,10 @@ pub fn build_system_graph(
     for n in project_nodes {
         node_by_id.entry(n.id.as_str()).or_insert(n);
     }
-    let node_set: HashSet<&str> = node_by_id.keys().copied().collect();
-    let pairs = collapse_edges(&node_set, project_edges);
-
-    let mut all_ids: Vec<&str> = node_set.iter().copied().collect();
+    let mut all_ids: Vec<&str> = node_by_id.keys().copied().collect();
     all_ids.sort_by(|a, b| js_cmp(a, b));
     let total = all_ids.len();
-    let index: HashMap<&str, usize> = all_ids.iter().enumerate().map(|(i, id)| (*id, i)).collect();
-    let pair_idx: Vec<(usize, usize, u64)> = pairs
-        .iter()
-        .map(|p| (index[p.source.as_str()], index[p.target.as_str()], p.weight))
-        .collect();
+    let pair_idx = collapse_edges(&all_ids, project_edges);
 
     let plain_pairs: Vec<(usize, usize)> = pair_idx.iter().map(|&(a, b, _)| (a, b)).collect();
     let community = label_propagate(&all_ids, &plain_pairs);
@@ -498,13 +534,13 @@ mod tests {
     use super::*;
     use crate::models::{CGEdge, CGNode};
     use crate::orbit::mulberry32;
-    use crate::snapshot::{OsActivity, OsActivityItem};
+    use crate::snapshot::{ActivityId, OsActivity, OsActivityItem};
     use std::time::Instant;
 
     fn node(id: &str, kind: &str) -> CGNode {
         CGNode {
             id: id.to_string(),
-            title: id.rsplit('/').next().unwrap_or(id).to_string(),
+            title: Some(id.rsplit('/').next().unwrap_or(id).to_string()),
             kind: kind.to_string(),
             position: None,
             metadata: BTreeMap::new(),
@@ -514,16 +550,15 @@ mod tests {
     fn node_meta(id: &str, kind: &str, meta: &[(&str, &str)]) -> CGNode {
         let mut n = node(id, kind);
         for (k, v) in meta {
-            n.metadata
-                .insert(k.to_string(), serde_json::Value::String(v.to_string()));
+            n.metadata.insert(k.to_string(), v.to_string());
         }
         n
     }
 
     fn edge(from: &str, to: &str) -> CGEdge {
         CGEdge {
-            from_id: from.to_string(),
-            to_id: to.to_string(),
+            from_id: Some(from.to_string()),
+            to_id: Some(to.to_string()),
             kind: "imports".to_string(),
             confidence: "EXTRACTED".to_string(),
         }
@@ -541,7 +576,7 @@ mod tests {
     fn fixture_snapshot() -> OsSnapshot {
         let item =
             |id: f64, kind: &str, title: &str, link: Option<&str>, at: &str| OsActivityItem {
-                id,
+                id: ActivityId::Number(id),
                 kind: kind.to_string(),
                 title: title.to_string(),
                 link: link.map(str::to_string),
@@ -625,10 +660,10 @@ mod tests {
             CoreCategory::Docs
         );
         let mut titled = node("n:2", "noteTask");
-        titled.title = "unit-test plan".to_string();
+        titled.title = Some("unit-test plan".to_string());
         assert_eq!(categorize(&titled), CoreCategory::Knowledge);
         let mut code_titled = node("src/plan.ts", "function");
-        code_titled.title = "unit-test plan".to_string();
+        code_titled.title = Some("unit-test plan".to_string());
         assert_eq!(categorize(&code_titled), CoreCategory::Code);
     }
 
@@ -650,12 +685,11 @@ mod tests {
     #[test]
     fn categorize_ignores_empty_and_non_string_metadata() {
         let mut n = node("src/a.ts", "file");
-        n.metadata.insert(
-            "source_file".into(),
-            serde_json::Value::String(String::new()),
-        );
-        n.metadata
-            .insert("path".into(), serde_json::json!(["tests/a.ts"]));
+        n.metadata.insert("source_file".into(), String::new());
+        assert_eq!(categorize(&n), CoreCategory::Code);
+        // Non-string values never reach the metadata map (see models.rs); a path that is
+        // empty or missing falls through to the id.
+        n.metadata.clear();
         assert_eq!(categorize(&n), CoreCategory::Code);
     }
 
@@ -722,9 +756,9 @@ mod tests {
     #[test]
     fn duplicate_node_ids_keep_the_first_occurrence() {
         let mut first = node("dup.ts", "file");
-        first.title = "First".into();
+        first.title = Some("First".into());
         let mut second = node("dup.ts", "function");
-        second.title = "Second".into();
+        second.title = Some("Second".into());
         let g = build_system_graph(
             None,
             Some(&graph(
@@ -735,7 +769,7 @@ mod tests {
         );
         let ids: Vec<&str> = g.core.iter().map(|n| n.id.as_str()).collect();
         assert_eq!(ids, ["dup.ts", "other.ts"]);
-        assert_eq!(g.core[0].label, "First");
+        assert_eq!(g.core[0].label.as_deref(), Some("First"));
         assert_eq!(g.core[0].category, CoreCategory::Code);
         assert_eq!(
             g.truncated,
@@ -1082,9 +1116,86 @@ mod tests {
     }
 
     #[test]
+    fn js_number_string_matches_js_string_of_number() {
+        // Expected values are `String(x)` from node 22.
+        let cases: &[(f64, &str)] = &[
+            (1e21, "1e+21"),
+            (1e-7, "1e-7"),
+            (1.5e-7, "1.5e-7"),
+            (0.000001, "0.000001"),
+            (0.0000015, "0.0000015"),
+            (0.00001, "0.00001"),
+            (123456789012345680000.0, "123456789012345680000"),
+            (-0.0, "0"),
+            (0.0, "0"),
+            (9007199254740992.0, "9007199254740992"),
+            (0.1 + 0.2, "0.30000000000000004"),
+            (1e300, "1e+300"),
+            (5e-324, "5e-324"),
+            (1.7976931348623157e308, "1.7976931348623157e+308"),
+            (123e-20, "1.23e-18"),
+            (1e20, "100000000000000000000"),
+            (99999999999999999999.0, "100000000000000000000"),
+            (999999999999999999999.0, "1e+21"),
+            (1.5, "1.5"),
+            (-2.5, "-2.5"),
+            (-1e-7, "-1e-7"),
+            (-1e21, "-1e+21"),
+            (1e-100, "1e-100"),
+            (4.35, "4.35"),
+            (1234567.125, "1234567.125"),
+            (1.2345e-5, "0.000012345"),
+            (9.5e21, "9.5e+21"),
+            (12345678901234.0, "12345678901234"),
+        ];
+        for &(value, want) in cases {
+            assert_eq!(js_number_string(value), want, "String({value:e})");
+        }
+    }
+
+    #[test]
+    fn nul_ids_reproduce_the_ts_pair_key_collision() {
+        // "a\0b"+"c" and "a"+"b\0c" share the TS key "a\0b\0c", so the TS merges them.
+        let g = build_system_graph(
+            None,
+            Some(&graph(
+                vec![
+                    node("a\u{0}b", "file"),
+                    node("c", "file"),
+                    node("a", "file"),
+                    node("b\u{0}c", "file"),
+                ],
+                vec![edge("a\u{0}b", "c"), edge("a", "b\u{0}c")],
+            )),
+            &defaults(),
+        );
+        assert_eq!(g.edges.len(), 1);
+        assert_eq!(g.edges[0].weight, 2);
+        assert_eq!(
+            (g.edges[0].source.as_str(), g.edges[0].target.as_str()),
+            ("a\u{0}b", "c")
+        );
+    }
+
+    #[test]
+    fn edges_without_string_endpoints_are_dropped() {
+        let mut dangling = edge("a", "b");
+        dangling.from_id = None;
+        let g = build_system_graph(
+            None,
+            Some(&graph(
+                vec![node("a", "file"), node("b", "file")],
+                vec![dangling],
+            )),
+            &defaults(),
+        );
+        assert!(g.edges.is_empty());
+    }
+
+    #[test]
     fn ring_ids_use_js_number_formatting_and_negative_limits_clamp() {
         let mut snap = fixture_snapshot();
-        snap.activity.items[0].id = 12345678901234.0;
+        snap.activity.items[0].id = ActivityId::Number(12345678901234.0);
         let g = build_system_graph(
             Some(&snap),
             None,

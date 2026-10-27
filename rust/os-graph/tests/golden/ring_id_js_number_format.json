@@ -1,0 +1,252 @@
+{
+ "input": {
+  "snapshot": {
+   "activity": {
+    "items": [
+     {
+      "id": 1.5,
+      "kind": "chat",
+      "title": "Ring 0",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:00:00"
+     },
+     {
+      "id": 1e+21,
+      "kind": "chat",
+      "title": "Ring 1",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:01:00"
+     },
+     {
+      "id": 1e-7,
+      "kind": "chat",
+      "title": "Ring 2",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:02:00"
+     },
+     {
+      "id": "str-id",
+      "kind": "chat",
+      "title": "Ring 3",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:03:00"
+     },
+     {
+      "id": 9007199254740992,
+      "kind": "chat",
+      "title": "Ring 4",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:04:00"
+     },
+     {
+      "id": 0,
+      "kind": "chat",
+      "title": "Ring 5",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:05:00"
+     },
+     {
+      "id": 0.000001,
+      "kind": "chat",
+      "title": "Ring 6",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:06:00"
+     },
+     {
+      "id": 12345678.5,
+      "kind": "chat",
+      "title": "Ring 7",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 11:07:00"
+     }
+    ]
+   }
+  },
+  "project": {
+   "nodes": [
+    {
+     "id": "only.ts",
+     "title": "only.ts",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {},
+  "orbitOptions": {}
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "only.ts",
+    "label": "only.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 0
+   }
+  ],
+  "edges": [],
+  "ring": [
+   {
+    "id": "activity:1.5",
+    "label": "Ring 0",
+    "kind": "chat",
+    "at": "2026-10-27 11:00:00",
+    "link": null
+   },
+   {
+    "id": "activity:1e+21",
+    "label": "Ring 1",
+    "kind": "chat",
+    "at": "2026-10-27 11:01:00",
+    "link": null
+   },
+   {
+    "id": "activity:1e-7",
+    "label": "Ring 2",
+    "kind": "chat",
+    "at": "2026-10-27 11:02:00",
+    "link": null
+   },
+   {
+    "id": "activity:str-id",
+    "label": "Ring 3",
+    "kind": "chat",
+    "at": "2026-10-27 11:03:00",
+    "link": null
+   },
+   {
+    "id": "activity:9007199254740992",
+    "label": "Ring 4",
+    "kind": "chat",
+    "at": "2026-10-27 11:04:00",
+    "link": null
+   },
+   {
+    "id": "activity:0",
+    "label": "Ring 5",
+    "kind": "chat",
+    "at": "2026-10-27 11:05:00",
+    "link": null
+   },
+   {
+    "id": "activity:0.000001",
+    "label": "Ring 6",
+    "kind": "chat",
+    "at": "2026-10-27 11:06:00",
+    "link": null
+   },
+   {
+    "id": "activity:12345678.5",
+    "label": "Ring 7",
+    "kind": "chat",
+    "at": "2026-10-27 11:07:00",
+    "link": null
+   }
+  ],
+  "truncated": {
+   "totalNodes": 1,
+   "keptNodes": 1,
+   "keptCommunities": 1
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "only.ts",
+    {
+     "x": -3.0831048903599774,
+     "y": -0.5370308264918348,
+     "z": -29.79373063655617
+    }
+   ]
+  ],
+  "ring": [
+   [
+    "activity:1.5",
+    {
+     "x": 170,
+     "y": 0,
+     "z": 0
+    }
+   ],
+   [
+    "activity:1e+21",
+    {
+     "x": 120.20815280171308,
+     "y": 0,
+     "z": 120.20815280171307
+    }
+   ],
+   [
+    "activity:1e-7",
+    {
+     "x": 1.0409497792752502e-14,
+     "y": 0,
+     "z": 170
+    }
+   ],
+   [
+    "activity:str-id",
+    {
+     "x": -120.20815280171307,
+     "y": 0,
+     "z": 120.20815280171308
+    }
+   ],
+   [
+    "activity:9007199254740992",
+    {
+     "x": -170,
+     "y": 0,
+     "z": 2.0818995585505004e-14
+    }
+   ],
+   [
+    "activity:0",
+    {
+     "x": -120.20815280171311,
+     "y": 0,
+     "z": -120.20815280171307
+    }
+   ],
+   [
+    "activity:0.000001",
+    {
+     "x": -3.122849337825751e-14,
+     "y": 0,
+     "z": -170
+    }
+   ],
+   [
+    "activity:12345678.5",
+    {
+     "x": 120.20815280171306,
+     "y": 0,
+     "z": -120.20815280171311
+    }
+   ]
+  ],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 170.00000000000003
+  }
+ }
+}

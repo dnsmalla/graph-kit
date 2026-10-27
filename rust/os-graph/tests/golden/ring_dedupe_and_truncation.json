@@ -1,0 +1,143 @@
+{
+ "input": {
+  "snapshot": {
+   "activity": {
+    "items": [
+     {
+      "id": 1,
+      "kind": "loop",
+      "title": "Dup 0",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 12:00:00"
+     },
+     {
+      "id": 1,
+      "kind": "loop",
+      "title": "Dup 1",
+      "detail": null,
+      "link": "/d/1",
+      "createdAt": "2026-10-27 12:01:00"
+     },
+     {
+      "id": 2,
+      "kind": "loop",
+      "title": "Dup 2",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 12:02:00"
+     },
+     {
+      "id": "s-3",
+      "kind": "loop",
+      "title": "Dup 3",
+      "detail": null,
+      "link": "/d/3",
+      "createdAt": "2026-10-27 12:03:00"
+     },
+     {
+      "id": 3,
+      "kind": "loop",
+      "title": "Dup 4",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 12:04:00"
+     },
+     {
+      "id": 4,
+      "kind": "loop",
+      "title": "Dup 5",
+      "detail": null,
+      "link": "/d/5",
+      "createdAt": "2026-10-27 12:05:00"
+     },
+     {
+      "id": 5,
+      "kind": "loop",
+      "title": "Dup 6",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 12:06:00"
+     }
+    ]
+   }
+  },
+  "project": null,
+  "buildOptions": {
+   "maxRingItems": 4
+  },
+  "orbitOptions": {}
+ },
+ "systemGraph": {
+  "core": [],
+  "edges": [],
+  "ring": [
+   {
+    "id": "activity:1",
+    "label": "Dup 0",
+    "kind": "loop",
+    "at": "2026-10-27 12:00:00",
+    "link": null
+   },
+   {
+    "id": "activity:1",
+    "label": "Dup 1",
+    "kind": "loop",
+    "at": "2026-10-27 12:01:00",
+    "link": "/d/1"
+   },
+   {
+    "id": "activity:2",
+    "label": "Dup 2",
+    "kind": "loop",
+    "at": "2026-10-27 12:02:00",
+    "link": null
+   },
+   {
+    "id": "activity:s-3",
+    "label": "Dup 3",
+    "kind": "loop",
+    "at": "2026-10-27 12:03:00",
+    "link": "/d/3"
+   }
+  ],
+  "truncated": {
+   "totalNodes": 0,
+   "keptNodes": 0,
+   "keptCommunities": 0
+  }
+ },
+ "orbit": {
+  "core": [],
+  "ring": [
+   [
+    "activity:1",
+    {
+     "x": 170,
+     "y": 0,
+     "z": 0
+    }
+   ],
+   [
+    "activity:2",
+    {
+     "x": -84.99999999999996,
+     "y": 0,
+     "z": 147.2243186433546
+    }
+   ],
+   [
+    "activity:s-3",
+    {
+     "x": -85.00000000000007,
+     "y": 0,
+     "z": -147.22431864335454
+    }
+   ]
+  ],
+  "communityCenters": [],
+  "bounds": {
+   "radius": 170
+  }
+ }
+}

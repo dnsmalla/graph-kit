@@ -1,0 +1,302 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": {
+   "nodes": [
+    {
+     "id": "m/null.ts",
+     "kind": "file",
+     "metadata": null
+    },
+    {
+     "id": "m/array.ts",
+     "kind": "file",
+     "metadata": [
+      "docs/x.md"
+     ]
+    },
+    {
+     "id": "t/untitled.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "t/nokind",
+     "metadata": {
+      "path": "tests/nokind.ts"
+     }
+    },
+    {
+     "id": "m/mixed.ts",
+     "kind": "function",
+     "metadata": {
+      "path": 5,
+      "source_file": "",
+      "file": "docs/m.md",
+      "source_path": "tests/m.ts"
+     }
+    },
+    {
+     "id": "m/tests.ts",
+     "title": "Tests",
+     "kind": "function",
+     "metadata": {
+      "source_path": "src/m.test.ts"
+     }
+    },
+    {
+     "id": "n/bare",
+     "title": "bare"
+    },
+    {
+     "id": "a.ts",
+     "title": "a",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "b.ts",
+     "title": "b",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "m/null.ts",
+     "toId": "m/array.ts"
+    },
+    {
+     "fromId": "m/null.ts",
+     "toId": "m/array.ts",
+     "kind": "imports"
+    },
+    {
+     "toId": "m/mixed.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "t/untitled.ts",
+     "toId": "t/nokind"
+    },
+    {
+     "fromId": "a.ts",
+     "toId": "b.ts"
+    },
+    {
+     "fromId": "b.ts",
+     "toId": "m/tests.ts",
+     "kind": "calls"
+    },
+    {
+     "fromId": "m/mixed.ts",
+     "toId": "n/bare"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {},
+  "orbitOptions": {
+   "seed": 2
+  }
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "a.ts",
+    "label": "a",
+    "category": "code",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "b.ts",
+    "label": "b",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "m/array.ts",
+    "category": "code",
+    "community": 1,
+    "degree": 2
+   },
+   {
+    "id": "m/mixed.ts",
+    "category": "docs",
+    "community": 2,
+    "degree": 1
+   },
+   {
+    "id": "m/null.ts",
+    "category": "code",
+    "community": 1,
+    "degree": 2
+   },
+   {
+    "id": "m/tests.ts",
+    "label": "Tests",
+    "category": "tests",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "n/bare",
+    "label": "bare",
+    "category": "code",
+    "community": 2,
+    "degree": 1
+   },
+   {
+    "id": "t/nokind",
+    "category": "tests",
+    "community": 3,
+    "degree": 1
+   },
+   {
+    "id": "t/untitled.ts",
+    "category": "code",
+    "community": 3,
+    "degree": 1
+   }
+  ],
+  "edges": [
+   {
+    "source": "a.ts",
+    "target": "b.ts",
+    "weight": 1
+   },
+   {
+    "source": "b.ts",
+    "target": "m/tests.ts",
+    "weight": 1
+   },
+   {
+    "source": "m/array.ts",
+    "target": "m/null.ts",
+    "weight": 2
+   },
+   {
+    "source": "m/mixed.ts",
+    "target": "n/bare",
+    "weight": 1
+   },
+   {
+    "source": "t/nokind",
+    "target": "t/untitled.ts",
+    "weight": 1
+   }
+  ],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 9,
+   "keptNodes": 9,
+   "keptCommunities": 4
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "a.ts",
+    {
+     "x": -4.813808253563237,
+     "y": 98.75296358343805,
+     "z": -14.989310644125203
+    }
+   ],
+   [
+    "b.ts",
+    {
+     "x": -13.619616869880412,
+     "y": 49.15225148202176,
+     "z": 26.332459075562817
+    }
+   ],
+   [
+    "m/array.ts",
+    {
+     "x": -40.399757126211014,
+     "y": -0.9214808069916263,
+     "z": 33.5430675481484
+    }
+   ],
+   [
+    "m/mixed.ts",
+    {
+     "x": 8.638497519799683,
+     "y": -11.016666727583386,
+     "z": -54.7936775771538
+    }
+   ],
+   [
+    "m/null.ts",
+    {
+     "x": -66.54874004905044,
+     "y": 18.493409198144626,
+     "z": 63.5312775345666
+    }
+   ],
+   [
+    "m/tests.ts",
+    {
+     "x": -13.815174672172693,
+     "y": 73.9018746921998,
+     "z": 15.298257243974774
+    }
+   ],
+   [
+    "n/bare",
+    {
+     "x": 15.640454792040087,
+     "y": -30.129442294920587,
+     "z": -94.06164404737567
+    }
+   ],
+   [
+    "t/nokind",
+    {
+     "x": 7.4838743326674075,
+     "y": -57.129389561999915,
+     "z": -20.64666481103116
+    }
+   ],
+   [
+    "t/untitled.ts",
+    {
+     "x": -7.274558412530072,
+     "y": -75.0296541326663,
+     "z": 17.05968997441089
+    }
+   ]
+  ],
+  "ring": [],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 70,
+    "z": 0
+   },
+   {
+    "x": -48.66386316634234,
+    "y": 23.333333333333336,
+    "z": 44.58008498514853
+   },
+   {
+    "x": 5.769803461100997,
+    "y": -23.33333333333333,
+    "z": -65.74393450027023
+   },
+   {
+    "x": 0,
+    "y": -70,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 100
+  }
+ }
+}

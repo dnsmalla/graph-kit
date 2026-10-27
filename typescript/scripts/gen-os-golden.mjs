@@ -8,6 +8,12 @@
 //   systemGraph = buildSystemGraph(snapshot, project, buildOptions)
 //   orbit       = orbitLayout(systemGraph, orbitOptions), with the Maps
 //                 serialized as arrays of [id, {x, y, z}] in insertion order.
+// A case with `rawSystemGraph` in its input skips the builder: the raw object (possibly
+// with odd numbers and missing fields) goes straight to orbitLayout, and Rust reads it
+// through the lenient orbit JSON boundary (api::orbit_layout_json).
+//
+// Cases are written with JSON-serializable values only (undefined keys are simply left
+// out, as JSON.stringify would drop them), so the Rust side sees exactly what the TS saw.
 //
 // Usage: node typescript/scripts/gen-os-golden.mjs
 
@@ -187,6 +193,223 @@ function serializeOrbit(o) {
   };
 }
 
+
+// ---- model leniency: null / non-object metadata, missing title and edge fields, a
+// missing fromId (dropped), a non-string metadata value and an empty path.
+const leniencyProject = {
+  nodes: [
+    { id: "m/null.ts", kind: "file", metadata: null },
+    { id: "m/array.ts", kind: "file", metadata: ["docs/x.md"] },
+    { id: "t/untitled.ts", kind: "file", metadata: {} },
+    { id: "t/nokind" , metadata: { path: "tests/nokind.ts" } },
+    { id: "m/mixed.ts", kind: "function", metadata: { path: 5, source_file: "", file: "docs/m.md", source_path: "tests/m.ts" } },
+    { id: "m/tests.ts", title: "Tests", kind: "function", metadata: { source_path: "src/m.test.ts" } },
+    { id: "n/bare", title: "bare" },
+    { id: "a.ts", title: "a", kind: "file", metadata: {} },
+    { id: "b.ts", title: "b", kind: "file", metadata: {} },
+  ],
+  edges: [
+    { fromId: "m/null.ts", toId: "m/array.ts" },
+    { fromId: "m/null.ts", toId: "m/array.ts", kind: "imports" },
+    { toId: "m/mixed.ts", kind: "imports", confidence: "EXTRACTED" },
+    { fromId: "t/untitled.ts", toId: "t/nokind" },
+    { fromId: "a.ts", toId: "b.ts" },
+    { fromId: "b.ts", toId: "m/tests.ts", kind: "calls" },
+    { fromId: "m/mixed.ts", toId: "n/bare" },
+  ],
+  layers: [],
+  tour: [],
+};
+
+// ---- metadata path keys: precedence across keys, non-string/empty values, knowledge and
+// other kinds, and the test-path separators and case rules.
+const precedenceProject = project(
+  [
+    node("src/a.ts", "file", { source_file: "src/a.ts", source_path: "tests/a.test.ts" }),
+    node("src/b.ts", "file", { source_file: "tests/b.ts", path: "docs/b.md" }),
+    node("src/c.ts", "file", { file: "notes/c.TXT" }),
+    node("x/d", "file", { source_file: 5, path: null, file: "", source_path: "tests/d.ts" }),
+    node("x/e", "function", { source_file: "docs/e.md" }),
+    node("x/f", "function", { path: ["x.md"] }),
+    node("docs/g.rst", "function", { path: "" }),
+    node("h.ts", "file", { source_file: "src/h.ts", path: "", file: "src/h.ts" }, "unit-test helper"),
+    node("kn/1", "noteConcept", { path: "tests/k.ts" }, "unit-test concept"),
+    node("kn/2", "notePlaybook", { source_file: "tests/k2.ts" }),
+    node("kn/3", "noteHypothesis"),
+    node("kn/4", "noteEvent"),
+    node("kn/5", "noteSource"),
+    node("kn/6", "article", { path: "docs/k6.md" }),
+    node("kn/7", "entity"),
+    node("kn/8", "topic"),
+    node("dp/1", "docPage", { path: "src/dp1.ts" }),
+    node("dp/2", "memoryDoc"),
+    node("dp/3", "memoryChunk", { file: "tests/dp3.ts" }),
+    node("sk/1", "skill"),
+    node("ag/1", "agent", { path: "tests/ag1.ts" }),
+    node("ot/1", "other"),
+    node("ep/1", "endpoint", { path: "api/ep1.ts" }),
+    node("cl/1", "class"),
+    node("Src/Spec-Utils.ts", "file"),
+    node("x_test_y.ts", "file"),
+    node("contest.ts", "file"),
+    node("testing/a.ts", "file"),
+    node("my.TESTS.js", "file"),
+    node("lib/__tests__/z.ts", "file"),
+    node("a/SPEC", "file"),
+    node("tests", "file"),
+    node("src/latest.ts", "file"),
+    node("src/contest-plan.md", "file"),
+  ],
+  [
+    edge("src/a.ts", "src/b.ts"),
+    edge("kn/1", "src/a.ts", "cites"),
+    edge("sk/1", "ot/1"),
+    edge("ep/1", "cl/1"),
+    edge("Src/Spec-Utils.ts", "contest.ts"),
+    edge("x_test_y.ts", "my.TESTS.js"),
+    edge("tests", "a/SPEC"),
+    edge("testing/a.ts", "src/latest.ts"),
+  ],
+);
+
+// ---- non-BMP ids: UTF-16 code-unit order differs from code-point order here (U+1F600 sorts
+// before U+FFFD and U+E000 in JS), which decides id order, community ties and cap trimming.
+const nonBmpProject = project(
+  [
+    node("�high.ts", "file"),
+    node("\u{1F600}smile.ts", "file"),
+    node("private.ts", "file"),
+    node("\u{10000}linear.ts", "file"),
+    node("￿.ts", "file"),
+    node("plain.ts", "file"),
+    node("\u{1F600}pair.ts", "file"),
+    node("�other.ts", "file"),
+  ],
+  [
+    edge("�high.ts", "\u{1F600}smile.ts"),
+    edge("\u{1F600}smile.ts", "private.ts"),
+    edge("private.ts", "�high.ts"),
+    edge("\u{10000}linear.ts", "￿.ts"),
+    edge("\u{10000}linear.ts", "plain.ts"),
+    edge("\u{1F600}pair.ts", "�other.ts"),
+    edge("�other.ts", "\u{1F600}smile.ts"),
+  ],
+);
+
+// ---- orbit with weights > 4, custom radii and a wrapping seed. Parallel edges give
+// collapsed weights 2, 5 and 9; the layout clamps each to 4.
+const weightedProject = project(
+  [
+    ...["a1", "a2", "a3", "a4", "a5", "a6"].map((id) => node(`grp/a/${id}.ts`)),
+    ...["b1", "b2", "b3", "b4", "b5"].map((id) => node(`grp/b/${id}.ts`)),
+    ...["c1", "c2", "c3", "c4"].map((id) => node(`grp/c/${id}.ts`)),
+  ],
+  [
+    ...[0, 1, 2, 3, 4, 5].map((i) => edge(`grp/a/a${i + 1}.ts`, `grp/a/a${((i + 1) % 6) + 1}.ts`)),
+    ...[0, 1, 2, 3, 4].map((i) => edge(`grp/b/b${i + 1}.ts`, `grp/b/b${((i + 1) % 5) + 1}.ts`)),
+    ...[0, 1, 2, 3].map((i) => edge(`grp/c/c${i + 1}.ts`, `grp/c/c${((i + 1) % 4) + 1}.ts`)),
+    ...Array.from({ length: 8 }, () => edge("grp/a/a1.ts", "grp/a/a4.ts")), // weight 9 -> 4
+    ...Array.from({ length: 4 }, () => edge("grp/b/b1.ts", "grp/b/b3.ts")), // weight 4 + 1 = 5 -> 4
+    ...Array.from({ length: 1 }, () => edge("grp/c/c1.ts", "grp/c/c3.ts")),
+    edge("grp/a/a2.ts", "grp/b/b2.ts"),
+    edge("grp/b/b4.ts", "grp/c/c2.ts"),
+  ],
+);
+
+// ---- raw orbit input: sparse, negative, fractional and missing community values, weights
+// that are out of range or not numbers, a duplicate core id, duplicate ring ids.
+const rawOrbitGraph = {
+  core: [
+    { id: "p0", community: 0, category: "code", degree: 3 },
+    { id: "p1", community: 7 },
+    { id: "p2", community: 1e9 },
+    { id: "p3", community: 2.7 },
+    { id: "p4", community: -3 },
+    { id: "p5", community: null },
+    { id: "p6", community: "x" },
+    { id: "p7" },
+    { id: "p8", community: 7 },
+    { id: "p1", community: 99 },
+    { id: "p9", community: 1e9 },
+    { id: "p10", community: 0.999 },
+  ],
+  edges: [
+    { source: "p0", target: "p1", weight: 9 },
+    { source: "p1", target: "p2", weight: 2.5 },
+    { source: "p2", target: "p3", weight: -1 },
+    { source: "p3", target: "p4", weight: null },
+    { source: "p4", target: "p5", weight: "2" },
+    { source: "p5", target: "p6", weight: 0 },
+    { source: "p6", target: "p7", weight: 1 },
+    { source: "p7", target: "p8", weight: 4 },
+    { source: "p8", target: "p9", weight: 3.5 },
+    { source: "p9", target: "p10" },
+    { source: "p10", target: "ghost", weight: 1 },
+    { source: "p0", target: "p0", weight: 2 },
+    { source: "p2", target: "p10", weight: 0.25 },
+  ],
+  ring: [
+    { id: "activity:1", label: "one", kind: "chat", at: "t", link: null },
+    { id: "activity:2" },
+    { id: "activity:1" },
+    { id: "activity:3" },
+    { id: "activity:2" },
+  ],
+};
+
+// ---- exact-fill boundary with six communities (cliques of 5,4,3,2,2 and a singleton).
+function cliqueGroups(sizes) {
+  const nodesOut = [];
+  const edgesOut = [];
+  sizes.forEach((size, c) => {
+    const ids = Array.from({ length: size }, (_, i) => `k${c}/${i}.ts`);
+    nodesOut.push(...ids.map((id) => node(id)));
+    for (let i = 0; i < size; i++)
+      for (let j = i + 1; j < size; j++) edgesOut.push(edge(ids[i], ids[j]));
+  });
+  return project(nodesOut, edgesOut);
+}
+const sixCliques = cliqueGroups([5, 4, 3, 2, 2, 1]);
+
+// ---- NUL in ids: "a\0b"+"c" and "a"+"b\0c" collide in the TS string key, so the TS merges
+// the two edges into one of weight 2. Rust must reproduce that.
+const nulProject = project(
+  [node("a\u0000b"), node("c"), node("a"), node("b\u0000c"), node("d")],
+  [
+    edge("a\u0000b", "c"),
+    edge("a", "b\u0000c"),
+    edge("c", "d"),
+  ],
+);
+
+// ---- ring from ids of several kinds: string, integer, fraction, exponent forms, zero.
+const ringIdSnapshot = {
+  activity: {
+    items: [1.5, 1e21, 1e-7, "str-id", 9007199254740992, 0, 1e-6, 12345678.5].map((id, i) => ({
+      id,
+      kind: "chat",
+      title: `Ring ${i}`,
+      detail: null,
+      link: null,
+      createdAt: `2026-10-27 11:${String(i).padStart(2, "0")}:00`,
+    })),
+  },
+};
+
+// ---- ring dedupe and truncation together: the cap is applied first, then duplicates collapse.
+const dedupeSnapshot = {
+  activity: {
+    items: [1, 1, 2, "s-3", 3, 4, 5].map((id, i) => ({
+      id,
+      kind: "loop",
+      title: `Dup ${i}`,
+      detail: null,
+      link: i % 2 ? `/d/${i}` : null,
+      createdAt: `2026-10-27 12:${String(i).padStart(2, "0")}:00`,
+    })),
+  },
+};
+
 const cases = {
   null_inputs: {
     snapshot: null,
@@ -219,6 +442,87 @@ const cases = {
     orbitOptions: { iterations: 0 },
   },
   synthetic_2000_cap500: syntheticCase(),
+  model_leniency: {
+    snapshot: null,
+    project: leniencyProject,
+    buildOptions: {},
+    orbitOptions: { seed: 2 },
+  },
+  metadata_path_precedence: {
+    snapshot: null,
+    project: precedenceProject,
+    buildOptions: {},
+    orbitOptions: {},
+  },
+  non_bmp_ids: {
+    snapshot: null,
+    project: nonBmpProject,
+    buildOptions: { maxCoreNodes: 5 },
+    orbitOptions: { seed: 11 },
+  },
+  orbit_weights_radii_seed: {
+    snapshot: {
+      activity: {
+        items: [
+          { id: 40, kind: "chat", title: "Forty", detail: null, link: null, createdAt: "2026-10-27 13:00:00" },
+          { id: 41, kind: "loop", title: "Forty-one", detail: null, link: "/l", createdAt: "2026-10-27 13:01:00" },
+          { id: 42, kind: "chat", title: "Forty-two", detail: null, link: null, createdAt: "2026-10-27 13:02:00" },
+        ],
+      },
+    },
+    project: weightedProject,
+    buildOptions: {},
+    orbitOptions: { coreRadius: 37.5, ringRadius: 90, seed: 4294967301, iterations: 25 },
+  },
+  raw_orbit_sparse_communities: {
+    snapshot: null,
+    project: null,
+    buildOptions: {},
+    orbitOptions: { seed: 5 },
+    rawSystemGraph: rawOrbitGraph,
+  },
+  exact_fill_six_communities_cap12: {
+    snapshot: null,
+    project: sixCliques,
+    buildOptions: { maxCoreNodes: 12 },
+    orbitOptions: {},
+  },
+  exact_fill_six_communities_cap13: {
+    snapshot: null,
+    project: sixCliques,
+    buildOptions: { maxCoreNodes: 13 },
+    orbitOptions: {},
+  },
+  ring_dedupe_and_truncation: {
+    snapshot: dedupeSnapshot,
+    project: null,
+    buildOptions: { maxRingItems: 4 },
+    orbitOptions: {},
+  },
+  ring_id_js_number_format: {
+    snapshot: ringIdSnapshot,
+    project: project([node("only.ts")], []),
+    buildOptions: {},
+    orbitOptions: {},
+  },
+  limits_fractional: {
+    snapshot: ringIdSnapshot,
+    project: nonBmpProject,
+    buildOptions: { maxCoreNodes: 3.7, maxRingItems: 2.9 },
+    orbitOptions: { iterations: 12.8, coreRadius: 50.5 },
+  },
+  limits_negative: {
+    snapshot: ringIdSnapshot,
+    project: nonBmpProject,
+    buildOptions: { maxCoreNodes: -4, maxRingItems: -3 },
+    orbitOptions: { iterations: -2, ringRadius: -10, seed: -7 },
+  },
+  nul_ids_key_collision: {
+    snapshot: null,
+    project: nulProject,
+    buildOptions: {},
+    orbitOptions: {},
+  },
   duplicate_ring_ids: (() => {
     const snapshot = osSnapshotFixture();
     const [first, second] = snapshot.activity.items;
@@ -236,13 +540,16 @@ rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
 for (const [name, input] of Object.entries(cases)) {
-  const systemGraph = buildSystemGraph(input.snapshot, input.project, input.buildOptions);
+  const systemGraph =
+    input.rawSystemGraph !== undefined
+      ? input.rawSystemGraph
+      : buildSystemGraph(input.snapshot, input.project, input.buildOptions);
   const orbit = serializeOrbit(orbitLayout(systemGraph, input.orbitOptions));
   const file = join(outDir, `${name}.json`);
   writeFileSync(file, JSON.stringify({ input, systemGraph, orbit }, null, 1) + "\n");
   const t = systemGraph.truncated;
   console.log(
-    `${name}: nodes=${t.totalNodes} kept=${t.keptNodes} communities=${t.keptCommunities} ` +
+    `${name}: nodes=${t?.totalNodes} kept=${t?.keptNodes} communities=${t?.keptCommunities} ` +
       `core=${systemGraph.core.length} edges=${systemGraph.edges.length} ring=${systemGraph.ring.length}`,
   );
 }

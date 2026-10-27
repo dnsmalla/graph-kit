@@ -1,11 +1,12 @@
 //! JSON-in / JSON-out entry points. These are what the `wasm` feature exports, and they
 //! are plain Rust so they are testable natively. Errors come back as `{"error": "..."}`.
 
-use crate::builder::{build_system_graph, BuildOptions, SystemGraph};
-use crate::models::CGData;
-use crate::orbit::{orbit_layout, OrbitOptions};
+use crate::builder::{build_system_graph, BuildOptions};
+use crate::models::{lenient_f64, lenient_vec, CGData};
+use crate::orbit::{layout_raw, OrbitLayout, OrbitOptions};
 use crate::snapshot::OsSnapshot;
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
 
 fn error_json(message: &str) -> String {
     serde_json::json!({ "error": message }).to_string()
@@ -31,11 +32,65 @@ fn build_inner(snapshot_json: &str, project_json: &str, opts_json: &str) -> Resu
     serde_json::to_string(&graph).map_err(|e| e.to_string())
 }
 
+/// The part of a `SystemGraph` the layout reads. Everything else (`truncated`, edge
+/// `weight` beyond its number, ring `label` / `at` / `link`, core `category` / `degree`) is
+/// ignored, and an element that does not fit is dropped, as the TS layout does for
+/// missing or non-string fields.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OrbitInput {
+    #[serde(default, deserialize_with = "lenient_vec")]
+    core: Vec<OrbitCoreNode>,
+    #[serde(default, deserialize_with = "lenient_vec")]
+    edges: Vec<OrbitEdge>,
+    #[serde(default, deserialize_with = "lenient_vec")]
+    ring: Vec<OrbitRingItem>,
+}
+
+#[derive(Deserialize)]
+struct OrbitCoreNode {
+    id: String,
+    /// Missing or non-number: community 0 (the TS `nonNegInt(x, 0)`).
+    #[serde(default, deserialize_with = "lenient_f64")]
+    community: Option<f64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OrbitEdge {
+    source: String,
+    target: String,
+    /// Missing or non-number: the edge is dropped (the TS `Number.isFinite` check).
+    #[serde(default, deserialize_with = "lenient_f64")]
+    weight: Option<f64>,
+}
+
+#[derive(Deserialize)]
+struct OrbitRingItem {
+    id: String,
+}
+
 fn orbit_inner(system_graph_json: &str, opts_json: &str) -> Result<String, String> {
-    let graph: SystemGraph = parse_nullable(system_graph_json, "systemGraph")?
+    let graph: OrbitInput = parse_nullable(system_graph_json, "systemGraph")?
         .ok_or_else(|| "systemGraph: must not be null".to_string())?;
     let opts = parse_nullable::<OrbitOptions>(opts_json, "orbitOptions")?.unwrap_or_default();
-    serde_json::to_string(&orbit_layout(&graph, &opts)).map_err(|e| e.to_string())
+    let core: Vec<(&str, Option<f64>)> = graph
+        .core
+        .iter()
+        .map(|n| (n.id.as_str(), n.community))
+        .collect();
+    let edges: Vec<(&str, &str, f64)> = graph
+        .edges
+        .iter()
+        .map(|e| {
+            // NaN stands for "missing": layout_raw treats any non-finite weight as 0.
+            let weight = e.weight.unwrap_or(f64::NAN);
+            (e.source.as_str(), e.target.as_str(), weight)
+        })
+        .collect();
+    let ring: Vec<&str> = graph.ring.iter().map(|r| r.id.as_str()).collect();
+    let layout: OrbitLayout = layout_raw(&core, &edges, &ring, &opts);
+    serde_json::to_string(&layout).map_err(|e| e.to_string())
 }
 
 /// Build the system graph from a `/kb/os/state` snapshot (or `null`), a canonical graph
@@ -46,6 +101,11 @@ pub fn build_system_graph_json(snapshot_json: &str, project_json: &str, opts_jso
 
 /// Lay out a `SystemGraph` JSON. Returns the `OrbitLayout` JSON, with `core` and `ring`
 /// as arrays of `[id, {x, y, z}]`.
+///
+/// Inputs are read leniently (see [`OrbitInput`]). Coordinates are finite for every input:
+/// the radii are clamped to [`crate::orbit::MAX_RADIUS`] and the step count to
+/// [`crate::orbit::MAX_ITERATIONS`]. Should a non-finite coordinate ever occur, serde writes
+/// it as `null`.
 pub fn orbit_layout_json(system_graph_json: &str, opts_json: &str) -> String {
     orbit_inner(system_graph_json, opts_json).unwrap_or_else(|e| error_json(&e))
 }
@@ -53,6 +113,7 @@ pub fn orbit_layout_json(system_graph_json: &str, opts_json: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::orbit::{MAX_ITERATIONS, MAX_RADIUS};
 
     #[test]
     fn null_inputs_build_an_empty_graph() {
@@ -82,5 +143,124 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&layout).unwrap();
         assert_eq!(v["core"].as_array().unwrap().len(), 2);
         assert_eq!(v["core"][0][0], "a.ts");
+    }
+
+    fn parse_value(text: &str) -> serde_json::Value {
+        serde_json::from_str(text).unwrap()
+    }
+
+    #[test]
+    fn orbit_reads_odd_community_and_weight_values_like_the_ts() {
+        // Missing / non-number community -> 0, negative -> 0, fractional -> floor,
+        // weights: missing, null, a string, 0, negative -> edge dropped; > 4 -> 4.
+        let raw = r#"{"core":[{"id":"a","community":-3},{"id":"b","community":2.7},
+            {"id":"c"},{"id":"d","community":null},{"id":"e","community":"x"},
+            {"id":"f","community":1e9}],
+            "edges":[{"source":"a","target":"b","weight":9},{"source":"b","target":"c"},
+            {"source":"c","target":"d","weight":null},{"source":"d","target":"e","weight":"2"},
+            {"source":"e","target":"f","weight":-1},{"source":"f","target":"a","weight":0.5},
+            {"target":"a","weight":2}],"ring":[{"id":"r"}]}"#;
+        let out = parse_value(&orbit_layout_json(raw, "{}"));
+        assert!(out.get("error").is_none(), "{out}");
+        assert_eq!(out["core"].as_array().unwrap().len(), 6);
+        // Communities after compaction: {0 (a, c, d, e)}, {2 (b)}, {1e9 (f)} -> 3 centers.
+        assert_eq!(out["communityCenters"].as_array().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn orbit_drops_core_and_ring_elements_without_string_ids() {
+        let raw = r#"{"core":[{"id":1},{"community":2},{"id":"ok"}],
+            "edges":[{"source":"ok"}],"ring":[{"label":"x"},{"id":"r"}]}"#;
+        let out = parse_value(&orbit_layout_json(raw, "{}"));
+        assert_eq!(out["core"].as_array().unwrap().len(), 1);
+        assert_eq!(out["ring"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn orbit_options_accept_non_numbers_as_unset() {
+        let raw = r#"{"core":[{"id":"a","community":0}],"edges":[],"ring":[{"id":"r"}]}"#;
+        let defaults = orbit_layout_json(raw, "{}");
+        let odd = orbit_layout_json(
+            raw,
+            r#"{"coreRadius":"big","ringRadius":null,"iterations":"lots","seed":[1]}"#,
+        );
+        assert_eq!(defaults, odd);
+    }
+
+    #[test]
+    fn huge_iteration_counts_are_clamped_to_the_cap() {
+        let graph = build_system_graph_json(
+            "null",
+            r#"{"nodes":[{"id":"a"},{"id":"b"},{"id":"c"}],
+            "edges":[{"fromId":"a","toId":"b"},{"fromId":"b","toId":"c"}]}"#,
+            "null",
+        );
+        let capped = orbit_layout_json(&graph, &format!(r#"{{"iterations":{}}}"#, MAX_ITERATIONS));
+        let huge = orbit_layout_json(&graph, r#"{"iterations":1e300}"#);
+        assert_eq!(huge, capped);
+        let inf_like = orbit_layout_json(&graph, r#"{"iterations":1e308}"#);
+        assert_eq!(inf_like, capped);
+    }
+
+    #[test]
+    fn huge_radii_are_clamped_so_coordinates_stay_finite() {
+        let graph = build_system_graph_json(
+            "null",
+            r#"{"nodes":[{"id":"a"},{"id":"b"}],"edges":[{"fromId":"a","toId":"b"}]}"#,
+            "null",
+        );
+        let at_cap = orbit_layout_json(
+            &graph,
+            &format!(r#"{{"coreRadius":{MAX_RADIUS},"ringRadius":{MAX_RADIUS}}}"#),
+        );
+        let huge = orbit_layout_json(&graph, r#"{"coreRadius":1e308,"ringRadius":1e308}"#);
+        assert_eq!(huge, at_cap);
+        let v = parse_value(&huge);
+        assert!(v["bounds"]["radius"].as_f64().unwrap().is_finite());
+        assert!(!huge.contains("null"), "non-finite coordinate in {huge}");
+    }
+
+    #[test]
+    fn ring_ids_accept_a_string_or_a_number() {
+        let snap = r#"{"activity":{"items":[
+            {"id":"s-1","kind":"chat","title":"S","createdAt":"t"},
+            {"id":4,"kind":"chat","title":"N","createdAt":"t"},
+            {"id":1e21,"kind":"chat","title":"Big","createdAt":"t"},
+            {"id":2.5,"kind":"chat","title":"Frac","createdAt":"t"}]}}"#;
+        let out = parse_value(&build_system_graph_json(snap, "null", "null"));
+        let ids: Vec<&str> = out["ring"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            ids,
+            [
+                "activity:s-1",
+                "activity:4",
+                "activity:1e+21",
+                "activity:2.5"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_boolean_ring_id_is_an_error_not_a_panic() {
+        let snap = r#"{"activity":{"items":[{"id":true,"kind":"x","title":"t","createdAt":"t"}]}}"#;
+        let out = parse_value(&build_system_graph_json(snap, "null", "null"));
+        assert!(out["error"].as_str().unwrap().starts_with("snapshot:"));
+    }
+
+    #[test]
+    fn metadata_at_ordinary_depth_is_ignored_without_failing() {
+        let depth = 100;
+        let nested = format!("{}1{}", "[".repeat(depth), "]".repeat(depth));
+        let project = format!(
+            r#"{{"nodes":[{{"id":"a.ts","metadata":{{"x":{nested},"path":"tests/a.ts"}}}}]}}"#
+        );
+        let out = parse_value(&build_system_graph_json("null", &project, "null"));
+        assert!(out.get("error").is_none(), "{out}");
+        assert_eq!(out["core"][0]["category"], "tests");
     }
 }

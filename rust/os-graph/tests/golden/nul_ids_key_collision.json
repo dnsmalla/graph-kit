@@ -1,0 +1,185 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": {
+   "nodes": [
+    {
+     "id": "a\u0000b",
+     "title": "a\u0000b",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "c",
+     "title": "c",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "a",
+     "title": "a",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "b\u0000c",
+     "title": "b\u0000c",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "d",
+     "title": "d",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "a\u0000b",
+     "toId": "c",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "a",
+     "toId": "b\u0000c",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c",
+     "toId": "d",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {},
+  "orbitOptions": {}
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "a",
+    "label": "a",
+    "category": "code",
+    "community": 1,
+    "degree": 0
+   },
+   {
+    "id": "a\u0000b",
+    "label": "a\u0000b",
+    "category": "code",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "b\u0000c",
+    "label": "b\u0000c",
+    "category": "code",
+    "community": 2,
+    "degree": 0
+   },
+   {
+    "id": "c",
+    "label": "c",
+    "category": "code",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "d",
+    "label": "d",
+    "category": "code",
+    "community": 0,
+    "degree": 1
+   }
+  ],
+  "edges": [
+   {
+    "source": "a\u0000b",
+    "target": "c",
+    "weight": 2
+   },
+   {
+    "source": "c",
+    "target": "d",
+    "weight": 1
+   }
+  ],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 5,
+   "keptNodes": 5,
+   "keptCommunities": 3
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "a",
+    {
+     "x": -53.39585290387157,
+     "y": -0.31005489223818794,
+     "z": 30.082902195127772
+    }
+   ],
+   [
+    "a\u0000b",
+    {
+     "x": -7.567021117102925,
+     "y": 78.99660797901257,
+     "z": 37.72397766037247
+    }
+   ],
+   [
+    "b\u0000c",
+    {
+     "x": -13.757107250797599,
+     "y": -63.07695520787931,
+     "z": 7.577746331925449
+    }
+   ],
+   [
+    "c",
+    {
+     "x": -37.344420530786635,
+     "y": 71.0513317035131,
+     "z": -1.2172800210613834
+    }
+   ],
+   [
+    "d",
+    {
+     "x": -3.8683600340208546,
+     "y": 87.18647791062314,
+     "z": -12.801466519789358
+    }
+   ]
+  ],
+  "ring": [],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 70,
+    "z": 0
+   },
+   {
+    "x": -51.615821465482384,
+    "y": 0,
+    "z": 47.28432059830667
+   },
+   {
+    "x": 0,
+    "y": -70,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 88.20614312432936
+  }
+ }
+}

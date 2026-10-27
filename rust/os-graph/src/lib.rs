@@ -22,5 +22,9 @@ pub use builder::{
     SystemCoreNode, SystemGraph, SystemRingItem, Truncated,
 };
 pub use models::{CGData, CGEdge, CGLayer, CGNode, CGPosition, CGTourStep};
-pub use orbit::{fibonacci_sphere, mulberry32, orbit_layout, OrbitLayout, OrbitOptions, Vec3};
+pub use orbit::{
+    fibonacci_sphere, mulberry32, orbit_layout, OrbitLayout, OrbitOptions, Vec3, MAX_ITERATIONS,
+    MAX_RADIUS,
+};
+pub use snapshot::ActivityId;
 pub use snapshot::OsSnapshot;

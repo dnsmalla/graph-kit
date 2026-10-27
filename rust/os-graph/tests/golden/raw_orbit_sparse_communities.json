@@ -1,0 +1,433 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": null,
+  "buildOptions": {},
+  "orbitOptions": {
+   "seed": 5
+  },
+  "rawSystemGraph": {
+   "core": [
+    {
+     "id": "p0",
+     "community": 0,
+     "category": "code",
+     "degree": 3
+    },
+    {
+     "id": "p1",
+     "community": 7
+    },
+    {
+     "id": "p2",
+     "community": 1000000000
+    },
+    {
+     "id": "p3",
+     "community": 2.7
+    },
+    {
+     "id": "p4",
+     "community": -3
+    },
+    {
+     "id": "p5",
+     "community": null
+    },
+    {
+     "id": "p6",
+     "community": "x"
+    },
+    {
+     "id": "p7"
+    },
+    {
+     "id": "p8",
+     "community": 7
+    },
+    {
+     "id": "p1",
+     "community": 99
+    },
+    {
+     "id": "p9",
+     "community": 1000000000
+    },
+    {
+     "id": "p10",
+     "community": 0.999
+    }
+   ],
+   "edges": [
+    {
+     "source": "p0",
+     "target": "p1",
+     "weight": 9
+    },
+    {
+     "source": "p1",
+     "target": "p2",
+     "weight": 2.5
+    },
+    {
+     "source": "p2",
+     "target": "p3",
+     "weight": -1
+    },
+    {
+     "source": "p3",
+     "target": "p4",
+     "weight": null
+    },
+    {
+     "source": "p4",
+     "target": "p5",
+     "weight": "2"
+    },
+    {
+     "source": "p5",
+     "target": "p6",
+     "weight": 0
+    },
+    {
+     "source": "p6",
+     "target": "p7",
+     "weight": 1
+    },
+    {
+     "source": "p7",
+     "target": "p8",
+     "weight": 4
+    },
+    {
+     "source": "p8",
+     "target": "p9",
+     "weight": 3.5
+    },
+    {
+     "source": "p9",
+     "target": "p10"
+    },
+    {
+     "source": "p10",
+     "target": "ghost",
+     "weight": 1
+    },
+    {
+     "source": "p0",
+     "target": "p0",
+     "weight": 2
+    },
+    {
+     "source": "p2",
+     "target": "p10",
+     "weight": 0.25
+    }
+   ],
+   "ring": [
+    {
+     "id": "activity:1",
+     "label": "one",
+     "kind": "chat",
+     "at": "t",
+     "link": null
+    },
+    {
+     "id": "activity:2"
+    },
+    {
+     "id": "activity:1"
+    },
+    {
+     "id": "activity:3"
+    },
+    {
+     "id": "activity:2"
+    }
+   ]
+  }
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "p0",
+    "community": 0,
+    "category": "code",
+    "degree": 3
+   },
+   {
+    "id": "p1",
+    "community": 7
+   },
+   {
+    "id": "p2",
+    "community": 1000000000
+   },
+   {
+    "id": "p3",
+    "community": 2.7
+   },
+   {
+    "id": "p4",
+    "community": -3
+   },
+   {
+    "id": "p5",
+    "community": null
+   },
+   {
+    "id": "p6",
+    "community": "x"
+   },
+   {
+    "id": "p7"
+   },
+   {
+    "id": "p8",
+    "community": 7
+   },
+   {
+    "id": "p1",
+    "community": 99
+   },
+   {
+    "id": "p9",
+    "community": 1000000000
+   },
+   {
+    "id": "p10",
+    "community": 0.999
+   }
+  ],
+  "edges": [
+   {
+    "source": "p0",
+    "target": "p1",
+    "weight": 9
+   },
+   {
+    "source": "p1",
+    "target": "p2",
+    "weight": 2.5
+   },
+   {
+    "source": "p2",
+    "target": "p3",
+    "weight": -1
+   },
+   {
+    "source": "p3",
+    "target": "p4",
+    "weight": null
+   },
+   {
+    "source": "p4",
+    "target": "p5",
+    "weight": "2"
+   },
+   {
+    "source": "p5",
+    "target": "p6",
+    "weight": 0
+   },
+   {
+    "source": "p6",
+    "target": "p7",
+    "weight": 1
+   },
+   {
+    "source": "p7",
+    "target": "p8",
+    "weight": 4
+   },
+   {
+    "source": "p8",
+    "target": "p9",
+    "weight": 3.5
+   },
+   {
+    "source": "p9",
+    "target": "p10"
+   },
+   {
+    "source": "p10",
+    "target": "ghost",
+    "weight": 1
+   },
+   {
+    "source": "p0",
+    "target": "p0",
+    "weight": 2
+   },
+   {
+    "source": "p2",
+    "target": "p10",
+    "weight": 0.25
+   }
+  ],
+  "ring": [
+   {
+    "id": "activity:1",
+    "label": "one",
+    "kind": "chat",
+    "at": "t",
+    "link": null
+   },
+   {
+    "id": "activity:2"
+   },
+   {
+    "id": "activity:1"
+   },
+   {
+    "id": "activity:3"
+   },
+   {
+    "id": "activity:2"
+   }
+  ]
+ },
+ "orbit": {
+  "core": [
+   [
+    "p0",
+    {
+     "x": 5.327848710505966,
+     "y": 60.630672751008596,
+     "z": -5.761767642182924
+    }
+   ],
+   [
+    "p1",
+    {
+     "x": 1.593251147600212,
+     "y": -29.40034484424357,
+     "z": -65.87230412795697
+    }
+   ],
+   [
+    "p2",
+    {
+     "x": 10.798527229927398,
+     "y": -70.10159736896577,
+     "z": -16.467725066253877
+    }
+   ],
+   [
+    "p3",
+    {
+     "x": -49.09115449386023,
+     "y": 16.097230963820703,
+     "z": 49.47619644958249
+    }
+   ],
+   [
+    "p4",
+    {
+     "x": -7.799566442045824,
+     "y": 71.52947958989635,
+     "z": -36.6495125988815
+    }
+   ],
+   [
+    "p5",
+    {
+     "x": -3.2807258469116634,
+     "y": 87.1744993870184,
+     "z": 24.52027306380171
+    }
+   ],
+   [
+    "p6",
+    {
+     "x": 0.80648503116648,
+     "y": 91.4331446976368,
+     "z": 10.881081877655761
+    }
+   ],
+   [
+    "p7",
+    {
+     "x": 2.0310654292620476,
+     "y": 59.70825264515676,
+     "z": -7.487888402056254
+    }
+   ],
+   [
+    "p8",
+    {
+     "x": -1.468958254768041,
+     "y": -0.6285607010808292,
+     "z": -53.922102841146085
+    }
+   ],
+   [
+    "p9",
+    {
+     "x": 10.63670211810509,
+     "y": -39.63269766538755,
+     "z": -23.6524285038687
+    }
+   ],
+   [
+    "p10",
+    {
+     "x": -18.163816324469327,
+     "y": 40.17871846913492,
+     "z": -14.604540010072052
+    }
+   ]
+  ],
+  "ring": [
+   [
+    "activity:1",
+    {
+     "x": 170,
+     "y": 0,
+     "z": 0
+    }
+   ],
+   [
+    "activity:2",
+    {
+     "x": -84.99999999999996,
+     "y": 0,
+     "z": 147.2243186433546
+    }
+   ],
+   [
+    "activity:3",
+    {
+     "x": -85.00000000000007,
+     "y": 0,
+     "z": -147.22431864335454
+    }
+   ]
+  ],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 70,
+    "z": 0
+   },
+   {
+    "x": -48.66386316634234,
+    "y": 23.333333333333336,
+    "z": 44.58008498514853
+   },
+   {
+    "x": 5.769803461100997,
+    "y": -23.33333333333333,
+    "z": -65.74393450027023
+   },
+   {
+    "x": 0,
+    "y": -70,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 170
+  }
+ }
+}

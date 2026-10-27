@@ -1,8 +1,10 @@
 //! Parity against the TypeScript oracle. Every `tests/golden/*.json` was written by
 //! `typescript/scripts/gen-os-golden.mjs` from the built TS. Here the Rust builder must
 //! produce a system graph EXACTLY equal to the golden one, and the Rust orbit layout must
-//! match the golden coordinates within 1e-9.
+//! match the golden coordinates within 1e-9. A case with `input.rawSystemGraph` skips the
+//! builder and runs the raw object through the JSON orbit boundary instead.
 
+use graph_kit_os::api::orbit_layout_json;
 use graph_kit_os::{
     build_system_graph, orbit_layout, BuildOptions, CGData, OrbitOptions, OsSnapshot,
 };
@@ -61,7 +63,7 @@ fn compare_vec(case: &str, label: &str, got: &Value, want: &Value, max_diff: &mu
 fn rust_matches_typescript_golden_cases() {
     let files = golden_files();
     assert!(
-        files.len() >= 6,
+        files.len() >= 19,
         "expected the golden cases in tests/golden (run `node typescript/scripts/gen-os-golden.mjs`), found {}",
         files.len()
     );
@@ -72,6 +74,17 @@ fn rust_matches_typescript_golden_cases() {
         let golden: Value = serde_json::from_str(&fs::read_to_string(file).unwrap())
             .unwrap_or_else(|e| panic!("{case}: invalid JSON: {e}"));
         let input = &golden["input"];
+
+        if !input["rawSystemGraph"].is_null() {
+            // Odd, hand-written orbit input: through the lenient JSON boundary.
+            let orbit_opts_json = input["orbitOptions"].to_string();
+            let out = orbit_layout_json(&input["rawSystemGraph"].to_string(), &orbit_opts_json);
+            let got_orbit: Value = serde_json::from_str(&out)
+                .unwrap_or_else(|e| panic!("{case}: orbit output not JSON: {e}"));
+            check_orbit(&case, &got_orbit, &golden["orbit"], &mut max_coord_diff);
+            eprintln!("parity {case}: raw orbit ok");
+            continue;
+        }
 
         let snapshot: Option<OsSnapshot> = serde_json::from_value(input["snapshot"].clone())
             .unwrap_or_else(|e| panic!("{case}: snapshot: {e}"));
@@ -91,46 +104,7 @@ fn rust_matches_typescript_golden_cases() {
 
         let layout = orbit_layout(&graph, &orbit_opts);
         let got_orbit = serde_json::to_value(&layout).unwrap();
-        let want_orbit = &golden["orbit"];
-        compare_points(
-            &case,
-            "core",
-            &got_orbit["core"],
-            &want_orbit["core"],
-            &mut max_coord_diff,
-        );
-        compare_points(
-            &case,
-            "ring",
-            &got_orbit["ring"],
-            &want_orbit["ring"],
-            &mut max_coord_diff,
-        );
-        let got_centers = got_orbit["communityCenters"].as_array().unwrap();
-        let want_centers = want_orbit["communityCenters"].as_array().unwrap();
-        assert_eq!(
-            got_centers.len(),
-            want_centers.len(),
-            "{case}: communityCenters length"
-        );
-        for (i, (g, w)) in got_centers.iter().zip(want_centers).enumerate() {
-            compare_vec(
-                &case,
-                &format!("communityCenters[{i}]"),
-                g,
-                w,
-                &mut max_coord_diff,
-            );
-        }
-        let (gr, wr) = (
-            got_orbit["bounds"]["radius"].as_f64().unwrap(),
-            want_orbit["bounds"]["radius"].as_f64().unwrap(),
-        );
-        max_coord_diff = max_coord_diff.max((gr - wr).abs());
-        assert!(
-            (gr - wr).abs() <= TOLERANCE,
-            "{case}: bounds.radius {gr} vs golden {wr}"
-        );
+        check_orbit(&case, &got_orbit, &golden["orbit"], &mut max_coord_diff);
 
         eprintln!(
             "parity {case}: core={} edges={} ring={} ok",
@@ -140,4 +114,46 @@ fn rust_matches_typescript_golden_cases() {
         );
     }
     eprintln!("max observed orbit coordinate difference vs TS: {max_coord_diff:e}");
+}
+
+fn check_orbit(case: &str, got_orbit: &Value, want_orbit: &Value, max_coord_diff: &mut f64) {
+    compare_points(
+        case,
+        "core",
+        &got_orbit["core"],
+        &want_orbit["core"],
+        max_coord_diff,
+    );
+    compare_points(
+        case,
+        "ring",
+        &got_orbit["ring"],
+        &want_orbit["ring"],
+        max_coord_diff,
+    );
+    let got_centers = got_orbit["communityCenters"].as_array().unwrap();
+    let want_centers = want_orbit["communityCenters"].as_array().unwrap();
+    assert_eq!(
+        got_centers.len(),
+        want_centers.len(),
+        "{case}: communityCenters length"
+    );
+    for (i, (g, w)) in got_centers.iter().zip(want_centers).enumerate() {
+        compare_vec(
+            case,
+            &format!("communityCenters[{i}]"),
+            g,
+            w,
+            max_coord_diff,
+        );
+    }
+    let (gr, wr) = (
+        got_orbit["bounds"]["radius"].as_f64().unwrap(),
+        want_orbit["bounds"]["radius"].as_f64().unwrap(),
+    );
+    *max_coord_diff = max_coord_diff.max((gr - wr).abs());
+    assert!(
+        (gr - wr).abs() <= TOLERANCE,
+        "{case}: bounds.radius {gr} vs golden {wr}"
+    );
 }

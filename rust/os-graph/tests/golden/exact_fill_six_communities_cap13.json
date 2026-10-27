@@ -1,0 +1,577 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": {
+   "nodes": [
+    {
+     "id": "k0/0.ts",
+     "title": "0.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k0/1.ts",
+     "title": "1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k0/2.ts",
+     "title": "2.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k0/3.ts",
+     "title": "3.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k0/4.ts",
+     "title": "4.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k1/0.ts",
+     "title": "0.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k1/1.ts",
+     "title": "1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k1/2.ts",
+     "title": "2.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k1/3.ts",
+     "title": "3.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k2/0.ts",
+     "title": "0.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k2/1.ts",
+     "title": "1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k2/2.ts",
+     "title": "2.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k3/0.ts",
+     "title": "0.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k3/1.ts",
+     "title": "1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k4/0.ts",
+     "title": "0.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k4/1.ts",
+     "title": "1.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "k5/0.ts",
+     "title": "0.ts",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "k0/0.ts",
+     "toId": "k0/1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/0.ts",
+     "toId": "k0/2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/0.ts",
+     "toId": "k0/3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/0.ts",
+     "toId": "k0/4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/1.ts",
+     "toId": "k0/2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/1.ts",
+     "toId": "k0/3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/1.ts",
+     "toId": "k0/4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/2.ts",
+     "toId": "k0/3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/2.ts",
+     "toId": "k0/4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k0/3.ts",
+     "toId": "k0/4.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k1/0.ts",
+     "toId": "k1/1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k1/0.ts",
+     "toId": "k1/2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k1/0.ts",
+     "toId": "k1/3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k1/1.ts",
+     "toId": "k1/2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k1/1.ts",
+     "toId": "k1/3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k1/2.ts",
+     "toId": "k1/3.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k2/0.ts",
+     "toId": "k2/1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k2/0.ts",
+     "toId": "k2/2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k2/1.ts",
+     "toId": "k2/2.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k3/0.ts",
+     "toId": "k3/1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "k4/0.ts",
+     "toId": "k4/1.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {
+   "maxCoreNodes": 13
+  },
+  "orbitOptions": {}
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "k0/0.ts",
+    "label": "0.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "k0/1.ts",
+    "label": "1.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "k0/2.ts",
+    "label": "2.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "k0/3.ts",
+    "label": "3.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "k0/4.ts",
+    "label": "4.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "k1/0.ts",
+    "label": "0.ts",
+    "category": "code",
+    "community": 1,
+    "degree": 3
+   },
+   {
+    "id": "k1/1.ts",
+    "label": "1.ts",
+    "category": "code",
+    "community": 1,
+    "degree": 3
+   },
+   {
+    "id": "k1/2.ts",
+    "label": "2.ts",
+    "category": "code",
+    "community": 1,
+    "degree": 3
+   },
+   {
+    "id": "k1/3.ts",
+    "label": "3.ts",
+    "category": "code",
+    "community": 1,
+    "degree": 3
+   },
+   {
+    "id": "k2/0.ts",
+    "label": "0.ts",
+    "category": "code",
+    "community": 2,
+    "degree": 2
+   },
+   {
+    "id": "k2/1.ts",
+    "label": "1.ts",
+    "category": "code",
+    "community": 2,
+    "degree": 2
+   },
+   {
+    "id": "k2/2.ts",
+    "label": "2.ts",
+    "category": "code",
+    "community": 2,
+    "degree": 2
+   },
+   {
+    "id": "k5/0.ts",
+    "label": "0.ts",
+    "category": "code",
+    "community": 5,
+    "degree": 0
+   }
+  ],
+  "edges": [
+   {
+    "source": "k0/0.ts",
+    "target": "k0/1.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/0.ts",
+    "target": "k0/2.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/0.ts",
+    "target": "k0/3.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/0.ts",
+    "target": "k0/4.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/1.ts",
+    "target": "k0/2.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/1.ts",
+    "target": "k0/3.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/1.ts",
+    "target": "k0/4.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/2.ts",
+    "target": "k0/3.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/2.ts",
+    "target": "k0/4.ts",
+    "weight": 1
+   },
+   {
+    "source": "k0/3.ts",
+    "target": "k0/4.ts",
+    "weight": 1
+   },
+   {
+    "source": "k1/0.ts",
+    "target": "k1/1.ts",
+    "weight": 1
+   },
+   {
+    "source": "k1/0.ts",
+    "target": "k1/2.ts",
+    "weight": 1
+   },
+   {
+    "source": "k1/0.ts",
+    "target": "k1/3.ts",
+    "weight": 1
+   },
+   {
+    "source": "k1/1.ts",
+    "target": "k1/2.ts",
+    "weight": 1
+   },
+   {
+    "source": "k1/1.ts",
+    "target": "k1/3.ts",
+    "weight": 1
+   },
+   {
+    "source": "k1/2.ts",
+    "target": "k1/3.ts",
+    "weight": 1
+   },
+   {
+    "source": "k2/0.ts",
+    "target": "k2/1.ts",
+    "weight": 1
+   },
+   {
+    "source": "k2/0.ts",
+    "target": "k2/2.ts",
+    "weight": 1
+   },
+   {
+    "source": "k2/1.ts",
+    "target": "k2/2.ts",
+    "weight": 1
+   }
+  ],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 17,
+   "keptNodes": 13,
+   "keptCommunities": 4
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "k0/0.ts",
+    {
+     "x": -2.595582137536338,
+     "y": 68.99544174401915,
+     "z": -31.391325130146505
+    }
+   ],
+   [
+    "k0/1.ts",
+    {
+     "x": -1.839724942396856,
+     "y": 82.10208853404845,
+     "z": 34.12852868440886
+    }
+   ],
+   [
+    "k0/2.ts",
+    {
+     "x": -24.387540983499484,
+     "y": 82.15586696959862,
+     "z": 13.693681143697201
+    }
+   ],
+   [
+    "k0/3.ts",
+    {
+     "x": -35.82203439084846,
+     "y": 72.13262754424132,
+     "z": -3.377186198843835
+    }
+   ],
+   [
+    "k0/4.ts",
+    {
+     "x": 0.9338410501777386,
+     "y": 88.24353924166387,
+     "z": -3.7596829116232766
+    }
+   ],
+   [
+    "k1/0.ts",
+    {
+     "x": -26.95549730172525,
+     "y": 28.020277448792925,
+     "z": 42.932989090927684
+    }
+   ],
+   [
+    "k1/1.ts",
+    {
+     "x": -54.62528297954396,
+     "y": 44.94984964664625,
+     "z": 60.72101234107835
+    }
+   ],
+   [
+    "k1/2.ts",
+    {
+     "x": -57.73488452221423,
+     "y": 22.82947380239441,
+     "z": 20.232857219426183
+    }
+   ],
+   [
+    "k1/3.ts",
+    {
+     "x": -56.769353676329146,
+     "y": 46.79408186552105,
+     "z": 65.53920843966142
+    }
+   ],
+   [
+    "k2/0.ts",
+    {
+     "x": -10.113168479810064,
+     "y": -27.321036803472907,
+     "z": -60.24832177260607
+    }
+   ],
+   [
+    "k2/1.ts",
+    {
+     "x": 1.9161973506587637,
+     "y": -43.55555329640172,
+     "z": -82.38486769637187
+    }
+   ],
+   [
+    "k2/2.ts",
+    {
+     "x": 24.93813384167141,
+     "y": -23.241948574218398,
+     "z": -53.458683574644155
+    }
+   ],
+   [
+    "k5/0.ts",
+    {
+     "x": 4.760224549598322,
+     "y": -63.15666046271349,
+     "z": 4.995160015188374
+    }
+   ]
+  ],
+  "ring": [],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 70,
+    "z": 0
+   },
+   {
+    "x": -48.66386316634234,
+    "y": 23.333333333333336,
+    "z": 44.58008498514853
+   },
+   {
+    "x": 5.769803461100997,
+    "y": -23.33333333333333,
+    "z": -65.74393450027023
+   },
+   {
+    "x": 0,
+    "y": -70,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 98.52833834670419
+  }
+ }
+}

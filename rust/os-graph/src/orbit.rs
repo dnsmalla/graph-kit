@@ -5,6 +5,7 @@
 //! Rust's libm are not guaranteed bit-identical for those; `tests/parity.rs` measures it).
 
 use crate::builder::SystemGraph;
+use crate::models::lenient_f64;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -15,17 +16,30 @@ pub struct Vec3 {
     pub z: f64,
 }
 
+/// Most relaxation steps run, whatever `iterations` asks for. The TS has no cap; a page
+/// passing `1e300` would otherwise hang. Goldens stay below this.
+pub const MAX_ITERATIONS: f64 = 10_000.0;
+
+/// Largest radius used. Above this the squared norms overflow to infinity and output
+/// coordinates would be non-finite (serialized as `null`). The TS has no cap.
+pub const MAX_RADIUS: f64 = 1e150;
+
 /// Options. `None` means "use the default" (as in the TS, invalid values also fall back).
+/// Non-number values count as unset, the TS `typeof` check. See the README for the clamps.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrbitOptions {
     /// Radius of the core sphere. Default 100.
+    #[serde(default, deserialize_with = "lenient_f64")]
     pub core_radius: Option<f64>,
     /// Radius of the activity ring (plane y = 0). Default 170.
+    #[serde(default, deserialize_with = "lenient_f64")]
     pub ring_radius: Option<f64>,
-    /// Relaxation steps over the core. Default 60.
+    /// Relaxation steps over the core. Default 60. Clamped to [`MAX_ITERATIONS`].
+    #[serde(default, deserialize_with = "lenient_f64")]
     pub iterations: Option<f64>,
     /// PRNG seed for the initial scatter. Default 1.
+    #[serde(default, deserialize_with = "lenient_f64")]
     pub seed: Option<f64>,
 }
 
@@ -107,9 +121,10 @@ pub fn fibonacci_sphere(n: usize, radius: f64) -> Vec<Vec3> {
     }
 }
 
+/// A positive radius, clamped to [`MAX_RADIUS`]; `fallback` when missing or not positive.
 fn positive(v: Option<f64>, fallback: f64) -> f64 {
     match v {
-        Some(x) if x.is_finite() && x > 0.0 => x,
+        Some(x) if x.is_finite() && x > 0.0 => x.min(MAX_RADIUS),
         _ => fallback,
     }
 }
@@ -128,10 +143,10 @@ fn norm(p: Vec3) -> f64 {
 
 /// Lay out a [`SystemGraph`] in 3D. See the TS doc comment on `orbitLayout` for the model.
 pub fn orbit_layout(graph: &SystemGraph, opts: &OrbitOptions) -> OrbitLayout {
-    let core: Vec<(&str, f64)> = graph
+    let core: Vec<(&str, Option<f64>)> = graph
         .core
         .iter()
-        .map(|n| (n.id.as_str(), n.community as f64))
+        .map(|n| (n.id.as_str(), Some(n.community as f64)))
         .collect();
     let edges: Vec<(&str, &str, f64)> = graph
         .edges
@@ -142,18 +157,20 @@ pub fn orbit_layout(graph: &SystemGraph, opts: &OrbitOptions) -> OrbitLayout {
     layout_raw(&core, &edges, &ring, opts)
 }
 
-/// The layout over raw inputs: core `(id, community)`, edges `(source, target, weight)`
-/// (weights may be any f64; non-finite counts as 0) and ring ids. [`orbit_layout`] is this
-/// over a [`SystemGraph`]; the split exists so non-finite weights can be exercised.
+/// The layout over raw inputs: core `(id, community)`, edges `(source, target, weight)` and
+/// ring ids. A missing community (`None`) and a non-finite weight both count as the TS does
+/// for non-numbers: community 0, weight 0 (the edge is dropped). Negative or fractional
+/// communities are floored / defaulted as in the TS `nonNegInt`. [`orbit_layout`] is this
+/// over a [`SystemGraph`]; the split lets the JSON boundary feed it lenient inputs.
 pub(crate) fn layout_raw(
-    core_nodes: &[(&str, f64)],
+    core_nodes: &[(&str, Option<f64>)],
     edges: &[(&str, &str, f64)],
     ring_ids: &[&str],
     opts: &OrbitOptions,
 ) -> OrbitLayout {
     let core_radius = positive(opts.core_radius, 100.0);
     let ring_radius = positive(opts.ring_radius, 170.0);
-    let iterations = non_neg_int(opts.iterations, 60.0) as usize;
+    let iterations = non_neg_int(opts.iterations, 60.0).min(MAX_ITERATIONS) as usize;
     let mut rng = mulberry32(opts.seed.unwrap_or(1.0));
 
     // ---- Core: index nodes (first occurrence wins on duplicate ids).
@@ -166,7 +183,7 @@ pub(crate) fn layout_raw(
         }
         index.insert(id, ids.len());
         ids.push(id);
-        raw_community.push(non_neg_int(Some(community), 0.0));
+        raw_community.push(non_neg_int(community, 0.0));
     }
     let n = ids.len();
 
@@ -418,7 +435,7 @@ mod tests {
     fn core_node(id: &str, community: usize) -> SystemCoreNode {
         SystemCoreNode {
             id: id.to_string(),
-            label: id.to_string(),
+            label: Some(id.to_string()),
             category: CoreCategory::Code,
             community,
             degree: 0,
@@ -802,7 +819,7 @@ mod tests {
 
     #[test]
     fn non_finite_and_non_positive_edge_weights_count_as_zero() {
-        let core = [("a", 0.0), ("b", 0.0)];
+        let core = [("a", Some(0.0)), ("b", Some(0.0))];
         let edges = [
             ("a", "b", f64::NAN),
             ("a", "b", f64::INFINITY),
