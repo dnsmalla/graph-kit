@@ -45818,3493 +45818,4365 @@
     "label": "x110",
     "category": "other",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c3/x115",
     "label": "x115",
     "category": "other",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "kind": "other"
    },
    {
     "id": "c3/x127",
     "label": "x127",
     "category": "other",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c3/x149",
     "label": "x149",
     "category": "other",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c3/x151",
     "label": "x151",
     "category": "other",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c3/x153",
     "label": "x153",
     "category": "other",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "kind": "other"
    },
    {
     "id": "c3/x154",
     "label": "x154",
     "category": "other",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c3/x158",
     "label": "x158",
     "category": "other",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "kind": "other"
    },
    {
     "id": "c3/x161",
     "label": "x161",
     "category": "other",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c3/x182",
     "label": "x182",
     "category": "other",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "other"
    },
    {
     "id": "c3/x194",
     "label": "x194",
     "category": "other",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c3/x199",
     "label": "x199",
     "category": "other",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "other"
    },
    {
     "id": "c3/x21",
     "label": "x21",
     "category": "other",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c3/x214",
     "label": "x214",
     "category": "other",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "other"
    },
    {
     "id": "c3/x219",
     "label": "x219",
     "category": "other",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "other"
    },
    {
     "id": "c3/x24",
     "label": "x24",
     "category": "other",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c3/x245",
     "label": "x245",
     "category": "other",
     "community": 0,
-    "degree": 9
+    "degree": 9,
+    "kind": "other"
    },
    {
     "id": "c3/x27",
     "label": "x27",
     "category": "other",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c3/x35",
     "label": "x35",
     "category": "other",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c3/x51",
     "label": "x51",
     "category": "other",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "kind": "other"
    },
    {
     "id": "c3/x52",
     "label": "x52",
     "category": "other",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c3/x53",
     "label": "x53",
     "category": "other",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c3/x58",
     "label": "x58",
     "category": "other",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "kind": "other"
    },
    {
     "id": "c3/x66",
     "label": "x66",
     "category": "other",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c3/x79",
     "label": "x79",
     "category": "other",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "other"
    },
    {
     "id": "c5/x100",
     "label": "x100",
     "category": "other",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "kind": "other"
    },
    {
     "id": "c5/x102",
     "label": "x102",
     "category": "other",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "kind": "other"
    },
    {
     "id": "c5/x108",
     "label": "x108",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x11",
     "label": "x11",
     "category": "other",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c5/x120",
     "label": "x120",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x133",
     "label": "x133",
     "category": "other",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c5/x142",
     "label": "x142",
     "category": "other",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c5/x149",
     "label": "x149",
     "category": "other",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c5/x153",
     "label": "x153",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x158",
     "label": "x158",
     "category": "other",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "kind": "other"
    },
    {
     "id": "c5/x160",
     "label": "x160",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x163",
     "label": "x163",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x165",
     "label": "x165",
     "category": "other",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c5/x171",
     "label": "x171",
     "category": "other",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c5/x172",
     "label": "x172",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x177",
     "label": "x177",
     "category": "other",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c5/x188",
     "label": "x188",
     "category": "other",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c5/x192",
     "label": "x192",
     "category": "other",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "kind": "other"
    },
    {
     "id": "c5/x203",
     "label": "x203",
     "category": "other",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "kind": "other"
    },
    {
     "id": "c5/x216",
     "label": "x216",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x221",
     "label": "x221",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x222",
     "label": "x222",
     "category": "other",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "c5/x225",
     "label": "x225",
     "category": "other",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "kind": "other"
    },
    {
     "id": "c5/x31",
     "label": "x31",
     "category": "other",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "kind": "other"
    },
    {
     "id": "c5/x70",
     "label": "x70",
     "category": "other",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "kind": "other"
    },
    {
     "id": "c5/x77",
     "label": "x77",
     "category": "other",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "other"
    },
    {
     "id": "c5/x83",
     "label": "x83",
     "category": "other",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "other"
    },
    {
     "id": "c5/x87",
     "label": "x87",
     "category": "other",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "other"
    },
    {
     "id": "docs/c3/d123.md",
     "label": "d123.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d125.md",
     "label": "d125.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "docs/c3/d125.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d144.md",
     "label": "d144.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d147.md",
     "label": "d147.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d160.md",
     "label": "d160.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d162.md",
     "label": "d162.md",
     "category": "docs",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d175.md",
     "label": "d175.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d179.md",
     "label": "d179.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c3/d179.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d18.md",
     "label": "d18.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d180.md",
     "label": "d180.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d183.md",
     "label": "d183.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c3/d183.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d193.md",
     "label": "d193.md",
     "category": "docs",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d198.md",
     "label": "d198.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "docs/c3/d198.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d200.md",
     "label": "d200.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d204.md",
     "label": "d204.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d208.md",
     "label": "d208.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "docs/c3/d208.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d220.md",
     "label": "d220.md",
     "category": "docs",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "docs/c3/d220.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d230.md",
     "label": "d230.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d243.md",
     "label": "d243.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "docs/c3/d243.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d251.md",
     "label": "d251.md",
     "category": "docs",
     "community": 0,
-    "degree": 9
+    "degree": 9,
+    "path": "docs/c3/d251.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d258.md",
     "label": "d258.md",
     "category": "docs",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "docs/c3/d258.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d26.md",
     "label": "d26.md",
     "category": "docs",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d31.md",
     "label": "d31.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d40.md",
     "label": "d40.md",
     "category": "docs",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d41.md",
     "label": "d41.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d43.md",
     "label": "d43.md",
     "category": "docs",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "docs/c3/d43.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d5.md",
     "label": "d5.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "docs/c3/d5.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d59.md",
     "label": "d59.md",
     "category": "docs",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "docs/c3/d59.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d64.md",
     "label": "d64.md",
     "category": "docs",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "docs/c3/d64.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d65.md",
     "label": "d65.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d68.md",
     "label": "d68.md",
     "category": "docs",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "docs/c3/d68.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d70.md",
     "label": "d70.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d77.md",
     "label": "d77.md",
     "category": "docs",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d91.md",
     "label": "d91.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d94.md",
     "label": "d94.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c3/d94.md",
+    "kind": "file"
    },
    {
     "id": "docs/c3/d97.md",
     "label": "d97.md",
     "category": "docs",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c3/d99.md",
     "label": "d99.md",
     "category": "docs",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c3/d99.md",
+    "kind": "file"
    },
    {
     "id": "docs/c4/d45.md",
     "label": "d45.md",
     "category": "docs",
     "community": 14,
-    "degree": 2
+    "degree": 2,
+    "path": "docs/c4/d45.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d101.md",
     "label": "d101.md",
     "category": "docs",
     "community": 1,
-    "degree": 10
+    "degree": 10,
+    "path": "docs/c5/d101.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d110.md",
     "label": "d110.md",
     "category": "docs",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "docs/c5/d110.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d118.md",
     "label": "d118.md",
     "category": "docs",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "docs/c5/d118.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d125.md",
     "label": "d125.md",
     "category": "docs",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d130.md",
     "label": "d130.md",
     "category": "docs",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c5/d130.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d138.md",
     "label": "d138.md",
     "category": "docs",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d144.md",
     "label": "d144.md",
     "category": "docs",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d152.md",
     "label": "d152.md",
     "category": "docs",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "docs/c5/d152.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d193.md",
     "label": "d193.md",
     "category": "docs",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "docs/c5/d193.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d196.md",
     "label": "d196.md",
     "category": "docs",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d198.md",
     "label": "d198.md",
     "category": "docs",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c5/d198.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d206.md",
     "label": "d206.md",
     "category": "docs",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d22.md",
     "label": "d22.md",
     "category": "docs",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d29.md",
     "label": "d29.md",
     "category": "docs",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "docs/c5/d29.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d43.md",
     "label": "d43.md",
     "category": "docs",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c5/d43.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d44.md",
     "label": "d44.md",
     "category": "docs",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "docs/c5/d44.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d45.md",
     "label": "d45.md",
     "category": "docs",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c5/d45.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d46.md",
     "label": "d46.md",
     "category": "docs",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d52.md",
     "label": "d52.md",
     "category": "docs",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "docs/c5/d52.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d54.md",
     "label": "d54.md",
     "category": "docs",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "docs/c5/d54.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d62.md",
     "label": "d62.md",
     "category": "docs",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "docs/c5/d62.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d64.md",
     "label": "d64.md",
     "category": "docs",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "docs/c5/d64.md",
+    "kind": "file"
    },
    {
     "id": "docs/c5/d79.md",
     "label": "d79.md",
     "category": "docs",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d80.md",
     "label": "d80.md",
     "category": "docs",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d84.md",
     "label": "d84.md",
     "category": "docs",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "docPage"
    },
    {
     "id": "docs/c5/d89.md",
     "label": "d89.md",
     "category": "docs",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "kind": "docPage"
    },
    {
     "id": "n:c3:101",
     "label": "fact 3.101",
     "category": "knowledge",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:11",
     "label": "fact 3.11",
     "category": "knowledge",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:112",
     "label": "fact 3.112",
     "category": "knowledge",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:114",
     "label": "fact 3.114",
     "category": "knowledge",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:131",
     "label": "fact 3.131",
     "category": "knowledge",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:132",
     "label": "fact 3.132",
     "category": "knowledge",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:133",
     "label": "fact 3.133",
     "category": "knowledge",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:135",
     "label": "fact 3.135",
     "category": "knowledge",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:140",
     "label": "fact 3.140",
     "category": "knowledge",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:142",
     "label": "fact 3.142",
     "category": "knowledge",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:152",
     "label": "fact 3.152",
     "category": "knowledge",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:157",
     "label": "fact 3.157",
     "category": "knowledge",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:191",
     "label": "fact 3.191",
     "category": "knowledge",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:202",
     "label": "fact 3.202",
     "category": "knowledge",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:206",
     "label": "fact 3.206",
     "category": "knowledge",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:212",
     "label": "fact 3.212",
     "category": "knowledge",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:221",
     "label": "fact 3.221",
     "category": "knowledge",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:226",
     "label": "fact 3.226",
     "category": "knowledge",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:23",
     "label": "fact 3.23",
     "category": "knowledge",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:240",
     "label": "fact 3.240",
     "category": "knowledge",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:246",
     "label": "fact 3.246",
     "category": "knowledge",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:248",
     "label": "fact 3.248",
     "category": "knowledge",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:249",
     "label": "fact 3.249",
     "category": "knowledge",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:49",
     "label": "fact 3.49",
     "category": "knowledge",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:56",
     "label": "fact 3.56",
     "category": "knowledge",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:6",
     "label": "fact 3.6",
     "category": "knowledge",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:67",
     "label": "fact 3.67",
     "category": "knowledge",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c3:78",
     "label": "fact 3.78",
     "category": "knowledge",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:106",
     "label": "fact 5.106",
     "category": "knowledge",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:109",
     "label": "fact 5.109",
     "category": "knowledge",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:131",
     "label": "fact 5.131",
     "category": "knowledge",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:147",
     "label": "fact 5.147",
     "category": "knowledge",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:190",
     "label": "fact 5.190",
     "category": "knowledge",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:2",
     "label": "fact 5.2",
     "category": "knowledge",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:224",
     "label": "fact 5.224",
     "category": "knowledge",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:41",
     "label": "fact 5.41",
     "category": "knowledge",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:60",
     "label": "fact 5.60",
     "category": "knowledge",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:65",
     "label": "fact 5.65",
     "category": "knowledge",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:88",
     "label": "fact 5.88",
     "category": "knowledge",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:90",
     "label": "fact 5.90",
     "category": "knowledge",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "kind": "noteFact"
    },
    {
     "id": "n:c5:94",
     "label": "fact 5.94",
     "category": "knowledge",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "kind": "noteFact"
    },
    {
     "id": "src/c3/f0.ts",
     "label": "f0.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f0.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f1.ts",
     "label": "f1.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f1.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f10.ts",
     "label": "f10.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f10.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f100.ts",
     "label": "f100.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f100.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f102.ts",
     "label": "f102.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f102.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f103.ts",
     "label": "f103.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f103.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f104.ts",
     "label": "f104.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f104.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f105.ts",
     "label": "f105.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f105.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f106.ts",
     "label": "f106.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f106.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f107.ts",
     "label": "f107.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f107.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f108.ts",
     "label": "f108.ts",
     "category": "code",
     "community": 0,
-    "degree": 10
+    "degree": 10,
+    "path": "src/c3/f108.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f109.ts",
     "label": "f109.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f109.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f111.ts",
     "label": "f111.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f111.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f113.ts",
     "label": "f113.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f113.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f117.ts",
     "label": "f117.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f117.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f118.ts",
     "label": "f118.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f118.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f12.ts",
     "label": "f12.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f12.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f120.ts",
     "label": "f120.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f120.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f121.ts",
     "label": "f121.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f121.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f122.ts",
     "label": "f122.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f122.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f124.ts",
     "label": "f124.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f124.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f128.ts",
     "label": "f128.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f128.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f129.ts",
     "label": "f129.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f129.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f13.ts",
     "label": "f13.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f13.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f130.ts",
     "label": "f130.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f130.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f134.ts",
     "label": "f134.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f134.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f136.ts",
     "label": "f136.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f136.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f137.ts",
     "label": "f137.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f137.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f138.ts",
     "label": "f138.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f138.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f139.ts",
     "label": "f139.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f139.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f14.ts",
     "label": "f14.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f14.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f141.ts",
     "label": "f141.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f141.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f143.ts",
     "label": "f143.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f143.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f145.ts",
     "label": "f145.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f145.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f146.ts",
     "label": "f146.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f146.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f148.ts",
     "label": "f148.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f148.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f15.ts",
     "label": "f15.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f15.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f150.ts",
     "label": "f150.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f150.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f155.ts",
     "label": "f155.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f155.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f156.ts",
     "label": "f156.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f156.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f159.ts",
     "label": "f159.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f159.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f16.ts",
     "label": "f16.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f16.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f163.ts",
     "label": "f163.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f163.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f164.ts",
     "label": "f164.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f164.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f165.ts",
     "label": "f165.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f165.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f166.ts",
     "label": "f166.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f166.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f167.ts",
     "label": "f167.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f167.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f168.ts",
     "label": "f168.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f168.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f169.ts",
     "label": "f169.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f169.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f17.ts",
     "label": "f17.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f17.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f170.ts",
     "label": "f170.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f170.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f171.ts",
     "label": "f171.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f171.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f172.ts",
     "label": "f172.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f172.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f173.ts",
     "label": "f173.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f173.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f174.ts",
     "label": "f174.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f174.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f176.ts",
     "label": "f176.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f176.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f177.ts",
     "label": "f177.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f177.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f178.ts",
     "label": "f178.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f178.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f181.ts",
     "label": "f181.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f181.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f184.ts",
     "label": "f184.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f184.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f186.ts",
     "label": "f186.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f186.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f188.ts",
     "label": "f188.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f188.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f189.ts",
     "label": "f189.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f189.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f19.ts",
     "label": "f19.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f19.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f192.ts",
     "label": "f192.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f192.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f195.ts",
     "label": "f195.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f195.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f196.ts",
     "label": "f196.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f196.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f197.ts",
     "label": "f197.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f197.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f20.ts",
     "label": "f20.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f20.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f201.ts",
     "label": "f201.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f201.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f203.ts",
     "label": "f203.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f203.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f205.ts",
     "label": "f205.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f205.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f207.ts",
     "label": "f207.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f207.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f209.ts",
     "label": "f209.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f209.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f210.ts",
     "label": "f210.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f210.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f211.ts",
     "label": "f211.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f211.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f213.ts",
     "label": "f213.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f213.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f215.ts",
     "label": "f215.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f215.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f216.ts",
     "label": "f216.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f216.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f217.ts",
     "label": "f217.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f217.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f218.ts",
     "label": "f218.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f218.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f22.ts",
     "label": "f22.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f22.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f222.ts",
     "label": "f222.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f222.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f223.ts",
     "label": "f223.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f223.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f224.ts",
     "label": "f224.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f224.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f227.ts",
     "label": "f227.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f227.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f228.ts",
     "label": "f228.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f228.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f229.ts",
     "label": "f229.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f229.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f232.ts",
     "label": "f232.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f232.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f233.ts",
     "label": "f233.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f233.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f234.ts",
     "label": "f234.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f234.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f235.ts",
     "label": "f235.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f235.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f238.ts",
     "label": "f238.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f238.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f239.ts",
     "label": "f239.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f239.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f241.ts",
     "label": "f241.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f241.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f244.ts",
     "label": "f244.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f244.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f247.ts",
     "label": "f247.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f247.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f25.ts",
     "label": "f25.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f25.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f252.ts",
     "label": "f252.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f252.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f254.ts",
     "label": "f254.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f254.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f255.ts",
     "label": "f255.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f255.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f256.ts",
     "label": "f256.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f256.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f257.ts",
     "label": "f257.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f257.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f259.ts",
     "label": "f259.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f259.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f261.ts",
     "label": "f261.ts",
     "category": "code",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c3/f261.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f28.ts",
     "label": "f28.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f28.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f29.ts",
     "label": "f29.ts",
     "category": "code",
     "community": 0,
-    "degree": 10
+    "degree": 10,
+    "path": "src/c3/f29.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f3.ts",
     "label": "f3.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f3.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f30.ts",
     "label": "f30.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f30.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f32.ts",
     "label": "f32.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f32.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f33.ts",
     "label": "f33.ts",
     "category": "code",
     "community": 0,
-    "degree": 10
+    "degree": 10,
+    "path": "src/c3/f33.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f34.ts",
     "label": "f34.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f34.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f36.ts",
     "label": "f36.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f36.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f38.ts",
     "label": "f38.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f38.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f39.ts",
     "label": "f39.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f39.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f4.ts",
     "label": "f4.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f4.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f44.ts",
     "label": "f44.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f44.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f45.ts",
     "label": "f45.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f45.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f46.ts",
     "label": "f46.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f46.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f48.ts",
     "label": "f48.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f48.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f50.ts",
     "label": "f50.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f50.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f54.ts",
     "label": "f54.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f54.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f55.ts",
     "label": "f55.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f55.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f57.ts",
     "label": "f57.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f57.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f60.ts",
     "label": "f60.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f60.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f61.ts",
     "label": "f61.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f61.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f62.ts",
     "label": "f62.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f62.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f63.ts",
     "label": "f63.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f63.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f69.ts",
     "label": "f69.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f69.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f7.ts",
     "label": "f7.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f7.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f71.ts",
     "label": "f71.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f71.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f72.ts",
     "label": "f72.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f72.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f73.ts",
     "label": "f73.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f73.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f74.ts",
     "label": "f74.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f74.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f75.ts",
     "label": "f75.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f75.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f76.ts",
     "label": "f76.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c3/f76.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f8.ts",
     "label": "f8.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f8.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f80.ts",
     "label": "f80.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f80.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f82.ts",
     "label": "f82.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f82.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f83.ts",
     "label": "f83.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f83.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f84.ts",
     "label": "f84.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f84.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f85.ts",
     "label": "f85.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f85.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f86.ts",
     "label": "f86.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f86.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f87.ts",
     "label": "f87.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f87.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f88.ts",
     "label": "f88.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c3/f88.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f89.ts",
     "label": "f89.ts",
     "category": "code",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c3/f89.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f9.ts",
     "label": "f9.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f9.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f92.ts",
     "label": "f92.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f92.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f93.ts",
     "label": "f93.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c3/f93.ts",
+    "kind": "function"
    },
    {
     "id": "src/c3/f96.ts",
     "label": "f96.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c3/f96.ts",
+    "kind": "file"
    },
    {
     "id": "src/c3/f98.ts",
     "label": "f98.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c3/f98.ts",
+    "kind": "file"
    },
    {
     "id": "src/c4/f44.ts",
     "label": "f44.ts",
     "category": "code",
     "community": 14,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c4/f44.ts",
+    "kind": "function"
    },
    {
     "id": "src/c4/f81.ts",
     "label": "f81.ts",
     "category": "code",
     "community": 14,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c4/f81.ts",
+    "kind": "function"
    },
    {
     "id": "src/c4/f82.ts",
     "label": "f82.ts",
     "category": "code",
     "community": 14,
-    "degree": 1
+    "degree": 1,
+    "path": "src/c4/f82.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f0.ts",
     "label": "f0.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f0.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f1.ts",
     "label": "f1.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f1.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f10.ts",
     "label": "f10.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f10.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f103.ts",
     "label": "f103.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f103.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f104.ts",
     "label": "f104.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f104.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f105.ts",
     "label": "f105.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f105.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f107.ts",
     "label": "f107.ts",
     "category": "code",
     "community": 1,
-    "degree": 9
+    "degree": 9,
+    "path": "src/c5/f107.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f111.ts",
     "label": "f111.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f111.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f112.ts",
     "label": "f112.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f112.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f113.ts",
     "label": "f113.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f113.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f114.ts",
     "label": "f114.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f114.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f115.ts",
     "label": "f115.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f115.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f116.ts",
     "label": "f116.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f116.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f117.ts",
     "label": "f117.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f117.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f119.ts",
     "label": "f119.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f119.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f12.ts",
     "label": "f12.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f12.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f121.ts",
     "label": "f121.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f121.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f122.ts",
     "label": "f122.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f122.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f123.ts",
     "label": "f123.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f123.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f124.ts",
     "label": "f124.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f124.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f126.ts",
     "label": "f126.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f126.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f127.ts",
     "label": "f127.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f127.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f128.ts",
     "label": "f128.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f128.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f129.ts",
     "label": "f129.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f129.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f13.ts",
     "label": "f13.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f13.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f132.ts",
     "label": "f132.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f132.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f134.ts",
     "label": "f134.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f134.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f135.ts",
     "label": "f135.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f135.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f136.ts",
     "label": "f136.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f136.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f137.ts",
     "label": "f137.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f137.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f139.ts",
     "label": "f139.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f139.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f14.ts",
     "label": "f14.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f14.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f140.ts",
     "label": "f140.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f140.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f141.ts",
     "label": "f141.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f141.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f143.ts",
     "label": "f143.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f143.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f145.ts",
     "label": "f145.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f145.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f146.ts",
     "label": "f146.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f146.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f148.ts",
     "label": "f148.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f148.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f15.ts",
     "label": "f15.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f15.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f150.ts",
     "label": "f150.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f150.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f151.ts",
     "label": "f151.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f151.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f154.ts",
     "label": "f154.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f154.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f155.ts",
     "label": "f155.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f155.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f156.ts",
     "label": "f156.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f156.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f157.ts",
     "label": "f157.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f157.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f159.ts",
     "label": "f159.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f159.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f16.ts",
     "label": "f16.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f16.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f161.ts",
     "label": "f161.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f161.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f162.ts",
     "label": "f162.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f162.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f164.ts",
     "label": "f164.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f164.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f166.ts",
     "label": "f166.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f166.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f167.ts",
     "label": "f167.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f167.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f168.ts",
     "label": "f168.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f168.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f169.ts",
     "label": "f169.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f169.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f17.ts",
     "label": "f17.ts",
     "category": "code",
     "community": 1,
-    "degree": 11
+    "degree": 11,
+    "path": "src/c5/f17.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f170.ts",
     "label": "f170.ts",
     "category": "code",
     "community": 1,
-    "degree": 10
+    "degree": 10,
+    "path": "src/c5/f170.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f173.ts",
     "label": "f173.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f173.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f174.ts",
     "label": "f174.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f174.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f176.ts",
     "label": "f176.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f176.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f178.ts",
     "label": "f178.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f178.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f179.ts",
     "label": "f179.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f179.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f18.ts",
     "label": "f18.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f18.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f180.ts",
     "label": "f180.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f180.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f181.ts",
     "label": "f181.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f181.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f182.ts",
     "label": "f182.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f182.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f184.ts",
     "label": "f184.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f184.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f185.ts",
     "label": "f185.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f185.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f186.ts",
     "label": "f186.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f186.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f189.ts",
     "label": "f189.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f189.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f19.ts",
     "label": "f19.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f19.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f191.ts",
     "label": "f191.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f191.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f194.ts",
     "label": "f194.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f194.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f195.ts",
     "label": "f195.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f195.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f197.ts",
     "label": "f197.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f197.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f199.ts",
     "label": "f199.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f199.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f20.ts",
     "label": "f20.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f20.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f200.ts",
     "label": "f200.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f200.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f201.ts",
     "label": "f201.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f201.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f202.ts",
     "label": "f202.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f202.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f204.ts",
     "label": "f204.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f204.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f205.ts",
     "label": "f205.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f205.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f207.ts",
     "label": "f207.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f207.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f208.ts",
     "label": "f208.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f208.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f21.ts",
     "label": "f21.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f21.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f210.ts",
     "label": "f210.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f210.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f211.ts",
     "label": "f211.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f211.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f213.ts",
     "label": "f213.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f213.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f214.ts",
     "label": "f214.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f214.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f215.ts",
     "label": "f215.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f215.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f217.ts",
     "label": "f217.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f217.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f218.ts",
     "label": "f218.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f218.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f219.ts",
     "label": "f219.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f219.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f220.ts",
     "label": "f220.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f220.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f223.ts",
     "label": "f223.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f223.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f226.ts",
     "label": "f226.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f226.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f227.ts",
     "label": "f227.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f227.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f228.ts",
     "label": "f228.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f228.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f229.ts",
     "label": "f229.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f229.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f23.ts",
     "label": "f23.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f23.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f230.ts",
     "label": "f230.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f230.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f24.ts",
     "label": "f24.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f24.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f25.ts",
     "label": "f25.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f25.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f26.ts",
     "label": "f26.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f26.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f27.ts",
     "label": "f27.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f27.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f28.ts",
     "label": "f28.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f28.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f3.ts",
     "label": "f3.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f3.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f30.ts",
     "label": "f30.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f30.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f32.ts",
     "label": "f32.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f32.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f33.ts",
     "label": "f33.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f33.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f34.ts",
     "label": "f34.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f34.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f35.ts",
     "label": "f35.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f35.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f36.ts",
     "label": "f36.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f36.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f37.ts",
     "label": "f37.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f37.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f38.ts",
     "label": "f38.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f38.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f39.ts",
     "label": "f39.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f39.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f4.ts",
     "label": "f4.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f4.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f40.ts",
     "label": "f40.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f40.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f42.ts",
     "label": "f42.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f42.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f47.ts",
     "label": "f47.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f47.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f48.ts",
     "label": "f48.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f48.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f5.ts",
     "label": "f5.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f5.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f51.ts",
     "label": "f51.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f51.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f53.ts",
     "label": "f53.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f53.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f55.ts",
     "label": "f55.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f55.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f56.ts",
     "label": "f56.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f56.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f57.ts",
     "label": "f57.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f57.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f58.ts",
     "label": "f58.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f58.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f6.ts",
     "label": "f6.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f6.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f66.ts",
     "label": "f66.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f66.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f67.ts",
     "label": "f67.ts",
     "category": "code",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "src/c5/f67.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f68.ts",
     "label": "f68.ts",
     "category": "code",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "src/c5/f68.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f69.ts",
     "label": "f69.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f69.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f7.ts",
     "label": "f7.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f7.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f71.ts",
     "label": "f71.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f71.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f72.ts",
     "label": "f72.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f72.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f73.ts",
     "label": "f73.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f73.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f74.ts",
     "label": "f74.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f74.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f76.ts",
     "label": "f76.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f76.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f78.ts",
     "label": "f78.ts",
     "category": "code",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "src/c5/f78.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f8.ts",
     "label": "f8.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f8.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f81.ts",
     "label": "f81.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f81.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f82.ts",
     "label": "f82.ts",
     "category": "code",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "src/c5/f82.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f86.ts",
     "label": "f86.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f86.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f9.ts",
     "label": "f9.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f9.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f92.ts",
     "label": "f92.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f92.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f93.ts",
     "label": "f93.ts",
     "category": "code",
     "community": 1,
-    "degree": 6
+    "degree": 6,
+    "path": "src/c5/f93.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f95.ts",
     "label": "f95.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f95.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f97.ts",
     "label": "f97.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "src/c5/f97.ts",
+    "kind": "function"
    },
    {
     "id": "src/c5/f98.ts",
     "label": "f98.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f98.ts",
+    "kind": "file"
    },
    {
     "id": "src/c5/f99.ts",
     "label": "f99.ts",
     "category": "code",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "src/c5/f99.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t116.test.ts",
     "label": "t116.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "tests/c3/t116.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t119.test.ts",
     "label": "t119.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t119.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t126.test.ts",
     "label": "t126.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t126.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t185.test.ts",
     "label": "t185.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t185.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t187.test.ts",
     "label": "t187.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t187.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t190.test.ts",
     "label": "t190.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "tests/c3/t190.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t2.test.ts",
     "label": "t2.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "tests/c3/t2.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t225.test.ts",
     "label": "t225.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "tests/c3/t225.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t231.test.ts",
     "label": "t231.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 8
+    "degree": 8,
+    "path": "tests/c3/t231.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t236.test.ts",
     "label": "t236.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t236.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t237.test.ts",
     "label": "t237.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t237.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t242.test.ts",
     "label": "t242.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "tests/c3/t242.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t250.test.ts",
     "label": "t250.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "tests/c3/t250.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t253.test.ts",
     "label": "t253.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "tests/c3/t253.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t260.test.ts",
     "label": "t260.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "tests/c3/t260.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t37.test.ts",
     "label": "t37.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t37.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t42.test.ts",
     "label": "t42.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 7
+    "degree": 7,
+    "path": "tests/c3/t42.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t47.test.ts",
     "label": "t47.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "tests/c3/t47.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t81.test.ts",
     "label": "t81.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t81.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t90.test.ts",
     "label": "t90.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t90.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c3/t95.test.ts",
     "label": "t95.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c3/t95.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c4/t42.test.ts",
     "label": "t42.test.ts",
     "category": "tests",
     "community": 14,
-    "degree": 1
+    "degree": 1,
+    "path": "tests/c4/t42.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c4/t43.test.ts",
     "label": "t43.test.ts",
     "category": "tests",
     "community": 14,
-    "degree": 2
+    "degree": 2,
+    "path": "tests/c4/t43.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t175.test.ts",
     "label": "t175.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c5/t175.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t183.test.ts",
     "label": "t183.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 8
+    "degree": 8,
+    "path": "tests/c5/t183.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t187.test.ts",
     "label": "t187.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 9
+    "degree": 9,
+    "path": "tests/c5/t187.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t209.test.ts",
     "label": "t209.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "tests/c5/t209.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t212.test.ts",
     "label": "t212.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c5/t212.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t49.test.ts",
     "label": "t49.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c5/t49.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t50.test.ts",
     "label": "t50.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 7
+    "degree": 7,
+    "path": "tests/c5/t50.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t59.test.ts",
     "label": "t59.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "path": "tests/c5/t59.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t61.test.ts",
     "label": "t61.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "tests/c5/t61.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t63.test.ts",
     "label": "t63.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 4
+    "degree": 4,
+    "path": "tests/c5/t63.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t75.test.ts",
     "label": "t75.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "tests/c5/t75.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t85.test.ts",
     "label": "t85.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 10
+    "degree": 10,
+    "path": "tests/c5/t85.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t91.test.ts",
     "label": "t91.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "tests/c5/t91.test.ts",
+    "kind": "file"
    },
    {
     "id": "tests/c5/t96.test.ts",
     "label": "t96.test.ts",
     "category": "tests",
     "community": 1,
-    "degree": 5
+    "degree": 5,
+    "path": "tests/c5/t96.test.ts",
+    "kind": "file"
    }
   ],
   "edges": [

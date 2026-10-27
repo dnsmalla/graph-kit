@@ -113,35 +113,45 @@
     "label": "😀pair.ts",
     "category": "code",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "😀pair.ts",
+    "kind": "file"
    },
    {
     "id": "😀smile.ts",
     "label": "😀smile.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "😀smile.ts",
+    "kind": "file"
    },
    {
     "id": "private.ts",
     "label": "private.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "private.ts",
+    "kind": "file"
    },
    {
     "id": "�high.ts",
     "label": "�high.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "�high.ts",
+    "kind": "file"
    },
    {
     "id": "�other.ts",
     "label": "�other.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "�other.ts",
+    "kind": "file"
    }
   ],
   "edges": [

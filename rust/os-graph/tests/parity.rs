@@ -8,7 +8,7 @@
 use graph_kit_os::api::orbit_layout_json;
 use graph_kit_os::{
     build_os_view, build_system_graph, orbit_layout, BuildOptions, CGData, OrbitOptions,
-    OsSnapshot, OsVizInput,
+    OsSnapshot, OsVizInput, SystemGraph,
 };
 use serde_json::Value;
 use std::fs;
@@ -243,5 +243,79 @@ fn write_viz_goldens() {
         text.push('\n');
         fs::write(&file, text).unwrap();
         eprintln!("wrote {}", file.display());
+    }
+}
+
+/// The system graph a golden's `input` builds, as the parity test builds it.
+fn system_graph_of(case: &str, input: &Value) -> SystemGraph {
+    let snapshot: Option<OsSnapshot> = serde_json::from_value(input["snapshot"].clone())
+        .unwrap_or_else(|e| panic!("{case}: snapshot: {e}"));
+    let project: Option<CGData> = serde_json::from_value(input["project"].clone())
+        .unwrap_or_else(|e| panic!("{case}: project: {e}"));
+    let build_opts: BuildOptions = serde_json::from_value(input["buildOptions"].clone())
+        .unwrap_or_else(|e| panic!("{case}: buildOptions: {e}"));
+    build_system_graph(snapshot.as_ref(), project.as_ref(), &build_opts)
+}
+
+/// Re-indents a `serde_json` pretty block (two spaces per level) for a value that sits at
+/// top-level key depth in the goldens (one space per level, the key itself at depth 1).
+fn golden_block(pretty: &str) -> String {
+    pretty
+        .lines()
+        .enumerate()
+        .map(|(i, line)| {
+            if i == 0 {
+                return line.to_owned();
+            }
+            let spaces = line.len() - line.trim_start().len();
+            format!("{}{}", " ".repeat(spaces / 2 + 1), line.trim_start())
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Rewrites only the `systemGraph` value of every top-level golden in `tests/golden/*.json`, from
+/// the golden's own `input` through the current builder. Every other byte of the file (inputs,
+/// orbit, key order, indentation) is kept. Raw orbit cases (`input.rawSystemGraph`) are skipped.
+/// Run it only when the system graph is meant to change, then review the diff:
+///
+/// `rustup run stable cargo test --release --test parity -- --ignored write_system_goldens`
+#[test]
+#[ignore]
+fn write_system_goldens() {
+    for file in golden_files() {
+        let case = file.file_name().unwrap().to_string_lossy().into_owned();
+        let text = fs::read_to_string(&file).unwrap();
+        let golden: Value = serde_json::from_str(&text).unwrap();
+        if !golden["input"]["rawSystemGraph"].is_null() {
+            eprintln!("skipped {case}: raw orbit case");
+            continue;
+        }
+        let key = "\n \"systemGraph\": ";
+        let start = text
+            .find(key)
+            .unwrap_or_else(|| panic!("{case}: no top-level systemGraph key"))
+            + key.len();
+        let end = text[start..]
+            .find("\n \"orbit\": ")
+            .map(|i| start + i)
+            .unwrap_or_else(|| panic!("{case}: systemGraph must be followed by orbit"));
+        assert!(
+            text[start..end].trim_end().ends_with(','),
+            "{case}: unexpected layout around systemGraph"
+        );
+        // The typed graph, not a Value: a Value's keys are sorted, which would reorder every object.
+        let graph = system_graph_of(&case, &golden["input"]);
+        let block = golden_block(&serde_json::to_string_pretty(&graph).unwrap());
+        let out = format!("{}{},{}", &text[..start], block, &text[end..]);
+        // The rewritten file must still parse, and its systemGraph must be what the builder gave.
+        let check: Value = serde_json::from_str(&out).unwrap_or_else(|e| panic!("{case}: {e}"));
+        assert_eq!(
+            check["systemGraph"],
+            serde_json::to_value(&graph).unwrap(),
+            "{case}"
+        );
+        fs::write(&file, out).unwrap();
+        eprintln!("wrote systemGraph of {}", file.display());
     }
 }

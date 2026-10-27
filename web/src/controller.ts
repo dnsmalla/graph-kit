@@ -2,7 +2,7 @@
 // runs in the app's web view, in the demo and in tests. Everything that talks to
 // a server or to native code goes through the OsHost the page was mounted with.
 import type { CGData } from '../../typescript/src/models';
-import { OsAuthError, type OsHost, type OsOpenTarget, type OsRange } from './host';
+import { OsAuthError, type OsFileContent, type OsHost, type OsOpenTarget, type OsRange } from './host';
 import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
 import { HUB_TITLES, isHubKey, levelKey, type CameraPose, type OsView, type ViewLevel } from './viz';
 
@@ -10,6 +10,35 @@ export const REFRESH_DEBOUNCE_MS = 300;
 
 const DEFAULT_OPEN_NOTICE = 'Open this in the app.';
 const DEFAULT_SIGNED_OUT_NOTICE = 'Your session has ended. Sign in again.';
+const NO_OPEN_FILE_NOTICE = 'Opening files in Explorer needs the app.';
+const NO_PREVIEW_MESSAGE = 'Code preview needs the app.';
+
+/** The most text of a file the page keeps for the preview (characters; the host may cut it sooner). */
+export const FILE_PREVIEW_MAX_CHARS = 256 * 1024;
+
+/** The code brain's two views: the 3D brain, or the file structure beside it. */
+export type CodeTab = 'brain' | 'structure';
+
+/** Load state of a file preview. 'idle' = asked for nothing yet; 'missing' = the host has no such file. */
+export type FilePreviewStatus = 'idle' | 'loading' | 'ready' | 'missing' | 'error';
+
+/** A file's content as the preview shows it. A binary file has no text. */
+export type FileContent = {
+  text: string | null;
+  binary: boolean;
+  bytes: number | null;
+  truncated: boolean;
+  language: string | null;
+};
+
+/** The code preview of one file. `path` is the file asked for; `content` is set when status is 'ready'. */
+export type FilePreview = {
+  path: string;
+  status: FilePreviewStatus;
+  content?: FileContent;
+  /** Why the preview failed (status 'error'). */
+  message?: string;
+};
 
 /** Load state of one optional host data set. 'none' = the host cannot supply it (or sent an unusable value). */
 export type ExtraStatus = 'idle' | 'loading' | 'ready' | 'none' | 'error';
@@ -46,6 +75,10 @@ export type ViewState = {
   view: ViewLevel;
   /** Bumped when a side panel asks the brain to fly to the selected node (see openNode). */
   focusSeq: number;
+  /** The code preview (host.loadFile) of the file last asked for. null until a preview is requested. */
+  filePreview: FilePreview | null;
+  /** The code brain's view: the 3D brain (default) or the file structure. */
+  codeTab: CodeTab;
 };
 
 export type ControllerDeps = {
@@ -153,6 +186,29 @@ function sanitizeSnapshot(raw: OsSnapshot): OsSnapshot {
   return { ...raw, activity: { ...activity, items: kept } } as unknown as OsSnapshot;
 }
 
+/**
+ * A host's file content reduced to what the preview shows: a text file's text (cut to
+ * FILE_PREVIEW_MAX_CHARS, with `truncated` set when it was), or a binary file with its size.
+ * Null when the value is not a file object at all.
+ */
+export function sanitizeFile(value: unknown): FileContent | null {
+  if (!isObject(value)) return null;
+  const file = value as Partial<OsFileContent> & Obj;
+  if (typeof file.path !== 'string') return null;
+  const bytes = typeof file.bytes === 'number' && Number.isFinite(file.bytes) && file.bytes >= 0 ? file.bytes : null;
+  const language = typeof file.language === 'string' && file.language.length > 0 ? file.language : null;
+  if (file.binary === true) return { text: null, binary: true, bytes, truncated: false, language };
+  const raw = typeof file.text === 'string' ? file.text : '';
+  const cut = raw.length > FILE_PREVIEW_MAX_CHARS;
+  return {
+    text: cut ? raw.slice(0, FILE_PREVIEW_MAX_CHARS) : raw,
+    binary: false,
+    bytes,
+    truncated: cut || file.truncated === true,
+    language,
+  };
+}
+
 function isSelectionType(value: unknown): value is OsSelection['type'] {
   return value === 'core' || value === 'ring' || value === 'viz';
 }
@@ -185,6 +241,8 @@ export class OsController {
   private graphSeq = 0;
   private skillsSeq = 0;
   private routinesSeq = 0;
+  /** The latest code-preview request; an older response is dropped. */
+  private fileSeq = 0;
   /** The camera each level was left at, by levelKey: returning to a level puts the camera back. */
   private readonly cameras = new Map<string, CameraPose>();
   /** Reads the mounted brain's camera. Navigation uses it when the caller gives no pose. */
@@ -215,6 +273,8 @@ export class OsController {
       selected: null,
       view: { level: 'os' },
       focusSeq: 0,
+      filePreview: null,
+      codeTab: 'brain',
     };
   }
 
@@ -265,6 +325,7 @@ export class OsController {
     if (!projectChanged) return;
     // A new project has its own graph and remembered views: the brain starts again at the OS.
     this.cameras.clear();
+    this.fileSeq++;
     this.set({
       view: { level: 'os' },
       selected: null,
@@ -274,6 +335,7 @@ export class OsController {
       skillsStatus: 'idle',
       routines: null,
       routinesStatus: 'idle',
+      filePreview: null,
     });
     if (this.watching) {
       void this.refresh();
@@ -360,6 +422,20 @@ export class OsController {
     this.set({
       view: { level: 'hub', hub },
       selected: { type: 'viz', id: node.id, label: node.label, detail: node.detail },
+      focusSeq: this.state.focusSeq + 1,
+    });
+  }
+
+  /**
+   * Opens the project's code brain on one of its nodes and selects it as a code (core) node, so the
+   * brain flies to it. Used by the code node's links and by a code cluster's "Explore in code".
+   */
+  openCodeNode(node: { id: string; label: string; detail: string }, camera?: CameraPose | null): void {
+    if (this.disposed) return;
+    this.leaving(camera);
+    this.set({
+      view: { level: 'hub', hub: 'code' },
+      selected: { type: 'core', id: node.id, label: node.label, detail: node.detail },
       focusSeq: this.state.focusSeq + 1,
     });
   }
@@ -457,12 +533,77 @@ export class OsController {
     }
   }
 
+  /** Switches the code brain between the 3D brain and the file structure. */
+  setCodeTab(tab: CodeTab): void {
+    if (this.disposed || tab === this.state.codeTab) return;
+    this.set({ codeTab: tab });
+  }
+
+  /**
+   * Opens a project file in the host's code explorer, at `line` when given. A host without the
+   * method, or one that refuses, gets a notice instead.
+   */
+  openFile(path: string, line?: number): void {
+    if (this.disposed || !isId(path)) return;
+    const host = this.deps.host;
+    const open = host.openFile;
+    if (typeof open !== 'function') {
+      this.set({ notice: NO_OPEN_FILE_NOTICE });
+      return;
+    }
+    let opened: boolean;
+    try {
+      opened = line === undefined ? open.call(host, path) : open.call(host, path, line);
+    } catch (err) {
+      this.set({ notice: `Could not open the file: ${describe(err)}` });
+      return;
+    }
+    if (!opened) this.set({ notice: `Could not open ${path} in the app.` });
+  }
+
+  /**
+   * Loads the code preview of one file (host.loadFile). Only the latest request may set the
+   * preview: an older response that arrives late is dropped, as is any response after dispose().
+   * A missing file (the host answers null) is 'missing'; a host without the method is an 'error'.
+   */
+  async loadFilePreview(path: string): Promise<void> {
+    if (this.disposed || !isId(path)) return;
+    const seq = ++this.fileSeq;
+    const host = this.deps.host;
+    const load = host.loadFile;
+    if (typeof load !== 'function') {
+      this.set({ filePreview: { path, status: 'error', message: NO_PREVIEW_MESSAGE } });
+      return;
+    }
+    this.set({ filePreview: { path, status: 'loading' } });
+    try {
+      const raw: unknown = await load.call(host, path);
+      if (this.disposed || seq !== this.fileSeq) return;
+      if (raw === null) {
+        this.set({ filePreview: { path, status: 'missing' } });
+        return;
+      }
+      const content = sanitizeFile(raw);
+      if (content) this.set({ filePreview: { path, status: 'ready', content } });
+      else this.set({ filePreview: { path, status: 'error', message: 'The host sent a file the page cannot read.' } });
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      if (seq !== this.fileSeq) return;
+      this.set({ filePreview: { path, status: 'error', message: `Could not load the file: ${describe(err)}` } });
+    }
+  }
+
   dispose(): void {
     this.disposed = true;
     this.requestSeq++;
     this.graphSeq++;
     this.skillsSeq++;
     this.routinesSeq++;
+    this.fileSeq++;
     this.stopWatching();
     this.cancelRefresh();
   }

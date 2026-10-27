@@ -36,6 +36,14 @@ pub struct SystemCoreNode {
     pub community: usize,
     /// Weighted degree within the kept graph.
     pub degree: u64,
+    /// The file the node is in: the first non-empty `source_file` / `source_path` / `path` /
+    /// `file` metadata value, or the id of a `file` node. Absent (omitted from the JSON) when
+    /// neither gives one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    /// The node's kind as the code graph has it (`file`, `function`, `class`, ...). Absent when empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -203,6 +211,15 @@ fn node_paths(node: &CGNode) -> Vec<&str> {
         .map(String::as_str)
         .filter(|s| !s.is_empty())
         .collect()
+}
+
+/// The file a node is in: the first non-empty path metadata value, or the id of a `file` node.
+/// None for a node that is in no file (a function with no source_file, a note, ...).
+pub fn node_path(node: &CGNode) -> Option<String> {
+    node_paths(node)
+        .first()
+        .map(|s| (*s).to_owned())
+        .or_else(|| (node.kind == "file" && !node.id.is_empty()).then(|| node.id.clone()))
 }
 
 /// Classify a node into the core category. First match wins:
@@ -504,6 +521,8 @@ pub fn build_system_graph(
                 category: categorize(node),
                 community: community[i],
                 degree: degree[i],
+                path: node_path(node),
+                kind: (!node.kind.is_empty()).then(|| node.kind.clone()),
             }
         })
         .collect();
@@ -680,6 +699,69 @@ mod tests {
             categorize(&node_meta("src/a.ts", "file", &[("file", "src/a.ts")])),
             CoreCategory::Code
         );
+    }
+
+    fn core_of(nodes: Vec<CGNode>) -> Vec<SystemCoreNode> {
+        build_system_graph(None, Some(&graph(nodes, vec![])), &defaults()).core
+    }
+
+    #[test]
+    fn node_path_takes_the_first_non_empty_metadata_key_in_order() {
+        // source_file beats source_path beats path beats file; an empty value is skipped.
+        let n = node_meta(
+            "x:1",
+            "function",
+            &[
+                ("file", "f.ts"),
+                ("path", "p.ts"),
+                ("source_path", "sp.ts"),
+                ("source_file", ""),
+            ],
+        );
+        assert_eq!(node_path(&n).as_deref(), Some("sp.ts"));
+        let n = node_meta(
+            "x:2",
+            "function",
+            &[("source_file", "a/b.ts"), ("path", "p.ts")],
+        );
+        assert_eq!(node_path(&n).as_deref(), Some("a/b.ts"));
+    }
+
+    #[test]
+    fn node_path_falls_back_to_the_id_only_for_file_nodes() {
+        assert_eq!(
+            node_path(&node("src/a.ts", "file")).as_deref(),
+            Some("src/a.ts")
+        );
+        // A function with no path metadata is in no file: its id is not a path.
+        assert_eq!(node_path(&node("src/a.ts::fn", "function")), None);
+        assert_eq!(node_path(&node_meta("n:1", "noteTask", &[])), None);
+    }
+
+    #[test]
+    fn core_nodes_carry_path_and_kind_and_omit_them_when_absent() {
+        let core = core_of(vec![
+            node_meta("src/a.ts::fn", "function", &[("source_file", "src/a.ts")]),
+            node("src/b.ts", "file"),
+            node("n:9", ""),
+        ]);
+        let by = |id: &str| core.iter().find(|c| c.id == id).unwrap().clone();
+        assert_eq!(by("src/a.ts::fn").path.as_deref(), Some("src/a.ts"));
+        assert_eq!(by("src/a.ts::fn").kind.as_deref(), Some("function"));
+        assert_eq!(by("src/b.ts").path.as_deref(), Some("src/b.ts"));
+        assert_eq!(by("src/b.ts").kind.as_deref(), Some("file"));
+        assert_eq!(by("n:9").path, None);
+        assert_eq!(by("n:9").kind, None);
+
+        // Absent fields are left out of the JSON, so the wire shape of old nodes is unchanged.
+        let json = serde_json::to_value(by("n:9")).unwrap();
+        assert!(
+            json.get("path").is_none() && json.get("kind").is_none(),
+            "{json}"
+        );
+        let json = serde_json::to_value(by("src/b.ts")).unwrap();
+        assert_eq!(json["path"], "src/b.ts");
+        assert_eq!(json["kind"], "file");
     }
 
     #[test]

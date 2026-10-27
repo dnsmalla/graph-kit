@@ -93,7 +93,9 @@
     "label": "only.ts",
     "category": "code",
     "community": 0,
-    "degree": 0
+    "degree": 0,
+    "path": "only.ts",
+    "kind": "file"
    }
   ],
   "edges": [],

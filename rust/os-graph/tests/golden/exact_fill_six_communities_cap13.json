@@ -249,91 +249,117 @@
     "label": "0.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "k0/0.ts",
+    "kind": "file"
    },
    {
     "id": "k0/1.ts",
     "label": "1.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "k0/1.ts",
+    "kind": "file"
    },
    {
     "id": "k0/2.ts",
     "label": "2.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "k0/2.ts",
+    "kind": "file"
    },
    {
     "id": "k0/3.ts",
     "label": "3.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "k0/3.ts",
+    "kind": "file"
    },
    {
     "id": "k0/4.ts",
     "label": "4.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "k0/4.ts",
+    "kind": "file"
    },
    {
     "id": "k1/0.ts",
     "label": "0.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "k1/0.ts",
+    "kind": "file"
    },
    {
     "id": "k1/1.ts",
     "label": "1.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "k1/1.ts",
+    "kind": "file"
    },
    {
     "id": "k1/2.ts",
     "label": "2.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "k1/2.ts",
+    "kind": "file"
    },
    {
     "id": "k1/3.ts",
     "label": "3.ts",
     "category": "code",
     "community": 1,
-    "degree": 3
+    "degree": 3,
+    "path": "k1/3.ts",
+    "kind": "file"
    },
    {
     "id": "k2/0.ts",
     "label": "0.ts",
     "category": "code",
     "community": 2,
-    "degree": 2
+    "degree": 2,
+    "path": "k2/0.ts",
+    "kind": "file"
    },
    {
     "id": "k2/1.ts",
     "label": "1.ts",
     "category": "code",
     "community": 2,
-    "degree": 2
+    "degree": 2,
+    "path": "k2/1.ts",
+    "kind": "file"
    },
    {
     "id": "k2/2.ts",
     "label": "2.ts",
     "category": "code",
     "community": 2,
-    "degree": 2
+    "degree": 2,
+    "path": "k2/2.ts",
+    "kind": "file"
    },
    {
     "id": "k5/0.ts",
     "label": "0.ts",
     "category": "code",
     "community": 5,
-    "degree": 0
+    "degree": 0,
+    "path": "k5/0.ts",
+    "kind": "file"
    }
   ],
   "edges": [

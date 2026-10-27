@@ -1,5 +1,5 @@
 export { OsAuthError } from './host';
-export type { OsHost, OsOpenTarget, OsRange } from './host';
+export type { OsFileContent, OsHost, OsOpenTarget, OsRange } from './host';
 export { OsController, REFRESH_DEBOUNCE_MS } from './controller';
 export type { ConfigureInput, ControllerDeps, ControllerInit, ExtraStatus, OsSelection, ViewState } from './controller';
 export { computeCore, computeRing, computeOsView, computeVizLayout, drawOs, drawViews, vizForLevel, SYSTEM_VIEW_LIMITS, whenOsGraphReady, osGraphReady, osGraphStatus } from './systemGraph';

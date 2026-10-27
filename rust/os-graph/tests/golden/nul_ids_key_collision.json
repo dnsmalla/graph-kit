@@ -67,35 +67,45 @@
     "label": "a",
     "category": "code",
     "community": 1,
-    "degree": 0
+    "degree": 0,
+    "path": "a",
+    "kind": "file"
    },
    {
     "id": "a\u0000b",
     "label": "a\u0000b",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "a\u0000b",
+    "kind": "file"
    },
    {
     "id": "b\u0000c",
     "label": "b\u0000c",
     "category": "code",
     "community": 2,
-    "degree": 0
+    "degree": 0,
+    "path": "b\u0000c",
+    "kind": "file"
    },
    {
     "id": "c",
     "label": "c",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "c",
+    "kind": "file"
    },
    {
     "id": "d",
     "label": "d",
     "category": "code",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "d",
+    "kind": "file"
    }
   ],
   "edges": [

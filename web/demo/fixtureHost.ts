@@ -1,10 +1,12 @@
 import type { CGData } from '../../typescript/src/models';
 import type { OsHost } from '../src/host';
 import type { OsSnapshot } from '../src/types';
-import { buildDemoProjectGraph, demoRoutines, demoSkills, fixtureSnapshot } from './fixture';
+import { buildDemoProjectGraph, demoFilePaths, demoFileText, demoRoutines, demoSkills, fixtureSnapshot } from './fixture';
 
 // The demo graph is built once: it is large and the host returns the same object each time.
 let projectGraph: CGData | null = null;
+// The paths the demo project has (for the code preview: a path not in it is missing).
+let filePaths: Set<string> | null = null;
 // Live-refresh simulation: each bump adds billable tokens to the first model, so the next state load
 // differs the way a running chat's numbers do (the OS view rebuilds; its layout must not move).
 let liveTicks = 0;
@@ -41,6 +43,18 @@ export function createFixtureHost(): OsHost {
     open: (target) => {
       console.info('[fixture] open', target);
       return true;
+    },
+    openFile: (path, line) => {
+      console.info('[fixture] openFile', path, line ?? '');
+      return true;
+    },
+    loadFile: async (path) => {
+      projectGraph ??= buildDemoProjectGraph();
+      filePaths ??= demoFilePaths(projectGraph);
+      if (!filePaths.has(path)) return null;
+      if (/\.png$/i.test(path)) return { path, binary: true, bytes: 18432, language: null };
+      const { text, language } = demoFileText(path);
+      return { path, text, truncated: false, bytes: new TextEncoder().encode(text).length, language };
     },
   };
 }

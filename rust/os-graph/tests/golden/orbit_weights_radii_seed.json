@@ -323,105 +323,135 @@
     "label": "a1.ts",
     "category": "code",
     "community": 0,
-    "degree": 10
+    "degree": 10,
+    "path": "grp/a/a1.ts",
+    "kind": "file"
    },
    {
     "id": "grp/a/a2.ts",
     "label": "a2.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "grp/a/a2.ts",
+    "kind": "file"
    },
    {
     "id": "grp/a/a3.ts",
     "label": "a3.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "grp/a/a3.ts",
+    "kind": "file"
    },
    {
     "id": "grp/a/a4.ts",
     "label": "a4.ts",
     "category": "code",
     "community": 0,
-    "degree": 10
+    "degree": 10,
+    "path": "grp/a/a4.ts",
+    "kind": "file"
    },
    {
     "id": "grp/a/a5.ts",
     "label": "a5.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "grp/a/a5.ts",
+    "kind": "file"
    },
    {
     "id": "grp/a/a6.ts",
     "label": "a6.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "grp/a/a6.ts",
+    "kind": "file"
    },
    {
     "id": "grp/b/b1.ts",
     "label": "b1.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "grp/b/b1.ts",
+    "kind": "file"
    },
    {
     "id": "grp/b/b2.ts",
     "label": "b2.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "grp/b/b2.ts",
+    "kind": "file"
    },
    {
     "id": "grp/b/b3.ts",
     "label": "b3.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "grp/b/b3.ts",
+    "kind": "file"
    },
    {
     "id": "grp/b/b4.ts",
     "label": "b4.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "grp/b/b4.ts",
+    "kind": "file"
    },
    {
     "id": "grp/b/b5.ts",
     "label": "b5.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "grp/b/b5.ts",
+    "kind": "file"
    },
    {
     "id": "grp/c/c1.ts",
     "label": "c1.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "grp/c/c1.ts",
+    "kind": "file"
    },
    {
     "id": "grp/c/c2.ts",
     "label": "c2.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "grp/c/c2.ts",
+    "kind": "file"
    },
    {
     "id": "grp/c/c3.ts",
     "label": "c3.ts",
     "category": "code",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "path": "grp/c/c3.ts",
+    "kind": "file"
    },
    {
     "id": "grp/c/c4.ts",
     "label": "c4.ts",
     "category": "code",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "path": "grp/c/c4.ts",
+    "kind": "file"
    }
   ],
   "edges": [

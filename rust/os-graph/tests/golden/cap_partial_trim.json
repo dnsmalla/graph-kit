@@ -79,14 +79,18 @@
     "label": "a",
     "category": "code",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "a",
+    "kind": "file"
    },
    {
     "id": "hub",
     "label": "hub",
     "category": "code",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "hub",
+    "kind": "file"
    }
   ],
   "edges": [

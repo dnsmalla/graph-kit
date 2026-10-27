@@ -137,42 +137,54 @@
     "label": "c1",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "c1",
+    "kind": "file"
    },
    {
     "id": "c2",
     "label": "c2",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "c2",
+    "kind": "file"
    },
    {
     "id": "c3",
     "label": "c3",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "c3",
+    "kind": "file"
    },
    {
     "id": "c4",
     "label": "c4",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "c4",
+    "kind": "file"
    },
    {
     "id": "c5",
     "label": "c5",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "c5",
+    "kind": "file"
    },
    {
     "id": "lone",
     "label": "lone",
     "category": "code",
     "community": 2,
-    "degree": 0
+    "degree": 0,
+    "path": "lone",
+    "kind": "file"
    }
   ],
   "edges": [

@@ -370,126 +370,155 @@
     "label": "Helper.ts",
     "category": "tests",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "Tests/Helper.ts",
+    "kind": "file"
    },
    {
     "id": "api/handler.ts",
     "label": "handler.ts",
     "category": "code",
     "community": 3,
-    "degree": 0
+    "degree": 0,
+    "path": "api/handler.ts",
+    "kind": "endpoint"
    },
    {
     "id": "cfg/app.yaml",
     "label": "app.yaml",
     "category": "code",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "src/app.yaml",
+    "kind": "config"
    },
    {
     "id": "claim:1",
     "label": "claim:1",
     "category": "knowledge",
     "community": 0,
-    "degree": 2
+    "degree": 2,
+    "kind": "claim"
    },
    {
     "id": "docs/guide.md",
     "label": "guide.md",
     "category": "docs",
     "community": 0,
-    "degree": 3
+    "degree": 3,
+    "kind": "docPage"
    },
    {
     "id": "docs/readme.txt",
     "label": "readme.txt",
     "category": "docs",
     "community": 1,
-    "degree": 1
+    "degree": 1,
+    "path": "docs/readme.txt",
+    "kind": "file"
    },
    {
     "id": "docs/spec/arch.md",
     "label": "arch.md",
     "category": "docs",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "docs/spec/arch.md",
+    "kind": "file"
    },
    {
     "id": "lib/__tests__/a.ts",
     "label": "a.ts",
     "category": "tests",
     "community": 2,
-    "degree": 1
+    "degree": 1,
+    "kind": "function"
    },
    {
     "id": "misc",
     "label": "misc",
     "category": "other",
     "community": 1,
-    "degree": 2
+    "degree": 2,
+    "kind": "other"
    },
    {
     "id": "notes/n1",
     "label": "unit-test plan",
     "category": "knowledge",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "kind": "noteDecision"
    },
    {
     "id": "skills/s",
     "label": "s",
     "category": "other",
     "community": 1,
-    "degree": 1
+    "degree": 1,
+    "kind": "skill"
    },
    {
     "id": "src/app/latest.ts",
     "label": "latest.ts",
     "category": "code",
     "community": 2,
-    "degree": 3
+    "degree": 3,
+    "path": "src/app/latest.ts",
+    "kind": "file"
    },
    {
     "id": "src/core/engine.ts",
     "label": "engine.ts",
     "category": "code",
     "community": 0,
-    "degree": 6
+    "degree": 6,
+    "path": "src/core/engine.ts",
+    "kind": "function"
    },
    {
     "id": "src/core/util.ts",
     "label": "util.ts",
     "category": "code",
     "community": 0,
-    "degree": 5
+    "degree": 5,
+    "path": "src/core/util.ts",
+    "kind": "file"
    },
    {
     "id": "src/plan.ts",
     "label": "unit-test plan",
     "category": "code",
     "community": 2,
-    "degree": 2
+    "degree": 2,
+    "kind": "function"
    },
    {
     "id": "src/ui/view.ts",
     "label": "view.ts",
     "category": "code",
     "community": 0,
-    "degree": 4
+    "degree": 4,
+    "path": "src/ui/view.ts",
+    "kind": "symbol"
    },
    {
     "id": "src/x.spec.ts",
     "label": "x.spec.ts",
     "category": "tests",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "tests/x.ts",
+    "kind": "file"
    },
    {
     "id": "tests/engine.test.ts",
     "label": "engine.test.ts",
     "category": "tests",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "tests/engine.test.ts",
+    "kind": "file"
    }
   ],
   "edges": [

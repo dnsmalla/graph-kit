@@ -542,6 +542,8 @@ mod tests {
             category: CoreCategory::Code,
             community,
             degree: 0,
+            path: None,
+            kind: None,
         }
     }
 

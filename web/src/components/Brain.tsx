@@ -11,6 +11,8 @@ import { DRILL_GUARD_MS, HUB_TITLES, isHubKey, swallowsPick, type DrillGuard, ty
 import { Recent, RECENT_LIMIT } from './Recent';
 import { NodeSearch } from './NodeSearch';
 import { Selection } from './Selection';
+import { CodeStructure } from './CodeStructure';
+import type { CodeTab } from '../controller';
 
 const LEGEND: Array<{ key: 'code' | 'docs' | 'tests' | 'knowledge' | 'other'; label: string }> = [
   { key: 'code', label: 'Code' },
@@ -76,6 +78,9 @@ export function Brain({
   const view = state.view;
   const inCode = view.level === 'hub' && view.hub === 'code';
   const { graph } = core;
+  // The code brain's two views: the 3D brain, or the file structure beside it (the brain stays mounted).
+  const codeTab: CodeTab = inCode ? state.codeTab : 'brain';
+  const structure = codeTab === 'structure';
   const status = state.projectGraphStatus;
   // The code brain draws the project's core; the OS levels draw the OS graph or one part of it.
   const drawing = inCode ? !drawFailed && !coreLoading : !osFailed && viz !== null;
@@ -140,8 +145,16 @@ export function Brain({
   useEffect(() => {
     if (focused.current === state.focusSeq) return;
     focused.current = state.focusSeq;
-    if (state.selected) brainRef.current?.focusNode(state.selected.id);
-  }, [state.focusSeq, state.selected]);
+    if (state.selected && codeTab === 'brain') brainRef.current?.focusNode(state.selected.id);
+  }, [state.focusSeq, state.selected, codeTab]);
+
+  // Back from the structure to the 3D brain: the selected node is flown to (the structure only selects).
+  const shownTab = useRef(codeTab);
+  useEffect(() => {
+    const previous = shownTab.current;
+    shownTab.current = codeTab;
+    if (previous === 'structure' && codeTab === 'brain' && state.selected) brainRef.current?.focusNode(state.selected.id);
+  }, [codeTab, state.selected]);
 
   const drill = (hub: HubKey) => {
     drillGuard.current = { id: `hub:${hub}`, until: Date.now() + DRILL_GUARD_MS };
@@ -262,8 +275,24 @@ export function Brain({
         onChoose={onSearchChoose}
       />
 
+      {inCode ? (
+        <div className="seg os-codeview" role="group" aria-label="Code view">
+          {(['brain', 'structure'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              aria-pressed={codeTab === tab}
+              className={codeTab === tab ? 'seg-btn seg-on' : 'seg-btn'}
+              onClick={() => controller.setCodeTab(tab)}
+            >
+              {tab === 'brain' ? '3D' : 'Structure'}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="os-brain">
-        <div className="os-brain-stage">
+        <div className="os-brain-stage" hidden={structure}>
           <OrbitPanel
             ref={brainRef}
             core={inCode && drawing ? core : null}
@@ -293,6 +322,18 @@ export function Brain({
             }}
           />
         </div>
+        {inCode && structure ? (
+          <div className={state.selected ? 'os-tree-host os-tree-host-drawer' : 'os-tree-host'}>
+            {status === 'ready' || graph.core.length > 0 ? (
+              <CodeStructure nodes={graph.core} selectedId={state.selected?.id ?? null} onSelect={(node) => {
+                triggerRef.current = null;
+                controller.select({ type: 'core', id: node.id, label: node.label ?? node.id, detail: node.category });
+              }} />
+            ) : (
+              <p className="meta os-tree-empty">{status === 'error' ? 'Could not load the project graph.' : 'Loading the project graph…'}</p>
+            )}
+          </div>
+        ) : null}
         {/* The code brain says what it waits for over the stage. The OS draws at once; its
             project-graph notices sit above the stage instead, so the graph stays visible. */}
         {inCode && (status === 'loading' || status === 'idle' || coreLoading) ? (
@@ -322,9 +363,20 @@ export function Brain({
             viz={vizGraph}
             running={running}
             stopping={state.stopping}
+            core={graph.core}
+            project={state.projectGraph}
+            preview={state.filePreview}
             onDrill={drill}
             onOpen={(target) => controller.open(target)}
             onStop={(cancel, key) => void controller.stopItem(cancel, key)}
+            onPreview={(path) => void controller.loadFilePreview(path)}
+            onOpenFile={(path) => controller.openFile(path)}
+            onFocusCore={(item) => controller.openCodeNode(item)}
+            onExploreCluster={(top) => {
+              triggerRef.current = null;
+              if (top) controller.openCodeNode({ id: top.id, label: top.label ?? top.id, detail: top.category });
+              else drill('code');
+            }}
             onClose={() => {
               const trigger = triggerRef.current;
               triggerRef.current = null;

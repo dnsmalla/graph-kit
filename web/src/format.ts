@@ -110,3 +110,11 @@ export function metaRows(meta: Record<string, unknown>, now: number = Date.now()
     return { key: label, value: scalar(key, value, now) };
   });
 }
+
+/** A size in bytes as words: "512 B", "12.5 KiB", "3.2 MiB". */
+export function fmtBytes(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value) || value < 0) return '—';
+  if (value < 1024) return `${fmtInt(value)} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MiB`;
+}

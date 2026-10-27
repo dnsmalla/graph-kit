@@ -147,14 +147,18 @@
     "label": "a.ts",
     "category": "code",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "a.ts",
+    "kind": "file"
    },
    {
     "id": "b.ts",
     "label": "b.ts",
     "category": "code",
     "community": 0,
-    "degree": 1
+    "degree": 1,
+    "path": "b.ts",
+    "kind": "file"
    }
   ],
   "edges": [

@@ -299,24 +299,31 @@ function demoRng(seed: number): () => number {
   };
 }
 
+/** The part of the project each demo cluster stands for: its folder under src/, docs/ and tests/. */
+const DEMO_AREAS = ['core', 'server', 'routes', 'kb', 'agents', 'providers', 'connectors', 'ui'] as const;
+
 /** One node per index; the kind/path mix cycles so every category is produced. */
 function demoNode(i: number, cluster: number): CGNode {
   const mod = i % 10;
   const id = `c${cluster}-${i}`;
+  const area = DEMO_AREAS[cluster % DEMO_AREAS.length];
   if (mod < 6) {
-    return { id, title: `fn${i}`, kind: 'function' as CGNodeKind, metadata: { source_file: `src/module${cluster}/file${i % 40}.ts` } };
+    return { id, title: `fn${i}`, kind: 'function' as CGNodeKind, metadata: { source_file: `src/${area}/module-${i % 40}.ts` } };
   }
   if (mod === 6) {
-    return { id, title: `doc${i}`, kind: 'docPage' as CGNodeKind, metadata: { source_file: `docs/area${cluster}/page${i}.md` } };
+    return { id, title: `doc${i}`, kind: 'docPage' as CGNodeKind, metadata: { source_file: `docs/${area}/page-${i % 60}.md` } };
   }
   if (mod === 7) {
-    return { id, title: `spec${i}`, kind: 'symbol' as CGNodeKind, metadata: { source_file: `tests/module${cluster}/case${i}.test.ts` } };
+    return { id, title: `spec${i}`, kind: 'symbol' as CGNodeKind, metadata: { source_file: `tests/${area}/case-${i % 50}.test.ts` } };
   }
   if (mod === 8) {
-    return { id, title: `decision${i}`, kind: 'noteDecision' as CGNodeKind, metadata: {} };
+    return { id, title: `decision${i}`, kind: 'noteDecision' as CGNodeKind, metadata: { source_file: `docs/decisions/adr-${i % 25}.md` } };
   }
   return { id, title: `skill${i}`, kind: 'skill' as CGNodeKind, metadata: {} };
 }
+
+/** The one binary file in the demo project: a file node whose id is its path (the `file` kind rule). */
+export const DEMO_BINARY_PATH = 'docs/assets/overview.png';
 
 /** A ~2500-node project graph in 8 clusters, mostly intra-cluster edges, every category present. */
 export function buildDemoProjectGraph(): CGData {
@@ -342,7 +349,39 @@ export function buildDemoProjectGraph(): CGData {
       edges.push({ fromId: nodes[i]!.id, toId: nodes[j]!.id, kind: 'imports', confidence: 'EXTRACTED' });
     }
   }
+  nodes.push({ id: DEMO_BINARY_PATH, title: 'overview.png', kind: 'file' as CGNodeKind, metadata: {} });
   return { nodes, edges, layers: [], tour: [] };
+}
+
+/** The file paths the demo project has: each node's source_file, or the id of a file node. */
+export function demoFilePaths(graph: CGData): Set<string> {
+  const paths = new Set<string>();
+  for (const node of graph.nodes) {
+    const path = node.metadata.source_file || (node.kind === 'file' ? node.id : '');
+    if (path) paths.add(path);
+  }
+  return paths;
+}
+
+/** A demo file's text, generated from its path (deterministic; nothing here is a real file). */
+export function demoFileText(path: string): { text: string; language: string } {
+  const rand = demoRng(path.split('').reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7));
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  if (/\.md$/i.test(path)) {
+    const lines = [`# ${name.replace(/\.md$/i, '')}`, '', 'Generated for the demo. Not a real document.', ''];
+    const sections = 3 + Math.floor(rand() * 4);
+    for (let s = 0; s < sections; s++) {
+      lines.push(`## Section ${s + 1}`, '', `Notes on ${path.split('/')[1] ?? 'the project'}, section ${s + 1}.`, '');
+    }
+    return { text: lines.join('\n'), language: 'Markdown' };
+  }
+  const lines = [`// ${path}`, '// Generated for the demo. Not a real file.', ''];
+  const functions = 4 + Math.floor(rand() * 10);
+  for (let f = 0; f < functions; f++) {
+    const ident = `${name.replace(/\W/g, '_').replace(/_ts$/, '')}${f + 1}`;
+    lines.push(`export function ${ident}(input: string): string {`, `  return input.trim().slice(0, ${10 + f * 4});`, '}', '');
+  }
+  return { text: lines.join('\n'), language: 'TypeScript' };
 }
 
 export const demoSkills: OsSkill[] = [

@@ -224,6 +224,10 @@ export interface SystemCoreNode {
   community: number;
   /** Weighted degree within the kept graph. */
   degree: number;
+  /** The file the node is in (absent when it is in no file). Mirrors rust/os-graph SystemCoreNode.path. */
+  path?: string;
+  /** The node's kind as the code graph has it (`file`, `function`, ...). Absent when empty. */
+  kind?: string;
 }
 
 export interface SystemCoreEdge {

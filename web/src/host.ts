@@ -16,6 +16,19 @@ export class OsAuthError extends Error {
   }
 }
 
+/**
+ * A project file as the host reads it, for the code preview. Text files carry `text` (the host
+ * may cut it: `truncated`); binary files carry `binary` and no text. `bytes` is the file's size.
+ */
+export interface OsFileContent {
+  path: string;
+  text?: string;
+  truncated?: boolean;
+  bytes?: number;
+  language?: string | null;
+  binary?: boolean;
+}
+
 export interface OsHost {
   /** The aggregate for one time window. Reject with OsAuthError when the session is refused. */
   loadState(range: OsRange): Promise<OsSnapshot>;
@@ -35,6 +48,16 @@ export interface OsHost {
    * A rejection only marks the graph as failed; the rest of the page still loads.
    */
   loadProjectGraph?(): Promise<unknown | null>;
+  /**
+   * Opens a project file in the host's code explorer, at `line` when given. Optional. false = the
+   * host could not open it; the page then says so. The page never calls it for a file it has not shown.
+   */
+  openFile?(path: string, line?: number): boolean;
+  /**
+   * The content of a project file for the code preview. Optional. Resolve null when the file is not
+   * there (the page shows it as missing). A rejection marks the preview as failed; OsAuthError signs out.
+   */
+  loadFile?(path: string): Promise<OsFileContent | null>;
   /** Skills for the Skills panel. Optional. Called on the same occasions as loadProjectGraph. */
   loadSkills?(): Promise<OsSkill[]>;
   /** Scheduled routines for the Routines panel. Optional. Called on the same occasions as loadProjectGraph. */

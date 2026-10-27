@@ -213,13 +213,23 @@ h1 {
   color: var(--os-muted);
 }
 
-/* Selection sits over the brain, bottom-left, so the view stays visible behind it. */
+/* The drawer starts below the 3D toolbar (its buttons sit at the top right of the stage). */
+.os {
+  --os-drawer-top: 52px;
+}
+
+/* Selection is a drawer on the right of the brain (it does not cover the node it describes, which
+   the view keeps at the middle-left). It scrolls on its own and collapses to a tab. */
 .os-selection {
   position: absolute;
-  left: var(--tok-space-md);
+  top: var(--os-drawer-top);
+  right: var(--tok-space-md);
   bottom: var(--tok-space-md);
   z-index: 2;
-  width: min(300px, calc(100% - 2 * var(--tok-space-md)));
+  width: min(340px, calc(100% - 2 * var(--tok-space-md)));
+  max-height: calc(100% - var(--os-drawer-top) - var(--tok-space-md));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: var(--tok-space-sm);
@@ -239,6 +249,306 @@ h1 {
 
 .os-selection-head .btn {
   padding: 2px var(--tok-space-sm);
+}
+
+.os-selection-buttons {
+  display: flex;
+  gap: var(--tok-space-xs);
+}
+
+.os-drawer-tab {
+  position: absolute;
+  top: var(--os-drawer-top);
+  right: var(--tok-space-md);
+  z-index: 2;
+  padding: 4px var(--tok-space-sm);
+  font: inherit;
+  font-size: var(--tok-type-caption-size);
+  background: var(--tok-color-surface2);
+  color: var(--tok-color-text);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-md);
+  cursor: pointer;
+}
+
+/* ---- code node details (K6b): path, links, preview; the file structure tab ---- */
+
+.os-path {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.os-path-row {
+  display: flex;
+  align-items: center;
+  gap: var(--tok-space-xs);
+  min-width: 0;
+}
+
+.os-path-text {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  background: var(--tok-color-body);
+  border-radius: 4px;
+}
+
+.os-path-copy {
+  flex: none;
+  padding: 2px var(--tok-space-sm);
+}
+
+.os-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.os-links-title {
+  margin: 0;
+  font-size: var(--tok-type-caption-size);
+  font-weight: 600;
+}
+
+.os-link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.os-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.os-link:hover,
+.os-link:focus-visible {
+  background: color-mix(in srgb, var(--tok-color-accent) 14%, transparent);
+}
+
+.os-link-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.os-top-files {
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.os-code {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.os-code-head,
+.os-code-note {
+  margin: 0;
+}
+
+.os-code-scroll {
+  max-height: 260px;
+  overflow: auto;
+  background: var(--tok-color-body);
+  border: 1px solid var(--tok-color-border);
+  border-radius: 4px;
+}
+
+.os-code-lines {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.os-code-lines li {
+  display: grid;
+  grid-template-columns: 3.5em minmax(0, 1fr);
+}
+
+.os-code-no {
+  padding-right: 8px;
+  text-align: right;
+  color: var(--os-muted);
+  user-select: none;
+}
+
+.os-code-text {
+  white-space: pre;
+}
+
+.os-codeview {
+  align-self: flex-start;
+}
+
+.os-tree-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--tok-color-surface);
+}
+
+/* While a drawer is open the tree leaves room for it, so its counts stay visible. */
+.os-tree-host-drawer .os-tree-panel {
+  right: calc(340px + 2 * var(--tok-space-md));
+}
+
+.os-tree-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-sm);
+  padding: var(--tok-space-md);
+  min-height: 0;
+}
+
+.os-tree-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tok-space-sm);
+}
+
+.os-tree-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--tok-space-xs);
+}
+
+.os-tree-filter input {
+  min-width: 180px;
+  padding: 4px var(--tok-space-sm);
+  font: inherit;
+  color: inherit;
+  background: var(--tok-color-body);
+  border: 1px solid var(--tok-color-border);
+  border-radius: 4px;
+}
+
+.os-tree-root {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.os-tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.os-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: var(--tok-type-caption-size);
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.os-tree-row:hover {
+  background: color-mix(in srgb, var(--tok-color-accent) 12%, transparent);
+}
+
+.os-tree-row:focus-visible {
+  outline: 2px solid var(--tok-color-accent);
+  outline-offset: -2px;
+}
+
+.os-tree-selected {
+  background: color-mix(in srgb, var(--tok-color-accent) 28%, transparent);
+  font-weight: 600;
+}
+
+.os-tree-chevron {
+  flex: none;
+  width: 10px;
+  color: var(--os-muted);
+}
+
+.os-tree-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.os-tree-folder .os-tree-name {
+  font-weight: 600;
+}
+
+.os-tree-count {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.os-tree-dots {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+}
+
+.os-tree-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--os-muted);
+}
+
+.os-tree-dot .os-swatch {
+  width: 8px;
+  height: 8px;
+}
+
+.os-tree-more {
+  color: var(--os-muted);
+  font-style: italic;
+}
+
+.os-tree-empty {
+  margin: 0;
+  padding: var(--tok-space-md) 0;
 }
 
 .os-selection-title {
@@ -780,11 +1090,23 @@ select:focus-visible {
     height: 420px;
   }
 
+  .os-tree-host-drawer .os-tree-panel {
+    right: 0;
+  }
+
   .os-selection {
+    top: auto;
     left: var(--tok-space-sm);
     right: var(--tok-space-sm);
     bottom: var(--tok-space-sm);
     width: auto;
+    max-height: 60%;
+  }
+
+  .os-drawer-tab {
+    top: auto;
+    bottom: var(--tok-space-sm);
+    right: var(--tok-space-sm);
   }
 }
 
