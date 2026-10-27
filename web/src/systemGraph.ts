@@ -182,9 +182,15 @@ let osMemo: OsMemo | null = null;
  * every object, so identity would never hit; the content of these four parts decides whether
  * the view can change at all (activity and the ring do not feed it).
  */
+const snapshotKeys = new WeakMap<OsSnapshot, string>();
+
 function osSnapshotKey(snapshot: OsSnapshot | null): string {
   if (!snapshot) return 'none';
-  return JSON.stringify([snapshot.system, snapshot.running, snapshot.tokens, snapshot.knowledge]);
+  const hit = snapshotKeys.get(snapshot);
+  if (hit !== undefined) return hit;
+  const key = JSON.stringify([snapshot.system, snapshot.running, snapshot.tokens, snapshot.knowledge]);
+  snapshotKeys.set(snapshot, key);
+  return key;
 }
 
 /**
@@ -214,15 +220,27 @@ export function computeOsView(
   return view;
 }
 
-/** Per-VizGraph layout memo: the same graph object returns the same layout. */
-const vizLayoutMemo = new WeakMap<VizGraph, OrbitLayout>();
+/**
+ * The layout's inputs as a content key: the level, the nodes (id, group, kind) in id order, and the
+ * edges. A refresh rebuilds the graph objects with the same content; the key keeps their positions.
+ */
+function vizLayoutKey(viz: VizGraph): string {
+  const nodes = viz.nodes.map((n) => `${n.id}\u0001${n.group}\u0001${n.kind}`);
+  nodes.sort();
+  const edges = viz.edges.map((e) => `${e.source}\u0001${e.target}\u0001${e.kind}\u0001${e.weight}`);
+  edges.sort();
+  return `${viz.level}\u0002${nodes.join('\u0003')}\u0002${edges.join('\u0003')}`;
+}
 
-/** The 3D layout of a VizGraph (the OS graph or a hub graph), memoised per graph object. */
+/** The last layout, keyed by its content. The page draws one graph at a time, so one slot is enough. */
+let vizLayoutSlot: { key: string; layout: OrbitLayout } | null = null;
+
+/** The 3D layout of a VizGraph (the OS graph or a hub graph). Same content, same layout object. */
 export function computeVizLayout(viz: VizGraph): OrbitLayout {
-  const hit = vizLayoutMemo.get(viz);
-  if (hit) return hit;
+  const key = vizLayoutKey(viz);
+  if (vizLayoutSlot && vizLayoutSlot.key === key) return vizLayoutSlot.layout;
   const layout = vizLayout(viz, { seed: LAYOUT_SEED });
-  vizLayoutMemo.set(viz, layout);
+  vizLayoutSlot = { key, layout };
   return layout;
 }
 
@@ -235,14 +253,18 @@ export type DrawnOs = {
   failed: boolean;
 };
 
-/** The two inputs of the OS view, with the same loading and failure rules as drawViews. */
+/**
+ * The two inputs of the OS view, with the same loading and failure rules as drawViews. `skip`
+ * (the code brain is showing) draws nothing: the OS view is not needed there.
+ */
 export function drawOs(
   snapshot: OsSnapshot | null,
   skills: OsSkill[] | null,
   routines: OsRoutine[] | null,
   core: CoreView,
-  opts: { loading?: boolean } = {},
+  opts: { loading?: boolean; skip?: boolean } = {},
 ): DrawnOs {
+  if (opts.skip) return { view: null, loading: false, failed: false };
   if (opts.loading || osGraphStatus() === 'loading') return { view: null, loading: true, failed: false };
   try {
     return { view: computeOsView(snapshot, skills, routines, core), loading: false, failed: false };

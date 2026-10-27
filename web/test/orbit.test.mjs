@@ -1344,7 +1344,8 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     assert.equal(geo.attributes.position.count, 4, 'four distinct nodes (the duplicate id is dropped)');
     assert.equal(geo.attributes.aSize.count, 4);
     assert.equal(geo.attributes.aAlpha.count, 4);
-    assert.ok(Math.abs(geo.attributes.aSize.array[0] - scene.vizNodeSize(viz.nodes[0])) < 1e-4, 'the hub is the largest point');
+    // A graph under PIXEL_SIZE_MAX_NODES draws its points in pixels: the hub 16, a member 6 to 8.
+    assert.ok(Math.abs(geo.attributes.aSize.array[0] - scene.vizPixelSize(viz.nodes[0])) < 1e-4, 'the hub is 16 px');
     assert.ok(geo.attributes.aSize.array[0] > geo.attributes.aSize.array[1] * 1.5, 'the hub is well above a member');
     const labels = labelsIn();
     assert.equal(labels.length, 3, 'hub, one and a are labelled; two is not');
@@ -1372,10 +1373,13 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     const edges = edgeLines(v);
     assert.equal(edges.geometry.attributes.position.count, 6, 'three edges, two vertices each (the self-loop is dropped)');
     const rgba = edges.geometry.attributes.color.array;
-    const heaviest = rgba[(1 * 2) * 4 + 3];
-    const lightest = rgba[(2 * 2) * 4 + 3];
-    assert.equal(heaviest, 1);
-    assert.ok(Math.abs(lightest - (0.33 + 0.67 * (0.5 / 3))) < 1e-6, 'the lightest edge keeps a third');
+    // Hub-member edges are quiet (0.2) whatever their weight; the other edges keep the weight scale.
+    const memberOfOne = rgba[(0 * 2) * 4 + 3];
+    const provides = rgba[(1 * 2) * 4 + 3];
+    const memberOfTwo = rgba[(2 * 2) * 4 + 3];
+    assert.ok(Math.abs(memberOfOne - 0.2) < 1e-6, 'a hub-member edge is quiet');
+    assert.ok(Math.abs(memberOfTwo - 0.2) < 1e-6, 'a light hub-member edge is quiet too');
+    assert.equal(provides, 1, 'the heaviest non-member edge is full');
     assert.equal(labelEdgeLines(v).geometry.attributes.position.count, 2, 'one labelled edge is hit-tested');
   });
 
@@ -1482,5 +1486,154 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     for (let i = 0; i < 3; i++) assert.ok(Math.abs(back.position[i] - pose.position[i]) < 1e-6);
     v.setCamera({ position: [NaN, 0, 0], target: [0, 0, 0] });
     assert.deepEqual(v.getCamera().position, back.position, 'a non-finite pose changes nothing');
+  });
+  it('a live refresh of the same level keeps the camera; a new level frames again', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    // The user moves the camera away from the framing.
+    v.setCamera({ position: [40, 60, 300], target: [5, 0, 0] });
+    const moved = v.getCamera();
+    // A refresh: new objects with the same level and node ids (a token count changed), same layout.
+    const refreshed = structuredClone(viz);
+    refreshed.nodes[1].status = 'ok';
+    v.setViz(refreshed, layout);
+    assert.deepEqual(v.getCamera(), moved, 'a refresh of the same nodes keeps the camera');
+    // The same level again with the layout rebuilt from the same content: still kept.
+    v.setViz(structuredClone(viz), orbit.vizLayout(viz, { seed: 1 }));
+    assert.deepEqual(v.getCamera(), moved, 'a rebuilt layout of the same content keeps the camera');
+    // A different level (another node set) frames the camera again.
+    const other = { ...structuredClone(viz), level: 'agents', nodes: viz.nodes.slice(0, 3) };
+    v.setViz(other, orbit.vizLayout(other, { seed: 1 }));
+    assert.notDeepEqual(v.getCamera(), moved, 'a new level is framed');
+  });
+
+  it('a level left mid-flight is remembered at the end of its flight, not part-way', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+    const home = v.getCamera();
+    assert.equal(v.focusNode('hub:models'), true);
+    runFrames(0);
+    runFrames(120); // part-way through the 400 ms flight
+    const mid = v.getCamera();
+    assert.notDeepEqual(mid.position, home.position, 'the flight moved the camera');
+    // The end pose is the focus target: the camera stands at the same distance from the hub.
+    const hub = v.worldPosition('hub:models');
+    const end = v.getCamera();
+    assert.ok(Math.abs(Math.hypot(...end.target) - Math.hypot(hub.x, hub.y, hub.z)) < 1e-6, 'the target is the node');
+    assert.deepEqual(v.getCamera(), end, 'reading again changes nothing: the flight has ended');
+  });
+
+  it('small graphs draw their points in pixels and the hub-member edges are quiet', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+    assert.equal(v.pixelUniform.value, 1, 'four nodes: pixel sizes');
+    v.setGraph(sampleGraph(), orbit.orbitLayout(sampleGraph()));
+    assert.equal(v.pixelUniform.value, 0, 'the code brain uses scene sizes');
+  });
+
+  it('hovering a node lights its edges; leaving puts them back', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    const edgeAlpha = () => edgeLines(v).geometry.attributes.color.array[3];
+    const quiet = edgeAlpha();
+    const at = screenOf(v, layout.core.get('hub:models'));
+    v.renderer.domElement.dispatch('pointermove', at);
+    assert.ok(edgeAlpha() > quiet + 1e-6, 'the hovered hub brightens its first edge');
+    v.renderer.domElement.dispatch('pointerleave', {});
+    assert.ok(Math.abs(edgeAlpha() - quiet) < 1e-6, 'leaving restores the edges');
+  });
+
+  it('a double-click on a hub activates it and does not fly the camera; a click only selects', () => {
+    const selects = [];
+    const activates = [];
+    const v = make({ reducedMotion: true, onSelect: (i) => selects.push(i), onActivate: (i) => activates.push(i) });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    const at = screenOf(v, layout.core.get('hub:models'));
+    const canvas = v.renderer.domElement;
+    canvas.dispatch('pointerdown', { ...at, button: 0 });
+    canvas.dispatch('pointerup', { ...at, type: 'pointerup', button: 0 });
+    assert.equal(selects.length, 1, 'a click selects');
+    assert.equal(activates.length, 0);
+    canvas.dispatch('dblclick', at);
+    assert.equal(activates.length, 1, 'a double-click activates');
+    assert.equal(activates[0].drill, 'models');
+    assert.equal(v.tween, null, 'a hub activation does not start a focus flight');
+  });
+
+  it('labels: only the non-overlapping ones are shown, and hubs come first', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+    const shown = labelsIn().filter((l) => l.style.visibility !== 'hidden' && l.style.display !== 'none');
+    assert.ok(shown.some((l) => l.textContent === 'Models'), 'the hub label is shown');
+  });
+});
+
+describe('the readable OS levels: pure helpers', () => {
+  it('pickLabels keeps no two overlapping labels and prefers higher priority', () => {
+    const cands = [
+      { id: 'low', x: 100, y: 100, w: 80, h: 16, priority: 1, size: 5 },
+      { id: 'hub', x: 110, y: 100, w: 80, h: 16, priority: 3, size: 1 },
+      { id: 'far', x: 400, y: 300, w: 80, h: 16, priority: 1, size: 1 },
+    ];
+    const kept = scene.pickLabels(cands);
+    assert.ok(kept.has('hub'), 'the hub wins the shared cells');
+    assert.ok(!kept.has('low'), 'an overlapping lower-priority label is dropped');
+    assert.ok(kept.has('far'), 'a label on free cells is kept');
+  });
+
+  it('pickLabels is deterministic: the same input keeps the same set in any order', () => {
+    const cands = [];
+    for (let i = 0; i < 40; i++) cands.push({ id: `n${i}`, x: (i * 37) % 600, y: (i * 53) % 400, w: 60, h: 16, priority: i % 3, size: i % 5 });
+    const a = [...scene.pickLabels(cands)].sort();
+    const b = [...scene.pickLabels([...cands].reverse())].sort();
+    assert.deepEqual(a, b);
+  });
+
+  it('vizPixelSize: hubs 16 px, members 6 to 8, never below 5', () => {
+    assert.equal(scene.vizPixelSize({ kind: 'hub', size: 4 }), 16);
+    assert.equal(scene.vizPixelSize({ kind: 'model', size: 1 }), 6);
+    assert.equal(scene.vizPixelSize({ kind: 'model', size: 3 }), 8);
+    assert.equal(scene.vizPixelSize({ kind: 'model', size: 99 }), 8);
+    assert.equal(scene.vizPixelSize({ kind: 'model', size: -4 }), 5);
+  });
+
+  it('extraLabelIndices: the largest members of each group, never hubs, groups or labelled nodes', () => {
+    const nodes = [
+      { kind: 'hub', group: 0, size: 4, labelled: true },
+      { kind: 'model', group: 0, size: 1, labelled: false },
+      { kind: 'model', group: 0, size: 3, labelled: false },
+      { kind: 'model', group: 0, size: 2, labelled: true },
+      { kind: 'model', group: 0, size: 2.5, labelled: false },
+      { kind: 'group', group: 1, size: 1, labelled: true },
+      { kind: 'model', group: 1, size: 9, labelled: false },
+    ];
+    // Group 0: the size-3 and size-2.5 unlabelled members (indices 2 and 4); group 1: index 6.
+    assert.deepEqual(scene.extraLabelIndices(nodes, 2), [2, 4, 6]);
+  });
+
+  it('vizFramingRadius frames the hubs; a drill-down falls back to the node percentile', () => {
+    const nodes = [
+      { id: 'hub:a', kind: 'hub' },
+      { id: 'hub:b', kind: 'hub' },
+      { id: 'x', kind: 'model' },
+    ];
+    const layout = { core: new Map([['hub:a', { x: 100, y: 0, z: 0 }], ['hub:b', { x: 0, y: 0, z: 60 }], ['x', { x: 0, y: 0, z: 900 }]]), ring: new Map(), communityCenters: [], bounds: { radius: 900 } };
+    assert.equal(scene.vizFramingRadius(nodes, layout), 100, 'the hubs bound the framing, not the far member');
+    assert.ok(scene.vizFramingRadius([{ id: 'hub:a', kind: 'hub' }, { id: 'x', kind: 'model' }], layout) > 0);
+  });
+
+  it('vizLevelSignature is the level and the sorted node ids', () => {
+    const a = { level: 'models', nodes: [{ id: 'b' }, { id: 'a' }] };
+    assert.equal(scene.vizLevelSignature(a), scene.vizLevelSignature({ level: 'models', nodes: [{ id: 'a' }, { id: 'b' }] }));
+    assert.notEqual(scene.vizLevelSignature(a), scene.vizLevelSignature({ level: 'agents', nodes: [{ id: 'a' }, { id: 'b' }] }));
   });
 });

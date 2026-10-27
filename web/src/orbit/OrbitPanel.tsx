@@ -45,6 +45,8 @@ export interface OrbitPanelProps {
   /** The OS graph or a hub's graph. Compared by identity. When set, it is drawn and `core` is ignored. */
   viz?: OrbitVizInput | null;
   onSelect?: (item: OrbitPick) => void;
+  /** A double-click on a node: the page opens a hub here. Without it a double-click selects, as a click does. */
+  onActivate?: (item: OrbitPick) => void;
   /** Called once when WebGL is unavailable (the view then shows only its text fallback). */
   onFallback?: () => void;
   /** Show the "No project graph yet" text when there is no core. Default true. */
@@ -247,6 +249,7 @@ export function OrbitPanel({
   ring,
   viz = null,
   onSelect,
+  onActivate,
   onFallback,
   showEmpty = true,
   selectedId = null,
@@ -258,6 +261,7 @@ export function OrbitPanel({
   const tipRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<OrbitView | null>(null);
   const selectRef = useRef(onSelect);
+  const activateRef = useRef(onActivate);
   const fallbackRef = useRef(onFallback);
   const [pick, setPick] = useState<OrbitPick | null>(null);
   const [paused, setPaused] = useState(false);
@@ -282,6 +286,10 @@ export function OrbitPanel({
   }, [onSelect]);
 
   useEffect(() => {
+    activateRef.current = onActivate;
+  }, [onActivate]);
+
+  useEffect(() => {
     fallbackRef.current = onFallback;
   }, [onFallback]);
 
@@ -297,6 +305,7 @@ export function OrbitPanel({
       theme: readTheme(),
       onHover: (item) => setPick(item),
       onSelect: (item) => selectRef.current?.(item),
+      onActivate: (item) => (activateRef.current ? activateRef.current(item) : selectRef.current?.(item)),
       onPausedChange: (next) => setPaused(next),
       onFallback: () => {
         setNoWebgl(true);
@@ -426,7 +435,7 @@ export function OrbitPanel({
       >
         <strong style={{ fontWeight: 600 }}>{pick?.label}</strong>
         <span style={{ opacity: 0.7 }}>{pick?.detail}</span>
-        {pick?.type === "viz" && pick.drill ? <span style={{ opacity: 0.7 }}>Click to open</span> : null}
+        {pick?.type === "viz" && pick.drill ? <span style={{ opacity: 0.7 }}>Click to select · double-click to open</span> : null}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@
 import type { CGData } from '../../typescript/src/models';
 import { OsAuthError, type OsHost, type OsOpenTarget, type OsRange } from './host';
 import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
-import { HUB_TITLES, isHubKey, levelKey, type CameraPose, type ViewLevel } from './viz';
+import { HUB_TITLES, isHubKey, levelKey, type CameraPose, type OsView, type ViewLevel } from './viz';
 
 export const REFRESH_DEBOUNCE_MS = 300;
 
@@ -307,6 +307,23 @@ export class OsController {
       view: { level: 'os' },
       selected: { type: 'viz', id: `hub:${hub}`, label: HUB_TITLES[hub], detail: 'hub' },
     });
+  }
+
+  /**
+   * Brings the navigation back in line with a freshly built OS view (after a refresh). A part the
+   * view no longer has sends the brain back to the OS. A selected OS-graph node that is no longer
+   * drawn at the level it is on is cleared. The code brain has no OS graph and is left alone.
+   */
+  reconcile(os: OsView): void {
+    if (this.disposed) return;
+    const view = this.state.view;
+    if (view.level === 'hub' && view.hub !== 'code' && !os.hubs[view.hub]) this.back();
+    const selected = this.state.selected;
+    if (selected === null || selected.type !== 'viz') return;
+    const now = this.state.view;
+    if (now.level === 'hub' && now.hub === 'code') return;
+    const graph = now.level === 'os' ? os.os : os.hubs[now.hub];
+    if (!graph || !graph.nodes.some((node) => node.id === selected.id)) this.select(null);
   }
 
   /** Remembers the camera for the level the brain is on now (a null pose is ignored). */

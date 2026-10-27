@@ -110,3 +110,17 @@ export function levelKey(view: ViewLevel): string {
 export function drillOf(node: VizNode): HubKey | null {
   return isHubKey(node.drill) ? node.drill : null;
 }
+
+/** A click or double-click on a hub that just opened its part is the same gesture: it is swallowed. */
+export const DRILL_GUARD_MS = 350;
+
+/** The guard a drill leaves: the hub's node id and the time (ms) until which that id is swallowed. */
+export interface DrillGuard {
+  id: string;
+  until: number;
+}
+
+/** True when a pick of `id` at time `now` is the trailing part of the drill `guard` came from. Other picks pass. */
+export function swallowsPick(guard: DrillGuard | null, id: string, now: number): boolean {
+  return guard !== null && guard.id === id && now < guard.until;
+}

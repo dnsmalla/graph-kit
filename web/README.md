@@ -93,9 +93,19 @@ Agents, Routines, Kits) with that part's members around it. The core builds it
 (`computeOsView`, keyed on the core's identity and the content of the snapshot parts the view
 reads, so an activity-only refresh keeps it) and each graph's layout (`computeVizLayout`).
 
-- **Click a hub** to open its part. The breadcrumb reads `OS › <part>`; `OS` and Back return,
-  and Escape returns from a part (not while typing in a field). The OS returns with that hub
-  selected. Code is the part whose graph is the project's own (the code brain).
+- **Click a hub** to select it (its details card, with an Explore button). **Double-click** a
+  hub, press Enter, or press Explore to open its part. The breadcrumb reads `OS › <part>`; `OS`
+  and Back return, and Escape returns from a part (not while typing in a field). The OS returns
+  with that hub selected. Code is the part whose graph is the project's own (the code brain).
+- **Live refreshes keep the camera**: a refresh of the same level (same node ids) keeps the pose
+  and the layout (`computeVizLayout` is keyed by content). After a refresh the navigation is
+  reconciled with the new OS view (`OsController.reconcile`): a part that is gone returns to the
+  OS, and a selected node that is no longer drawn is cleared.
+- **Readable levels**: the OS places its hubs on a ring with their members on a shell around
+  each (`hub_layout` in `rust/os-graph/src/orbit.rs`); the camera frames the hubs. Small graphs
+  (under 200 nodes) draw points in pixels. Labels: the labelled nodes, the hovered or selected
+  node, and the largest members of each part when the camera is close; `pickLabels` keeps only
+  the labels whose boxes miss a 64 px occupancy grid, in priority order.
 - **Each level remembers its camera**: leaving a level records its pose, and returning puts the
   camera back. The brain registers how to read its camera with the controller
   (`setCameraSource`), so every navigation records the level it leaves.

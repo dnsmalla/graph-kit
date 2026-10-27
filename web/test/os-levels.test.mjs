@@ -189,12 +189,17 @@ describe('the memoised OS view and layout', () => {
     assert.notEqual(api.systemGraph.computeOsView(seeded(), skills, routines, emptyCore), a, 'a different core');
   });
 
-  it('computeVizLayout is memoised per graph object', () => {
+  it('computeVizLayout is keyed by content: a refresh that rebuilds the same graph keeps the positions', () => {
     const { view } = fixtureView();
     const first = api.systemGraph.computeVizLayout(view.os);
     assert.equal(api.systemGraph.computeVizLayout(view.os), first);
     const copy = structuredClone(view.os);
-    assert.notEqual(api.systemGraph.computeVizLayout(copy), first, 'a different object is laid out again');
+    assert.equal(api.systemGraph.computeVizLayout(copy), first, 'the same content is the same layout object');
+    const grown = structuredClone(view.os);
+    grown.nodes.push({ ...grown.nodes[grown.nodes.length - 1], id: 'extra:node', label: 'extra', kind: 'activity', group: 0 });
+    const next = api.systemGraph.computeVizLayout(grown);
+    assert.notEqual(next, first, 'a changed node set is laid out again');
+    assert.ok(next.core.has('extra:node'), 'and the new node is placed');
   });
 
   it('drawOs reports loading without calling the core, and vizForLevel picks a level or nothing', () => {
@@ -377,7 +382,11 @@ describe('rendering: the OS levels and the side panels', () => {
 });
 
 describe('the details card (Selection)', () => {
-  const { view } = fixtureView();
+  // Built in a hook: the file's server is only up once the top-level before() has run.
+  let view;
+  before(() => {
+    ({ view } = fixtureView());
+  });
   const node = (id) => ({ type: 'viz', id, label: id, detail: 'x' });
   const find = (hub, id) => view.hubs[hub].nodes.find((n) => n.id === id);
   const labelled = (hub, id) => ({ type: 'viz', id, label: find(hub, id).label, detail: find(hub, id).kind });
@@ -406,7 +415,8 @@ describe('the details card (Selection)', () => {
 
   it('a hub offers Explore with its part name', () => {
     const html = api.render.renderSelection(labelled('models', 'hub:models'), { viz: view.hubs.models });
-    assert.match(html, />Explore Models</);
+    // React's server output puts a comment between the two text runs: "Explore <!-- -->Models".
+    assert.match(html, />Explore (<!-- -->)?Models</);
     assert.match(html, /Part of the OS/);
   });
 
@@ -444,7 +454,7 @@ describe('the details card (Selection)', () => {
     assert.match(html, />2,800</);
     assert.match(html, />2 items</);
     assert.match(html, /Usage/);
-    assert.match(html, /<span class="meta">Cache read:<\/span> 8,000/);
+    assert.match(html, /Cache read<!-- -->:<\/span> <!-- -->8,000/);
   });
 
   it('a node the drawn graph no longer has says so, and still shows the label', () => {
@@ -497,5 +507,49 @@ describe('search over the OS graph', () => {
   it('keeps the project-graph search as it was', () => {
     const core = api.systemGraph.computeCore(project(), { maxCoreNodes: 4000 });
     assert.ok(api.search.searchCoreNodes(core.graph, 'fn1').length > 0);
+  });
+});
+
+describe('navigation after a refresh and the drill guard', () => {
+  const os = () => api.wasm.buildOsView({ snapshot: seeded(), skills: api.fixture.demoSkills, routines: api.fixture.demoRoutines, code: null });
+
+  it('a part the refreshed OS no longer has sends the brain back to the OS', () => {
+    const { controller } = makeController();
+    controller.drill('models');
+    const gone = { ...os(), hubs: { ...os().hubs } };
+    delete gone.hubs.models;
+    controller.reconcile(gone);
+    assert.deepEqual(controller.getSnapshot().view, { level: 'os' });
+    assert.deepEqual(controller.getSnapshot().selected, { type: 'viz', id: 'hub:models', label: 'Models', detail: 'hub' });
+  });
+
+  it('a selected OS node that is no longer drawn is cleared; a present one is kept', () => {
+    const { controller } = makeController();
+    const view = os();
+    controller.select({ type: 'viz', id: 'hub:models', label: 'Models', detail: 'hub' });
+    controller.reconcile(view);
+    assert.equal(controller.getSnapshot().selected?.id, 'hub:models', 'still drawn: kept');
+    controller.drill('models');
+    controller.select({ type: 'viz', id: 'model:gone', label: 'gone', detail: 'model' });
+    controller.reconcile(view);
+    assert.equal(controller.getSnapshot().selected, null, 'not in the models graph any more: cleared');
+  });
+
+  it('the code brain is left alone by the reconcile, and a core selection is not a viz one', () => {
+    const { controller } = makeController();
+    controller.drill('code');
+    controller.select({ type: 'core', id: 'x', label: 'x', detail: 'code' });
+    controller.reconcile(os());
+    assert.deepEqual(controller.getSnapshot().view, { level: 'hub', hub: 'code' });
+    assert.equal(controller.getSnapshot().selected?.type, 'core');
+  });
+
+  it('the drill guard swallows only the trailing pick of the same hub, and only for a moment', () => {
+    const guard = { id: 'hub:models', until: 1000 };
+    assert.equal(api.viz.swallowsPick(guard, 'hub:models', 900), true);
+    assert.equal(api.viz.swallowsPick(guard, 'hub:models', 1000), false, 'after the window');
+    assert.equal(api.viz.swallowsPick(guard, 'model:a/one', 900), false, 'another node is not swallowed');
+    assert.equal(api.viz.swallowsPick(null, 'hub:models', 900), false);
+    assert.equal(api.viz.DRILL_GUARD_MS, 350);
   });
 });

@@ -84,10 +84,17 @@ export function App({ controller }: { controller: OsController }) {
   );
   // The OS view (every part's graph) and the graph of the level the brain is on. The code level
   // draws the project's core instead, so it needs no OS graph of its own.
+  // The code brain shows the project's graph only: the OS view is not built while it is showing.
+  const inCode = state.view.level === 'hub' && state.view.hub === 'code';
   const osDrawn = useMemo(
-    () => drawOs(data, state.skills, state.routines, drawn.core, { loading: drawn.loading }),
-    [data, state.skills, state.routines, drawn.core, drawn.loading],
+    () => drawOs(data, state.skills, state.routines, drawn.core, { loading: drawn.loading, skip: inCode }),
+    [data, state.skills, state.routines, drawn.core, drawn.loading, inCode],
   );
+  // A refresh can remove the part the brain is on, or a node that is selected: the controller brings
+  // the navigation back in line with the new OS view.
+  useEffect(() => {
+    if (osDrawn.view) controller.reconcile(osDrawn.view);
+  }, [controller, osDrawn.view]);
   const level = state.view.level === 'os' ? 'os' : state.view.hub;
   const vizDrawn = useMemo((): { viz: VizView | null; failed: boolean } => {
     if (!osDrawn.view || level === 'code') return { viz: null, failed: false };
@@ -137,6 +144,7 @@ export function App({ controller }: { controller: OsController }) {
             activity={data.activity.items}
             viz={vizDrawn.viz}
             osFailed={osDrawn.failed || vizDrawn.failed}
+            osLoading={osDrawn.loading}
             running={data.running}
           />
 

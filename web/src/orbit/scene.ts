@@ -479,3 +479,117 @@ export function vizLabelled<T extends { id: string; labelled: boolean }>(nodes: 
   }
   return out;
 }
+
+// ---- Readable OS levels: pixel sizes, framing, labels --------------------------------
+
+/** A VizGraph with fewer nodes than this draws its points at a size in pixels, not in scene units. */
+export const PIXEL_SIZE_MAX_NODES = 200;
+
+/** Point size in CSS pixels of a node in a small graph: hubs 16, members 6 to 8, never below 5. */
+export function vizPixelSize(node: { kind: string; size: number }): number {
+  if (node.kind === "hub") return 16;
+  const s = Number.isFinite(node.size) ? node.size : 1;
+  return Math.min(8, Math.max(5, 6 + (s - 1)));
+}
+
+/**
+ * The radius the camera frames a VizGraph on. With two or more hubs (the OS) it is the hubs'
+ * bounding sphere, so the stage is filled by the parts rather than by empty space. A drill-down
+ * (one hub at the origin) falls back to the 90th percentile of every node.
+ */
+export function vizFramingRadius(nodes: Array<{ id: string; kind: string }>, layout: OrbitLayout): number {
+  const hubs = nodes.filter((n) => n.kind === "hub");
+  if (hubs.length >= 2) {
+    let max = 0;
+    for (const hub of hubs) {
+      const p = layout.core.get(hub.id);
+      if (p) max = Math.max(max, Math.hypot(p.x, p.y, p.z));
+    }
+    if (max > 0) return max;
+  }
+  return coreFramingRadius(
+    nodes.map((n) => n.id),
+    layout,
+  );
+}
+
+/** Identifies what a level shows: the level and its node ids (sorted). Same signature, same camera. */
+export function vizLevelSignature(viz: { level: string; nodes: Array<{ id: string }> }): string {
+  const ids = viz.nodes.map((n) => n.id);
+  ids.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return `${viz.level}|${ids.join("\n")}`;
+}
+
+/**
+ * The largest members of each group, as node indices: the labels a close camera adds without
+ * being asked for. Hubs, group rows and nodes already labelled are not counted.
+ */
+export function extraLabelIndices(nodes: Array<{ kind: string; group: number; size: number; labelled: boolean }>, perGroup: number): number[] {
+  const byGroup = new Map<number, number[]>();
+  nodes.forEach((n, i) => {
+    if (n.kind === "hub" || n.kind === "group" || n.labelled) return;
+    const list = byGroup.get(n.group) ?? [];
+    list.push(i);
+    byGroup.set(n.group, list);
+  });
+  const out: number[] = [];
+  for (const list of byGroup.values()) {
+    list.sort((a, b) => nodes[b]!.size - nodes[a]!.size || a - b);
+    out.push(...list.slice(0, perGroup));
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** Label text metrics: the page's 12 px label, estimated (the layout does not measure the DOM). */
+export const LABEL_HEIGHT_PX = 16;
+export function labelWidth(text: string): number {
+  return Math.ceil(text.length * 6.6) + 8;
+}
+
+/** The grid cell size of the label occupancy check, in CSS pixels. */
+export const LABEL_GRID_PX = 64;
+
+/** One label that may be drawn: its anchor on the stage (CSS pixels), its box and its priority. */
+export interface LabelCandidate {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  priority: number;
+  size: number;
+}
+
+/**
+ * Chooses the labels to draw, in priority order (then size, then id). A label is kept only when
+ * none of the 64 px grid cells under its box is taken; a kept label takes its cells. So two kept
+ * labels never overlap, and the rest are hidden. The box sits above the anchor, as the page
+ * positions its labels (translate -50%, -140%).
+ */
+export function pickLabels(candidates: LabelCandidate[], cell: number = LABEL_GRID_PX): Set<string> {
+  const order = [...candidates].sort((a, b) => b.priority - a.priority || b.size - a.size || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const taken = new Set<string>();
+  const kept = new Set<string>();
+  for (const c of order) {
+    const left = c.x - c.w / 2;
+    const right = c.x + c.w / 2;
+    const top = c.y - c.h * 1.4;
+    const bottom = c.y - c.h * 0.4;
+    const x0 = Math.floor(left / cell);
+    const x1 = Math.floor(right / cell);
+    const y0 = Math.floor(top / cell);
+    const y1 = Math.floor(bottom / cell);
+    let free = true;
+    for (let cx = x0; cx <= x1 && free; cx++) {
+      for (let cy = y0; cy <= y1 && free; cy++) {
+        if (taken.has(`${cx},${cy}`)) free = false;
+      }
+    }
+    if (!free) continue;
+    for (let cx = x0; cx <= x1; cx++) {
+      for (let cy = y0; cy <= y1; cy++) taken.add(`${cx},${cy}`);
+    }
+    kept.add(c.id);
+  }
+  return kept;
+}

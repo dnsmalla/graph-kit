@@ -7,7 +7,7 @@ import { OrbitPanel, type OrbitPanelHandle } from '../orbit/OrbitPanel';
 import type { OrbitColorMode, OrbitPick } from '../orbit/OrbitView';
 import { clusterSummary, CLUSTER_PALETTE_SIZE, uniqueCoreNodes, VIZ_KIND_COLORS, VIZ_KIND_FALLBACK, vizKindSummary } from '../orbit/scene';
 import { fmtInt, humanKey } from '../format';
-import { HUB_TITLES, isHubKey, type HubKey, type VizGraph } from '../viz';
+import { DRILL_GUARD_MS, HUB_TITLES, isHubKey, swallowsPick, type DrillGuard, type HubKey, type VizGraph } from '../viz';
 import { Recent, RECENT_LIMIT } from './Recent';
 import { NodeSearch } from './NodeSearch';
 import { Selection } from './Selection';
@@ -30,8 +30,6 @@ const STATUS_LEGEND: Array<{ key: string; label: string }> = [
 
 /** Clusters listed in the legend before the "and N more" line. */
 const CLUSTER_LEGEND_LIMIT = 10;
-/** A click on a hub right after a drill is the same gesture: it must not pick a node of the new view. */
-const DRILL_GUARD_MS = 500;
 
 /** A pick as a selection: edges are hover-only and never selected. */
 function toSelection(item: OrbitPick): OsSelection | null {
@@ -54,6 +52,7 @@ export function Brain({
   activity,
   viz = null,
   osFailed = false,
+  osLoading = false,
   running = null,
 }: {
   state: ViewState;
@@ -69,6 +68,8 @@ export function Brain({
   viz?: VizView | null;
   /** The OS graph could not be drawn. */
   osFailed?: boolean;
+  /** The OS graph is still being built: the brain says so until it is ready. */
+  osLoading?: boolean;
   /** The snapshot's running items, for the Stop action of an agent node. */
   running?: OsSnapshot['running'] | null;
 }) {
@@ -105,8 +106,10 @@ export function Brain({
   const brainRef = useRef<OrbitPanelHandle>(null);
   // The Recent row that opened the current selection; focus returns to it on close.
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  // Picks are ignored for a moment after a drill (see DRILL_GUARD_MS).
-  const drillGuard = useRef(0);
+  // The drill a double-click made: its trailing pick of the same hub is swallowed (see swallowsPick).
+  const drillGuard = useRef<DrillGuard | null>(null);
+  // The level's heading takes focus when the level changes, so a screen reader announces it.
+  const headingRef = useRef<HTMLHeadingElement>(null);
   // The loading and error texts sit under the stage; the stage's own empty text only
   // shows once the load has settled, so the two never overlap.
   const settled = status !== 'loading' && status !== 'idle' && status !== 'error';
@@ -129,6 +132,7 @@ export function Brain({
     const pose = controller.cameraFor(view);
     if (pose) brainRef.current?.setCamera(pose);
     else brainRef.current?.refit();
+    headingRef.current?.focus({ preventScroll: true });
   }, [viewKey, controller, view]);
 
   // A side panel asked for a node: fly to it once the level that holds it is drawn.
@@ -140,15 +144,34 @@ export function Brain({
   }, [state.focusSeq, state.selected]);
 
   const drill = (hub: HubKey) => {
-    drillGuard.current = Date.now() + DRILL_GUARD_MS;
+    drillGuard.current = { id: `hub:${hub}`, until: Date.now() + DRILL_GUARD_MS };
     triggerRef.current = null;
     controller.drill(hub);
   };
   const goOs = () => {
-    drillGuard.current = Date.now() + DRILL_GUARD_MS;
     triggerRef.current = null;
     controller.back();
   };
+
+  // Enter opens the selected hub when the focus is on the stage or the card's heading (not on a control).
+  useEffect(() => {
+    const selected = state.selected;
+    if (!selected || selected.type !== 'viz' || !vizGraph) return;
+    const node = vizGraph.nodes.find((n) => n.id === selected.id);
+    const hub = node && node.kind === 'hub' && isHubKey(node.drill) ? node.drill : null;
+    if (!hub) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' || event.defaultPrevented || event.repeat) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.tagName === 'A' || target.isContentEditable)) return;
+      event.preventDefault();
+      drill(hub);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // drill is rebuilt each render but only reads the controller.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.selected, vizGraph, controller]);
 
   // Escape returns from a part to the OS. Typing in a field keeps its own Escape (the search clears).
   useEffect(() => {
@@ -179,7 +202,7 @@ export function Brain({
   return (
     <section className="os-centre" aria-labelledby="sec-brain">
       <div className="os-centre-head">
-        <h2 id="sec-brain" className="card-title">
+        <h2 id="sec-brain" ref={headingRef} tabIndex={-1} className="card-title">
           {title}
         </h2>
         {caption ? <p className="meta">{caption}</p> : null}
@@ -252,9 +275,15 @@ export function Brain({
             onColorByChange={setColorBy}
             onFallback={() => setWebgl(false)}
             onSelect={(item) => {
-              if (Date.now() < drillGuard.current) return;
+              // A click selects: a hub shows its details card, and its Explore action (or a double-click) opens it.
+              if (swallowsPick(drillGuard.current, item.id, Date.now())) return;
               triggerRef.current = null;
-              // A hub node opens its part (the code hub opens the project's graph); every other node selects.
+              const selection = toSelection(item);
+              if (selection) controller.select(selection);
+            }}
+            onActivate={(item) => {
+              if (swallowsPick(drillGuard.current, item.id, Date.now())) return;
+              triggerRef.current = null;
               if (item.type === 'viz' && isHubKey(item.drill)) {
                 drill(item.drill);
                 return;
@@ -281,7 +310,7 @@ export function Brain({
             Could not draw the project graph.
           </p>
         ) : null}
-        {!inCode && !viz && !osFailed ? (
+        {!inCode && !viz && !osFailed && osLoading ? (
           <p className="os-brain-status" role="status">
             Loading the OS graph…
           </p>

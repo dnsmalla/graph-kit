@@ -36,12 +36,21 @@ import {
   type RingLabel,
   uniqueCoreNodes,
   buildVizKindColors,
+  extraLabelIndices,
+  labelWidth,
+  LABEL_HEIGHT_PX,
+  pickLabels,
+  PIXEL_SIZE_MAX_NODES,
   vizEdgeAlphas,
+  vizFramingRadius,
   vizLabelled,
+  vizLevelSignature,
   vizNodeAlpha,
   vizNodeSize,
+  vizPixelSize,
   VIZ_PULSE_MS,
   VIZ_PULSE_MIN,
+  type LabelCandidate,
 } from "./scene";
 import type { CameraPose, VizEdge, VizGraph, VizNode } from "../viz";
 
@@ -88,6 +97,11 @@ export interface OrbitViewOptions {
   colorBy?: OrbitColorMode;
   onHover?: (item: OrbitPick | null) => void;
   onSelect?: (item: OrbitPick) => void;
+  /**
+   * Called on a double-click with the picked node. The page opens a hub here; without it the
+   * double-click reports through onSelect like a click, as before.
+   */
+  onActivate?: (item: OrbitPick) => void;
   /** Called when the user pauses or resumes the rotation (the view's toggle, Space). */
   onPausedChange?: (paused: boolean) => void;
   /** Called once when WebGL is unavailable and the view shows its text fallback. */
@@ -164,6 +178,13 @@ const MAX_FRAME_DT = 0.1;
 const REPICK_INTERVAL_MS = 150;
 /** Framing: camera looking slightly down. */
 const FRAME_ELEVATION = 0.35;
+/**
+ * The OS level looks down more steeply: the hub ring is a circle in the XZ plane, so at the code
+ * brain's elevation it would read as a thin band, and neighbouring hubs would fall on each other.
+ */
+const VIZ_FRAME_ELEVATION = 0.9;
+/** The OS level frames its hubs' sphere a little larger than the code brain frames its core. */
+const VIZ_FRAME_FRACTION = 0.7;
 /** The camera is re-framed when the core's node count moves by more than this fraction. */
 const REFRAME_CHANGE_RATIO = 0.2;
 /** Zoom limits as multiples of the layout radius. */
@@ -195,6 +216,8 @@ attribute float aSize;
 attribute float aAlpha;
 attribute vec3 aColor;
 uniform float uScale;
+uniform float uPixel;
+uniform float uPixelRatio;
 uniform vec2 uDepth;
 varying vec3 vColor;
 varying float vAlpha;
@@ -204,7 +227,8 @@ void main() {
   vAlpha = aAlpha;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = clamp(aSize * uScale / -mv.z, 1.0, 48.0);
+  // Small graphs draw their points at a size in pixels (no depth attenuation); larger ones in scene units.
+  gl_PointSize = uPixel > 0.5 ? clamp(aSize * uPixelRatio, 1.0, 48.0) : clamp(aSize * uScale / -mv.z, 1.0, 48.0);
   // Depth fade: the far side of the scene is dimmer, so the near side reads as the front of the cluster.
   float t = clamp((-mv.z - uDepth.x) / max(uDepth.y - uDepth.x, 1e-6), 0.0, 1.0);
   vFade = 1.0 - (1.0 - ${DEPTH_FADE_MIN.toFixed(2)}) * t;
@@ -240,7 +264,23 @@ interface SelectionRef {
 interface VizLabel {
   el: HTMLElement;
   pos: THREE.Vector3;
+  /** Index of the node in the drawn graph, and its text, size and kind (for the placement). */
+  index: number;
+  text: string;
+  size: number;
+  kind: string;
+  labelled: boolean;
 }
+
+/** Hub-member edges are quiet: they show the membership, the hover and selection make them bright. */
+const MEMBER_EDGE_ALPHA = 0.2;
+/** Extra labels a close camera adds: this many of the largest members per group, faded in by distance. */
+const EXTRA_LABELS_PER_GROUP = 3;
+/** Camera distance, as a multiple of the scene radius, at which the extra labels are full (near) or gone (far). */
+const EXTRA_NEAR_RATIO = 0.6;
+const EXTRA_FAR_RATIO = 1.5;
+/** Below this opacity the extra labels are not candidates. */
+const EXTRA_MIN_OPACITY = 0.05;
 
 interface Tween {
   start: number | null;
@@ -320,6 +360,7 @@ export class OrbitView {
   private colorMode: OrbitColorMode;
   private readonly onHover?: (item: OrbitPick | null) => void;
   private readonly onSelect?: (item: OrbitPick) => void;
+  private readonly onActivate?: (item: OrbitPick) => void;
   private readonly onPausedChange?: (paused: boolean) => void;
   private readonly onFallback?: () => void;
   private readonly createRenderer: (canvas: HTMLCanvasElement) => RendererLike;
@@ -363,6 +404,27 @@ export class OrbitView {
   /** The OS graph's labelled nodes, drawn as HTML text over the canvas. */
   private labelLayer: HTMLElement | null = null;
   private labels: VizLabel[] = [];
+  private labelByIndex = new Map<number, VizLabel>();
+  /** Node indices that may get a label when the camera is close (see EXTRA_LABELS_PER_GROUP). */
+  private extraIndices: number[] = [];
+  /** The node under the pointer, as a drawn index (viz mode), or null. Its edges light up. */
+  private hoverIndex: number | null = null;
+  /** How far the extra labels are faded in, 0 (far) to 1 (close). */
+  private extraFade = 0;
+  /** The label set changed (hover, selection, graph): the next updateLabels places them again. */
+  private labelVersion = 0;
+  private lastLabelVersion = -1;
+  private readonly lastMatrix = new Float64Array(16);
+  private lastStageW = -1;
+  private lastStageH = -1;
+  /** The stage size, measured in resize(): updateLabels does not read the DOM per frame. */
+  private stageW = 1;
+  private stageH = 1;
+  /** The level and node ids of the drawn viz (see vizLevelSignature): the same signature keeps the camera. */
+  private vizSignature: string | null = null;
+  /** Shared by every point material: 1 draws point sizes in pixels, the pixel ratio scales them. */
+  private readonly pixelUniform = { value: 0 };
+  private readonly pixelRatioUniform = { value: 1 };
   /** Labelled edges of the OS graph: hover-only, found by a line raycast. */
   private labelledEdges: VizEdge[] = [];
   private labelEdgeObj: THREE.LineSegments | null = null;
@@ -442,6 +504,7 @@ export class OrbitView {
     this.colorMode = opts.colorBy === "cluster" ? "cluster" : "kind";
     this.onHover = opts.onHover;
     this.onSelect = opts.onSelect;
+    this.onActivate = opts.onActivate;
     this.onPausedChange = opts.onPausedChange;
     this.onFallback = opts.onFallback;
     this.createRenderer = opts.createRenderer ?? defaultCreateRenderer;
@@ -470,7 +533,7 @@ export class OrbitView {
     canvas.setAttribute("role", "img");
     canvas.setAttribute(
       "aria-label",
-      "Project brain. Drag to orbit, scroll or pinch to zoom, double-click a node to focus it. Keys: plus and minus zoom, 0 resets the view, space pauses the rotation.",
+      "Project brain. Drag to orbit, scroll or pinch to zoom. Click a node to select it; double-click a hub to open its part. Keys: plus and minus zoom, 0 resets the view, space pauses the rotation.",
     );
     Object.assign(canvas.style, {
       position: "absolute",
@@ -539,6 +602,7 @@ export class OrbitView {
     if (graph === this.graph && layout === this.layout && this.mode === "code") return;
     this.clearCore();
     this.enterMode("code");
+    this.pixelUniform.value = 0;
     this.graph = graph;
     this.layout = layout;
 
@@ -615,10 +679,14 @@ export class OrbitView {
   setViz(viz: VizGraph, layout: OrbitLayout): void {
     if (!this.renderer || this.disposed) return;
     if (viz === this.vizGraph && layout === this.layout && this.mode === "viz") return;
+    // The same level with the same nodes is a live refresh: the camera stays where the user left it.
+    const signature = vizLevelSignature(viz);
+    const sameView = this.mode === "viz" && signature === this.vizSignature;
     this.clearCore();
     this.enterMode("viz");
     this.vizGraph = viz;
     this.layout = layout;
+    this.vizSignature = signature;
 
     // Nodes in order, first occurrence per id; the core index of a node is its place here.
     const seen = new Set<string>();
@@ -634,6 +702,9 @@ export class OrbitView {
     const n = nodes.length;
     this.adjacency = this.coreItems.map(() => []);
 
+    // Small graphs draw their points in pixels, so a hub reads as a hub at any zoom.
+    const pixels = n < PIXEL_SIZE_MAX_NODES;
+    this.pixelUniform.value = pixels ? 1 : 0;
     const positions = new Float32Array(n * 3);
     const sizes = new Float32Array(n);
     this.baseAlpha = new Float32Array(n);
@@ -644,13 +715,13 @@ export class OrbitView {
       positions[i * 3] = p.x;
       positions[i * 3 + 1] = p.y;
       positions[i * 3 + 2] = p.z;
-      sizes[i] = vizNodeSize(node);
+      sizes[i] = pixels ? vizPixelSize(node) : vizNodeSize(node);
       this.baseAlpha[i] = vizNodeAlpha(node);
       if (node.status === "running") pulsing.push(i);
     });
     this.pulsing = pulsing;
     this.baseSizes = sizes;
-    this.coreRadius = coreFramingRadius(nodes.map((node) => node.id), layout);
+    this.coreRadius = vizFramingRadius(nodes, layout);
     this.kindRgb = buildVizKindColors(nodes, this.theme);
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
 
@@ -689,6 +760,7 @@ export class OrbitView {
       edgePositions.set([pa.x, pa.y, pa.z, pb.x, pb.y, pb.z], k * 6);
       ends[k * 2] = a;
       ends[k * 2 + 1] = b;
+      if (edge.kind === "member") alphas[k] = MEMBER_EDGE_ALPHA;
     });
     this.edgeEnds = ends;
     this.edgeBase = alphas;
@@ -723,9 +795,9 @@ export class OrbitView {
     this.applyZoomLimits();
     this.setHover(null);
     this.applySelection();
-    // A new graph always frames its own content; the caller restores a remembered pose afterwards.
     this.framedCoreCount = n;
-    this.fitCamera();
+    // A new level frames its own content; the caller restores a remembered pose afterwards. A refresh of the same level keeps the camera.
+    if (!sameView) this.fitCamera();
     this.updateLabels();
     this.requestRender();
   }
@@ -733,6 +805,7 @@ export class OrbitView {
   /** The camera as plain numbers (what a level remembers), or null without WebGL. */
   getCamera(): CameraPose | null {
     if (!this.renderer || this.disposed) return null;
+    this.settleTween();
     const p = this.camera.position;
     const t = this.controls.target;
     return { position: [p.x, p.y, p.z], target: [t.x, t.y, t.z] };
@@ -770,60 +843,168 @@ export class OrbitView {
     this.radius = Math.max(this.coreRadius, this.mode === "code" ? this.ringRadius : 0, 1);
   }
 
-  /** The OS graph's labels: one HTML element per labelled node, positioned every frame by updateLabels(). */
+  /**
+   * The OS graph's labels: one HTML element per labelled node, created now and placed by
+   * updateLabels(). Other nodes get an element on demand (hover, selection, a close camera).
+   */
   private buildVizLabels(nodes: VizNode[], layout: OrbitLayout): void {
+    this.removeVizLabels();
+    this.extraIndices = extraLabelIndices(nodes, EXTRA_LABELS_PER_GROUP);
+    nodes.forEach((node, i) => {
+      if (node.labelled) this.labelFor(i, nodes, layout);
+    });
+    this.labelVersion++;
+  }
+
+  /** The label element of a drawn node, created on first use. Null without a label layer. */
+  private labelFor(index: number, nodes: VizNode[], layout: OrbitLayout): VizLabel | null {
+    const have = this.labelByIndex.get(index);
+    if (have) return have;
     const layer = this.labelLayer;
-    if (!layer) return;
+    const node = nodes[index];
+    if (!layer || !node) return null;
     const style = LABEL_STYLE[this.theme];
-    for (const node of vizLabelled(nodes)) {
-      const el = document.createElement("div");
-      el.className = "orbit-label";
-      el.textContent = node.label || node.id;
-      Object.assign(el.style, {
-        position: "absolute",
-        left: "0",
-        top: "0",
-        whiteSpace: "nowrap",
-        fontSize: "12px",
-        lineHeight: "1.2",
-        color: style.color,
-        textShadow: style.shadow,
-        pointerEvents: "none",
-      });
-      layer.appendChild(el);
-      const p = layout.core.get(node.id) ?? { x: 0, y: 0, z: 0 };
-      this.labels.push({ el, pos: new THREE.Vector3(p.x, p.y, p.z) });
-    }
+    const el = document.createElement("div");
+    el.className = "orbit-label";
+    el.textContent = node.label || node.id;
+    Object.assign(el.style, {
+      position: "absolute",
+      left: "0",
+      top: "0",
+      whiteSpace: "nowrap",
+      fontSize: "12px",
+      lineHeight: "1.2",
+      color: style.color,
+      textShadow: style.shadow,
+      pointerEvents: "none",
+      display: "none",
+    });
+    layer.appendChild(el);
+    const p = layout.core.get(node.id) ?? { x: 0, y: 0, z: 0 };
+    const label: VizLabel = {
+      el,
+      pos: new THREE.Vector3(p.x, p.y, p.z),
+      index,
+      text: node.label || node.id,
+      size: node.size,
+      kind: node.kind,
+      labelled: node.labelled,
+    };
+    this.labels.push(label);
+    this.labelByIndex.set(index, label);
+    return label;
   }
 
   private removeVizLabels(): void {
     for (const label of this.labels) label.el.remove();
     this.labels = [];
+    this.labelByIndex = new Map();
   }
 
   /**
-   * Places each label over its node: projected with the current camera, hidden when the node is
-   * behind the camera or off the stage. Only the labelled nodes (a few dozen) are touched.
+   * Places the labels. Candidates: the labelled nodes (hubs first), the hovered and selected
+   * nodes, and, when the camera is close, the largest members of each group (faded in by
+   * distance). The candidates are chosen by pickLabels so no two drawn labels overlap; the rest
+   * stay in the DOM with visibility hidden. Runs only when the camera, the stage size or the
+   * label set changed since the last placement.
    */
   private updateLabels(): void {
-    if (this.labels.length === 0 || !this.renderer || this.disposed) return;
-    const w = Math.max(1, this.container.clientWidth);
-    const h = Math.max(1, this.container.clientHeight);
+    if (this.mode !== "viz" || !this.renderer || this.disposed || !this.vizNodes) return;
+    if (this.labels.length === 0 && this.extraIndices.length === 0 && this.hoverIndex === null && this.selection === null) return;
     this.camera.updateMatrixWorld();
+    const m = this.camera.matrixWorld.elements;
+    let same = this.lastLabelVersion === this.labelVersion && this.lastStageW === this.stageW && this.lastStageH === this.stageH;
+    if (same) {
+      for (let i = 0; i < 16; i++) {
+        if (m[i] !== this.lastMatrix[i]) {
+          same = false;
+          break;
+        }
+      }
+    }
+    if (same) return;
+    this.lastLabelVersion = this.labelVersion;
+    this.lastStageW = this.stageW;
+    this.lastStageH = this.stageH;
+    for (let i = 0; i < 16; i++) this.lastMatrix[i] = m[i] ?? 0;
+
+    const nodes = this.vizNodes;
+    const layout = this.layout;
+    if (layout) {
+      // Close camera: the extra labels fade in. Zoomed out, they are not candidates at all.
+      const near = this.radius * EXTRA_NEAR_RATIO;
+      const far = this.radius * EXTRA_FAR_RATIO;
+      const d = this.distance();
+      const fade = THREE.MathUtils.clamp((far - d) / Math.max(far - near, 1e-6), 0, 1);
+      if (fade > EXTRA_MIN_OPACITY) {
+        for (const i of this.extraIndices) this.labelFor(i, nodes, layout);
+      }
+      this.extraFade = fade;
+    }
+
+    const focus = new Set<number>();
+    if (this.hoverIndex !== null) focus.add(this.hoverIndex);
+    if (this.selection?.kind === "core") focus.add(this.selection.index);
+    for (const i of focus) if (layout) this.labelFor(i, nodes, layout);
+
+    const cands: LabelCandidate[] = [];
+    const placed = new Map<VizLabel, { x: number; y: number; opacity: number }>();
     for (const label of this.labels) {
+      const isExtra = !label.labelled && !focus.has(label.index);
+      let priority: number;
+      let opacity = 1;
+      if (isExtra) {
+        if (!this.extraIndices.includes(label.index) || this.extraFade <= EXTRA_MIN_OPACITY) continue;
+        priority = 0.5;
+        opacity = this.extraFade;
+      } else if (focus.has(label.index)) priority = 2;
+      else priority = label.kind === "hub" ? 3 : 1;
       const s = this.labelScratch.copy(label.pos);
-      const inFront = s.applyMatrix4(this.camera.matrixWorldInverse).z < 0;
-      if (!inFront) {
-        label.el.style.display = "none";
+      if (!(s.applyMatrix4(this.camera.matrixWorldInverse).z < 0)) continue;
+      this.labelScratch.copy(label.pos).project(this.camera);
+      const x = ((this.labelScratch.x + 1) / 2) * this.stageW;
+      const y = ((1 - this.labelScratch.y) / 2) * this.stageH;
+      if (x < -this.stageW || x > 2 * this.stageW || y < -this.stageH || y > 2 * this.stageH) continue;
+      const w = labelWidth(label.text);
+      cands.push({ id: String(label.index), x, y, w, h: LABEL_HEIGHT_PX, priority, size: label.size });
+      placed.set(label, { x, y, opacity });
+    }
+    const kept = pickLabels(cands);
+
+    for (const label of this.labels) {
+      const p = placed.get(label);
+      const el = label.el;
+      if (!p) {
+        el.style.display = "none";
         continue;
       }
-      this.labelScratch.copy(label.pos).project(this.camera);
-      const x = ((this.labelScratch.x + 1) / 2) * w;
-      const y = ((1 - this.labelScratch.y) / 2) * h;
-      const onStage = x >= -w && x <= 2 * w && y >= -h && y <= 2 * h;
-      label.el.style.display = onStage ? "" : "none";
-      label.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -140%)`;
+      el.style.display = "";
+      el.style.visibility = kept.has(String(label.index)) ? "visible" : "hidden";
+      el.style.opacity = p.opacity.toFixed(2);
+      el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, -140%)`;
     }
+  }
+
+  /** Quiets or lights the hub-member and other edges for the selection (dims the rest) or the hover. */
+  private applyEdgeAlphas(): void {
+    const attr = this.edgeColorAttr;
+    if (!attr) return;
+    const rgba = attr.array as Float32Array;
+    const ends = this.edgeEnds;
+    const sel = this.selection;
+    const dimming = sel?.kind === "core";
+    const focus = dimming ? sel.index : this.mode === "viz" ? this.hoverIndex : null;
+    for (let k = 0; k < ends.length / 2; k++) {
+      let a = 1;
+      if (focus !== null) {
+        const touching = ends[k * 2] === focus || ends[k * 2 + 1] === focus;
+        a = touching ? EDGE_HOT : dimming ? EDGE_DIM : 1;
+      }
+      const base = this.edgeBase[k] ?? 1;
+      rgba[(k * 2) * 4 + 3] = a * base;
+      rgba[(k * 2 + 1) * 4 + 3] = a * base;
+    }
+    attr.needsUpdate = true;
   }
 
   /**
@@ -1029,8 +1210,11 @@ export class OrbitView {
     if (!this.renderer || this.disposed) return;
     const w = Math.max(1, this.container.clientWidth);
     const h = Math.max(1, this.container.clientHeight);
+    this.stageW = w;
+    this.stageH = h;
     this.renderer.setSize(w, h, false);
     const pr = this.renderer.getPixelRatio();
+    this.pixelRatioUniform.value = pr;
     this.camera.aspect = w / h;
     this.scaleUniform.value = ((h * pr) / (2 * Math.tan(THREE.MathUtils.degToRad(FOV_DEG) / 2))) * POINT_SCALE;
     if (this.userMoved) this.camera.updateProjectionMatrix();
@@ -1093,7 +1277,13 @@ export class OrbitView {
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
-      uniforms: { uScale: this.scaleUniform, uDepth: this.depthUniform, uOpacity: { value: opacity } },
+      uniforms: {
+        uScale: this.scaleUniform,
+        uPixel: this.pixelUniform,
+        uPixelRatio: this.pixelRatioUniform,
+        uDepth: this.depthUniform,
+        uOpacity: { value: opacity },
+      },
       transparent: true,
       depthWrite: false,
     });
@@ -1136,10 +1326,13 @@ export class OrbitView {
     const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
     const half = Math.min(vHalf, hHalf);
     const framed = this.coreItems.length > 0 ? Math.max(this.coreRadius, 1) : Math.max(this.ringRadius, 1);
-    const dist = framed / (CORE_FRAME_FRACTION * Math.tan(half));
-    const n = Math.hypot(FRAME_ELEVATION, 1);
+    const viz = this.mode === "viz";
+    const fraction = viz ? VIZ_FRAME_FRACTION : CORE_FRAME_FRACTION;
+    const elevation = viz ? VIZ_FRAME_ELEVATION : FRAME_ELEVATION;
+    const dist = framed / (fraction * Math.tan(half));
+    const n = Math.hypot(elevation, 1);
     this.home = {
-      position: new THREE.Vector3(0, (dist * FRAME_ELEVATION) / n, dist / n),
+      position: new THREE.Vector3(0, (dist * elevation) / n, dist / n),
       target: new THREE.Vector3(0, 0, 0),
     };
     this.camera.position.copy(this.home.position);
@@ -1193,6 +1386,9 @@ export class OrbitView {
   private clearCore(): void {
     this.clearGroup(this.coreGroup);
     this.removeVizLabels();
+    this.vizSignature = null;
+    this.extraIndices = [];
+    this.hoverIndex = null;
     this.labelEdgeObj = null;
     this.labelledEdges = [];
     this.vizGraph = null;
@@ -1303,21 +1499,8 @@ export class OrbitView {
       this.writeCoreAlpha(this.lastNow);
     }
 
-    if (this.edgeColorAttr) {
-      const rgba = this.edgeColorAttr.array as Float32Array;
-      const ends = this.edgeEnds;
-      for (let k = 0; k < ends.length / 2; k++) {
-        let a = 1;
-        if (sel?.kind === "core") {
-          const touching = ends[k * 2] === sel.index || ends[k * 2 + 1] === sel.index;
-          a = touching ? EDGE_HOT : EDGE_DIM;
-        }
-        const base = this.edgeBase[k] ?? 1;
-        rgba[(k * 2) * 4 + 3] = a * base;
-        rgba[(k * 2 + 1) * 4 + 3] = a * base;
-      }
-      this.edgeColorAttr.needsUpdate = true;
-    }
+    this.applyEdgeAlphas();
+    this.labelVersion++;
 
     if (this.ringAlphaAttr && this.ringSizeAttr) {
       const alpha = this.ringAlphaAttr.array as Float32Array;
@@ -1470,6 +1653,15 @@ export class OrbitView {
     }, RESUME_MS);
   }
 
+  /** Ends a focus flight at its target pose (what a level remembers when it is left mid-flight). */
+  private settleTween(): void {
+    const t = this.tween;
+    if (!t) return;
+    this.camera.position.copy(t.toPos);
+    this.controls.target.copy(t.toTarget);
+    this.cancelTween();
+  }
+
   /** Stops a focus flight in progress; the auto-rotation resumes after RESUME_MS like after any interaction. */
   private cancelTween(): void {
     if (!this.tween) return;
@@ -1604,6 +1796,13 @@ export class OrbitView {
   private setHover(pick: OrbitPick | null): void {
     if (sameItem(this.hovered, pick)) return;
     this.hovered = pick;
+    const index = pick && pick.type === "viz" && this.mode === "viz" ? (this.coreIndex.get(pick.id) ?? null) : null;
+    if (index !== this.hoverIndex) {
+      this.hoverIndex = index;
+      this.labelVersion++;
+      this.applyEdgeAlphas();
+      this.requestRender();
+    }
     this.onHover?.(pick);
   }
 
@@ -1654,8 +1853,10 @@ export class OrbitView {
   private readonly onDblClick = (e: MouseEvent): void => {
     const pick = this.pickAt(e.clientX, e.clientY);
     if (!pick || pick.type === "edge") return;
-    this.focusNode(pick.id);
-    this.onSelect?.(pick);
+    // A hub opens its part (the page flies nothing there: the level changes); other nodes fly to.
+    if (!pick.drill) this.focusNode(pick.id);
+    if (this.onActivate) this.onActivate(pick);
+    else this.onSelect?.(pick);
   };
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
