@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Orbit (demo)</title>
+    <link rel="icon" href="data:," />
+    <style>
+      :root { --os-cat-code: #5b8def; --os-cat-docs: #e0b341; --os-cat-tests: #4fbf86; --os-cat-knowledge: #c17be6; --os-cat-other: #8a93a6; }
+      html, body, #root { height: 100%; margin: 0; }
+      body { background: #07090e; color: #f2f4f8; font: 14px/1.4 system-ui, sans-serif; overflow: hidden; }
+      #root { position: relative; }
+      .orbit-caption { position: absolute; left: 16px; bottom: 12px; opacity: 0.55; font-size: 12px; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./orbit.tsx"></script>
+  </body>
+</html>

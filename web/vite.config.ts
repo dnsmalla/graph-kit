@@ -11,5 +11,12 @@ export default defineConfig({
   build: {
     outDir: fileURLToPath(new URL('./dist', import.meta.url)),
     emptyOutDir: true,
+    rollupOptions: {
+      // Two demo pages: the System view (index.html) and the orbit brain (orbit.html).
+      input: {
+        index: fileURLToPath(new URL('./demo/index.html', import.meta.url)),
+        orbit: fileURLToPath(new URL('./demo/orbit.html', import.meta.url)),
+      },
+    },
   },
 });
