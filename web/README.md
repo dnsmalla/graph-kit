@@ -2,8 +2,8 @@
 
 The Agentic OS **System** view as a React page. The page holds no transport of
 its own: the app that hosts it supplies the data through the `OsHost` interface
-(`src/host.ts`), so the same page runs in the LLM-IDE Mac app, in a dev browser
-and in the demo.
+(`src/host.ts`), so the same page runs in any host that implements it: a native
+app bridge, an HTTP client, or the demo. LLM-IDE is the first host.
 
 ## The OsHost contract
 
@@ -34,10 +34,12 @@ const view = mountOsView(document.getElementById('root')!, host, {
   theme: 'dark',                 // dark | light | midnight
   projectName: 'My project',
   openFallbackNotice: 'Open this in the app.',
+  signedOutNotice: 'Your session has ended. Sign in again.', // the default
 });
 
 view.configure({ theme: 'light', projectName: 'Other project' });
 view.notifyChange(); // for hosts that push changes without a watch callback
+view.retry();        // after the host refreshed a refused session: re-watch and reload
 view.dispose();
 ```
 

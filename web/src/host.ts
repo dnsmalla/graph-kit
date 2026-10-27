@@ -1,6 +1,6 @@
 // The contract between the System view and the app that hosts it. The page
-// holds no transport of its own: a host (LLM-IDE's Mac app over its bridge, LLM-IDE's
-// dev page over HTTP, or the demo fixture) answers these calls with data.
+// holds no transport of its own: a host (e.g. a native app bridge or an HTTP client,
+// or the demo fixture) answers these calls with data.
 import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
 
 export type OsRange = 'day' | 'week';

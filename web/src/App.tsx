@@ -65,7 +65,7 @@ export function App({ controller }: { controller: OsController }) {
 
       {state.signedOut ? (
         <p className="banner banner-warn" role="status">
-          Your LLM-IDE session has ended. Sign in to LLM-IDE again.
+          {controller.signedOutNotice}
         </p>
       ) : null}
       {state.error ? (

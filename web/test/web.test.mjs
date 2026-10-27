@@ -118,7 +118,7 @@ function fakeHost(overrides = {}) {
 
 const applied = [];
 
-function makeController({ host, timers = fakeTimers(), projectName, openFallbackNotice } = {}) {
+function makeController({ host, timers = fakeTimers(), projectName, openFallbackNotice, signedOutNotice } = {}) {
   const t = timers;
   const controller = new api.controller.OsController(
     {
@@ -129,6 +129,7 @@ function makeController({ host, timers = fakeTimers(), projectName, openFallback
         applied.push(theme);
       },
       openFallbackNotice,
+      signedOutNotice,
     },
     { projectName },
   );
@@ -319,12 +320,11 @@ describe('controller: stopItem', () => {
   it('shows a failed stop as an error and clears the stopping key', async () => {
     const fake = fakeHost({ cancel: () => Promise.reject(new Error('conflict')) });
     const { controller } = makeController({ host: fake.host });
-    // The follow-up refresh runs after a failed stop and clears `error` on success,
-    // as the original controller did, so the stop error is not asserted on the snapshot.
     await controller.stopItem({ method: 'POST', path: '/kb/agent/stop', body: { sessionId: 's1' } }, 'agent-s1');
     assert.equal(fake.calls.cancel.length, 1);
     assert.equal(fake.calls.loadState.length, 1, 'the view still refreshes after a failed stop');
     assert.equal(controller.getSnapshot().stopping, null);
+    assert.match(controller.getSnapshot().error, /Could not stop it/, 'the stop error survives the trailing refresh');
   });
 
   it('ignores a second stop while one is in flight', async () => {
@@ -485,7 +485,142 @@ describe('rendering', () => {
     controller.start();
     await flush();
     const html = api.render.renderApp(controller);
-    assert.ok(html.includes('Your LLM-IDE session has ended.'));
+    assert.ok(html.includes('Your session has ended. Sign in again.'), 'the default notice is shown');
+    assert.ok(!html.includes('LLM-IDE'), 'the default notice names no host');
+    controller.dispose();
+  });
+
+  it('renders a configured signed-out notice', async () => {
+    const fake = fakeHost({ loadState: () => Promise.reject(new api.host.OsAuthError()) });
+    const { controller } = makeController({ host: fake.host, signedOutNotice: 'Sign in to the host app.' });
+    assert.equal(controller.signedOutNotice, 'Sign in to the host app.');
+    controller.start();
+    await flush();
+    assert.ok(api.render.renderApp(controller).includes('Sign in to the host app.'));
+    controller.dispose();
+  });
+});
+
+describe('controller: lifecycle guards and sign-out recovery', () => {
+  it('a late change after dispose schedules no refresh and loads nothing', async () => {
+    const fake = fakeHost();
+    const { controller, timers } = makeController({ host: fake.host });
+    controller.start();
+    await flush();
+    controller.dispose();
+    const loads = fake.calls.loadState.length;
+    fake.emitChange();
+    controller.notifyChange();
+    assert.equal(timers.count(), 0, 'no refresh is scheduled');
+    timers.runTimers();
+    await flush();
+    assert.equal(fake.calls.loadState.length, loads, 'nothing is loaded after dispose');
+  });
+
+  it('an in-flight response that lands after dispose leaves the state unchanged', async () => {
+    const pending = deferred();
+    const fake = fakeHost({ loadState: () => pending.promise });
+    const { controller } = makeController({ host: fake.host });
+    const refreshing = controller.refresh();
+    controller.dispose();
+    const before = controller.getSnapshot();
+    pending.resolve(seeded());
+    await refreshing;
+    assert.equal(controller.getSnapshot(), before, 'no set() after dispose');
+    assert.equal(controller.getSnapshot().data, null);
+  });
+
+  it('a stop that finishes after dispose does not refresh', async () => {
+    const pending = deferred();
+    const fake = fakeHost({ cancel: () => pending.promise });
+    const { controller } = makeController({ host: fake.host });
+    const stopping = controller.stopItem({ method: 'POST', path: '/agent/v2/cancel', body: {} }, 'k');
+    controller.dispose();
+    pending.resolve();
+    await stopping;
+    assert.equal(fake.calls.loadState.length, 0, 'no trailing refresh after dispose');
+  });
+
+  it('a slower pre-401 success cannot clear the sign-out', async () => {
+    const slow = deferred();
+    const fake = fakeHost({
+      loadState: () => slow.promise,
+      cancel: () => Promise.reject(new api.host.OsAuthError()),
+    });
+    const { controller } = makeController({ host: fake.host });
+    const refreshing = controller.refresh();
+    await controller.stopItem({ method: 'POST', path: '/agent/v2/cancel', body: {} }, 'k');
+    assert.equal(controller.getSnapshot().signedOut, true);
+    slow.resolve(seeded());
+    await refreshing;
+    const snap = controller.getSnapshot();
+    assert.equal(snap.signedOut, true, 'the stale success does not clear the sign-out');
+    assert.equal(snap.loading, false);
+    controller.dispose();
+  });
+
+  it('a 401 while already signed out still sets loading to false', async () => {
+    const fake = fakeHost({ loadState: () => Promise.reject(new api.host.OsAuthError()) });
+    const { controller } = makeController({ host: fake.host });
+    await controller.refresh();
+    await controller.refresh();
+    assert.equal(controller.getSnapshot().signedOut, true);
+    assert.equal(controller.getSnapshot().loading, false);
+    controller.dispose();
+  });
+
+  it('retry() re-watches the feed, clears the sign-out and reloads', async () => {
+    let refusing = true;
+    const fake = fakeHost({
+      loadState: () => (refusing ? Promise.reject(new api.host.OsAuthError()) : Promise.resolve(seeded())),
+    });
+    const { controller } = makeController({ host: fake.host });
+    controller.start();
+    await flush();
+    assert.equal(controller.getSnapshot().signedOut, true);
+    assert.equal(fake.calls.unwatch, 1, 'the feed stopped with the sign-out');
+
+    refusing = false;
+    controller.retry();
+    await flush();
+    const snap = controller.getSnapshot();
+    assert.equal(snap.signedOut, false);
+    assert.ok(snap.data, 'data loads after retry');
+    assert.equal(fake.calls.watch, 2, 'the feed is watched again');
+    controller.dispose();
+  });
+
+  it('a refresh that clears a sign-out re-establishes the feed', async () => {
+    let refusing = true;
+    const fake = fakeHost({
+      loadState: () => (refusing ? Promise.reject(new api.host.OsAuthError()) : Promise.resolve(seeded())),
+    });
+    const { controller } = makeController({ host: fake.host });
+    controller.start();
+    await flush();
+    refusing = false;
+    await controller.refresh();
+    assert.equal(controller.getSnapshot().signedOut, false);
+    assert.equal(fake.calls.watch, 2, 'the feed is back after the host recovered');
+    controller.dispose();
+  });
+
+  it('a watch that returns no unwatch function is still watched once', async () => {
+    let watches = 0;
+    const host = {
+      loadState: () => Promise.resolve(seeded()),
+      cancel: () => Promise.resolve(),
+      watch: () => {
+        watches++;
+        return undefined;
+      },
+      open: () => true,
+    };
+    const { controller } = makeController({ host });
+    controller.start();
+    controller.start();
+    await flush();
+    assert.equal(watches, 1, 'one feed per view, even without an unwatch function');
     controller.dispose();
   });
 });

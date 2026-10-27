@@ -12,6 +12,8 @@ export type MountOptions = {
   projectName?: string | null;
   /** Notice shown when the host cannot open a screen. */
   openFallbackNotice?: string;
+  /** Notice shown when the host refuses the session. */
+  signedOutNotice?: string;
   /** The document whose <html> carries data-theme. Defaults to the global document. */
   doc?: Document;
 };
@@ -20,6 +22,8 @@ export type OsViewHandle = {
   configure(cfg: { theme?: string; projectName?: string | null }): void;
   /** For hosts that push changes: re-fetch once the burst settles. */
   notifyChange(): void;
+  /** After the host refreshed its session: clears the sign-out and resumes the feed and data. */
+  retry(): void;
   dispose(): void;
   controller: OsController;
 };
@@ -36,6 +40,7 @@ export function mountOsView(root: HTMLElement, host: OsHost, opts: MountOptions 
         applyTheme(theme, doc.documentElement);
       },
       openFallbackNotice: opts.openFallbackNotice,
+      signedOutNotice: opts.signedOutNotice,
     },
     { projectName: opts.projectName ?? null },
   );
@@ -48,6 +53,7 @@ export function mountOsView(root: HTMLElement, host: OsHost, opts: MountOptions 
   return {
     configure: (cfg) => controller.configure(cfg),
     notifyChange: () => controller.notifyChange(),
+    retry: () => controller.retry(),
     dispose: () => {
       controller.dispose();
       reactRoot.unmount();
