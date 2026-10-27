@@ -34,6 +34,87 @@ test("categorize: tests, docs, knowledge, code, other", () => {
   assert.equal(categorize(node("misc", "other")), "other");
 });
 
+test("categorize: kind decides first; doc paths beat test dirs; titles are never scanned", () => {
+  // Doc file under a spec/ or tests/ directory is docs, not tests.
+  assert.equal(categorize(node("docs/spec/architecture.md")), "docs");
+  assert.equal(categorize(node("docs/tests/x.md")), "docs");
+  // Knowledge node whose title looks like a test is still knowledge.
+  const titled = { ...node("n:2", "noteTask"), title: "unit-test plan" };
+  assert.equal(categorize(titled), "knowledge");
+  // Code file whose title looks like a test is code (title ignored).
+  const codeTitled = { ...node("src/plan.ts", "function"), title: "unit-test plan" };
+  assert.equal(categorize(codeTitled), "code");
+});
+
+test("categorize: test path is read from source_path, path and file metadata", () => {
+  assert.equal(categorize(node("src/a.ts", "file", { source_path: "tests/a.ts" })), "tests");
+  assert.equal(categorize(node("src/a.ts", "file", { path: "tests/a.ts" })), "tests");
+  assert.equal(categorize(node("src/a.ts", "file", { file: "tests/a.ts" })), "tests");
+  assert.equal(categorize(node("src/a.ts", "file", { file: "src/a.ts" })), "code");
+});
+
+test("buildSystemGraph: duplicate node ids keep the first occurrence", () => {
+  const first = { ...node("dup.ts", "file"), title: "First" };
+  const second = { ...node("dup.ts", "function"), title: "Second" };
+  const other = node("other.ts");
+  const g = buildSystemGraph(null, graph([first, second, other], [edge("dup.ts", "other.ts")]));
+  assert.deepEqual(g.core.map((n) => n.id), ["dup.ts", "other.ts"]);
+  const dup = g.core.find((n) => n.id === "dup.ts")!;
+  assert.equal(dup.label, "First");
+  assert.equal(dup.category, "code");
+  assert.equal(g.truncated.totalNodes, 2);
+  assert.deepEqual(g.edges, [{ source: "dup.ts", target: "other.ts", weight: 1 }]);
+});
+
+test("detectCommunities: node with one neighbour from each of two labels takes the smaller label", () => {
+  // Two stable triangles (b*, c*) joined only through zm, which is visited last.
+  // zm's edges are listed c-first so the tie is resolved by label order, not
+  // by neighbour insertion order. Community 0 = the b-triangle + zm (the
+  // b-label is smaller); community 1 = the c-triangle.
+  const ids = ["b1", "b2", "b3", "c1", "c2", "c3", "zm"];
+  const edges = [
+    { source: "b1", target: "b2" }, { source: "b2", target: "b3" }, { source: "b1", target: "b3" },
+    { source: "c1", target: "c2" }, { source: "c2", target: "c3" }, { source: "c1", target: "c3" },
+    { source: "zm", target: "c2" }, { source: "zm", target: "b2" },
+  ];
+  const c = detectCommunities(ids, edges);
+  assert.deepEqual(
+    [...c.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+    [
+      ["b1", 0], ["b2", 0], ["b3", 0], ["c1", 1], ["c2", 1], ["c3", 1], ["zm", 0],
+    ],
+  );
+});
+
+test("buildSystemGraph: greedy fill keeps later communities that fit after a larger one is skipped", () => {
+  // Communities by size: 5 (clique), 2 (pair), 1 (lone). Cap 6: the 5-clique
+  // fits, the pair does not (5+2 > 6), but the lone node does (5+1 = 6).
+  const big = ["c1", "c2", "c3", "c4", "c5"];
+  const nodes = [...big, "s1", "s2", "lone"].map((id) => node(id));
+  const edges: CGEdge[] = [];
+  for (let i = 0; i < big.length; i++)
+    for (let j = i + 1; j < big.length; j++) edges.push(edge(big[i]!, big[j]!));
+  edges.push(edge("s1", "s2"));
+  const g = buildSystemGraph(null, graph(nodes, edges), { maxCoreNodes: 6 });
+  assert.equal(g.truncated.totalNodes, 8);
+  assert.equal(g.truncated.keptNodes, 6);
+  assert.equal(g.truncated.keptCommunities, 2);
+  assert.deepEqual(g.core.map((n) => n.id), [...big, "lone"].sort());
+});
+
+test("buildSystemGraph: 150k nodes with no edges does not throw and caps quickly", () => {
+  const nodes: CGNode[] = [];
+  for (let i = 0; i < 150000; i++) nodes.push(node(`n${i}`));
+  const started = Date.now();
+  const g = buildSystemGraph(null, graph(nodes), { maxCoreNodes: 4000 });
+  const elapsed = Date.now() - started;
+  assert.equal(g.truncated.totalNodes, 150000);
+  assert.equal(g.truncated.keptNodes, 4000);
+  assert.equal(g.truncated.keptCommunities, 4000);
+  assert.equal(g.core.length, 4000);
+  assert.ok(elapsed < 20000, `took ${elapsed} ms`);
+});
+
 test("detectCommunities: two disconnected triangles give two communities, bigger first", () => {
   const ids = ["a1", "a2", "a3", "b1", "b2", "b3", "b4"];
   const edges = [

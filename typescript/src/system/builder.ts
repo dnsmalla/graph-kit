@@ -69,13 +69,22 @@ function nodePaths(node: CGNode): string[] {
   );
 }
 
-/** Classify a node into the core category used by the system view. */
+/**
+ * Classify a node into the core category used by the system view. Decided in
+ * this order, first match wins:
+ *   1. kind: DOC_KINDS → docs, KNOWLEDGE_KINDS → knowledge (the title is never
+ *      consulted, so a note called "unit-test plan" stays knowledge);
+ *   2. a path (metadata source_file / source_path / path / file, or the id)
+ *      ending in a doc extension → docs (so `docs/spec/a.md` is docs, not tests);
+ *   3. a path or id matching TEST_PATH → tests (title still ignored);
+ *   4. NON_CODE_KINDS → other; anything else → code.
+ */
 export function categorize(node: CGNode): CoreCategory {
-  const paths = nodePaths(node);
-  const testish = [...paths, node.id, node.title].some((s) => TEST_PATH.test(s));
-  if (testish) return "tests";
-  if (DOC_KINDS.has(node.kind) || [...paths, node.id, node.title].some((p) => DOC_EXT.test(p))) return "docs";
+  if (DOC_KINDS.has(node.kind)) return "docs";
   if (KNOWLEDGE_KINDS.has(node.kind)) return "knowledge";
+  const locators = [...nodePaths(node), node.id];
+  if (locators.some((s) => DOC_EXT.test(s))) return "docs";
+  if (locators.some((s) => TEST_PATH.test(s))) return "tests";
   if (NON_CODE_KINDS.has(node.kind)) return "other";
   return "code";
 }
@@ -178,6 +187,14 @@ function collapseEdges(nodeIds: Set<string>, edges: CGData["edges"]): PairEdge[]
  * Build the system view graph. `project` supplies the core (nodes + edges);
  * `snapshot` supplies the ring of recent activity. Either may be null.
  * Capping removes nodes only: every edge between two kept nodes is kept.
+ *
+ * Cap rule (when there are more than `maxCoreNodes` nodes): communities are
+ * walked largest-first and each is kept whole if it fits in the remaining
+ * budget; one that does not fit is skipped and the walk continues, so smaller
+ * communities later in the order can still fill the core. If the largest
+ * community alone exceeds the cap, only its `maxCoreNodes` highest-degree nodes
+ * are kept and no other community is. `truncated.keptCommunities` counts the
+ * whole communities kept (1 in the partial-trim case, 0 if the cap is 0).
  */
 export function buildSystemGraph(
   snapshot: OsSnapshot | null,
@@ -203,7 +220,10 @@ export function buildSystemGraph(
   const allIds = [...nodeIds].sort();
 
   const communityOf = detectCommunities(allIds, pairs);
-  const communityCount = allIds.length === 0 ? 0 : Math.max(...communityOf.values()) + 1;
+  // Loop rather than Math.max(...values): spreading >~125k args throws RangeError.
+  let maxCommunity = -1;
+  for (const c of communityOf.values()) if (c > maxCommunity) maxCommunity = c;
+  const communityCount = maxCommunity + 1;
   const totalNodes = allIds.length;
 
   // Full-graph weighted degree, used to rank nodes when trimming.
@@ -225,21 +245,28 @@ export function buildSystemGraph(
 
     kept = new Set();
     keptCommunities = 0;
-    for (const [c, group] of members.entries()) {
-      if (kept.size + group.length <= maxCore) {
+    const largest = members[0] ?? [];
+    if (largest.length > maxCore) {
+      // Partial trim: the largest community alone exceeds the cap, so keep its
+      // highest-degree nodes and nothing else. Community indices on the core
+      // stay the raw detectCommunities numbers (not renumbered).
+      const ranked = [...largest].sort(
+        (a, b) => fullDegree.get(b)! - fullDegree.get(a)! || byId(a, b),
+      );
+      for (const id of ranked.slice(0, maxCore)) kept.add(id);
+      keptCommunities = kept.size > 0 ? 1 : 0;
+    } else {
+      // Greedy fill, largest community first: keep each community that fits in
+      // the remaining budget and skip (continue past) any that does not, so a
+      // large community that no longer fits does not block smaller ones.
+      // Community indices on the core are the raw detectCommunities numbers, so
+      // they may skip values where a community was dropped.
+      for (const group of members) {
+        if (kept.size + group.length > maxCore) continue;
         for (const id of group) kept.add(id);
         keptCommunities++;
-        continue;
+        if (kept.size === maxCore) break;
       }
-      // Largest community alone exceeds the cap: keep its highest-degree nodes.
-      if (c === 0) {
-        const ranked = [...group].sort(
-          (a, b) => fullDegree.get(b)! - fullDegree.get(a)! || byId(a, b),
-        );
-        for (const id of ranked.slice(0, maxCore)) kept.add(id);
-        keptCommunities = kept.size > 0 ? 1 : 0;
-      }
-      break;
     }
   }
 
