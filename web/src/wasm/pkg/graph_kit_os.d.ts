@@ -1,9 +1,17 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function __wbg_reset_state(): void;
+
 export function build_system_graph_json(snapshot_json: string, project_json: string, opts_json: string): string;
 
 export function orbit_layout_json(system_graph_json: string, opts_json: string): string;
+
+/**
+ * Runs when the module is instantiated. It exists so wasm-bindgen emits `__wbindgen_start`,
+ * which the generated `__wbg_reset_state` (see web/src/wasm/index.ts) calls after a trap.
+ */
+export function start(): void;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -11,10 +19,12 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly build_system_graph_json: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
     readonly orbit_layout_json: (a: number, b: number, c: number, d: number, e: number) => void;
+    readonly start: () => void;
     readonly __wbindgen_export: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export2: (a: number, b: number) => number;
     readonly __wbindgen_export3: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
+    readonly __wbindgen_start: () => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

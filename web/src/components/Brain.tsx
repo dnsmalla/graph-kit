@@ -23,6 +23,7 @@ export function Brain({
   core,
   ring,
   drawFailed,
+  coreLoading,
   activity,
 }: {
   state: ViewState;
@@ -31,11 +32,14 @@ export function Brain({
   ring: RingView;
   /** True when the host's graph or the activity could not be drawn; the view is then empty. */
   drawFailed: boolean;
+  /** True while the core is still compiling: the brain shows its loading state. */
+  coreLoading: boolean;
   activity: OsActivityItem[];
 }) {
   const { graph } = core;
   const status = state.projectGraphStatus;
-  const ready = !drawFailed && status === 'ready' && graph.core.length > 0;
+  const drawing = !drawFailed && !coreLoading;
+  const ready = drawing && status === 'ready' && graph.core.length > 0;
   const truncated = graph.truncated.totalNodes > graph.truncated.keptNodes;
   const caption = ready
     ? `${fmtInt(graph.core.length)} nodes · ${fmtInt(ring.items.length)} recent${
@@ -62,9 +66,9 @@ export function Brain({
       <div className="os-brain">
         <div className="os-brain-stage">
           <OrbitPanel
-            core={drawFailed ? null : core}
-            ring={drawFailed ? null : ring}
-            showEmpty={settled && !drawFailed}
+            core={drawing ? core : null}
+            ring={drawing ? ring : null}
+            showEmpty={settled && drawing}
             onFallback={() => setWebgl(false)}
             onSelect={(item) => {
               triggerRef.current = null;
@@ -72,7 +76,7 @@ export function Brain({
             }}
           />
         </div>
-        {status === 'loading' || status === 'idle' ? (
+        {status === 'loading' || status === 'idle' || coreLoading ? (
           <p className="os-brain-status" role="status">
             Loading the project graph…
           </p>

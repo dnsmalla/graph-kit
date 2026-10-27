@@ -889,6 +889,55 @@ describe('rendering: accessibility, empty states and fallbacks', () => {
   });
 });
 
+describe('system view: drawing the brain', () => {
+  const boom = () => {
+    throw new Error('core crashed');
+  };
+
+  it('a core that throws yields the failed state with the empty views, never an exception', () => {
+    const drawn = api.systemGraph.drawViews(api.fixture.buildDemoProjectGraph(), null, {
+      computeCore: boom,
+      computeRing: (s, o) => api.systemGraph.computeRing(s, o),
+    });
+    assert.equal(drawn.drawFailed, true);
+    assert.equal(drawn.loading, false);
+    assert.equal(drawn.core.graph.core.length, 0);
+    assert.equal(drawn.ring.items.length, 0);
+  });
+
+  it('a ring that throws yields the failed state too', () => {
+    const drawn = api.systemGraph.drawViews(null, seeded(), {
+      computeCore: (p, o) => api.systemGraph.computeCore(p, o),
+      computeRing: boom,
+    });
+    assert.equal(drawn.drawFailed, true);
+    assert.equal(drawn.core.graph.core.length, 0);
+  });
+
+  it('the failed state renders "Could not draw the project graph." and keeps the brain on the page', () => {
+    const { controller } = makeController({ host: fakeHost().host });
+    const html = api.render.renderBrain(controller, { drawFailed: true });
+    assert.match(html, /Could not draw the project graph\./);
+    assert.match(html, /Project brain/);
+    controller.dispose();
+  });
+
+  it('the loading state renders the loading text, never the failure text', () => {
+    const { controller } = makeController({ host: fakeHost().host });
+    const html = api.render.renderBrain(controller, { coreLoading: true });
+    assert.match(html, /Loading the project graph/);
+    assert.doesNotMatch(html, /Could not draw the project graph/);
+    controller.dispose();
+  });
+
+  it('a settled, drawable project reports neither loading nor failed', () => {
+    const drawn = api.systemGraph.drawViews(api.fixture.buildDemoProjectGraph(), null);
+    assert.equal(drawn.drawFailed, false);
+    assert.equal(drawn.loading, false);
+    assert.ok(drawn.core.graph.core.length > 0);
+  });
+});
+
 describe('system view: core and ring split', () => {
   // Looked up at call time: the modules load in the before() hook.
   const computeCore = (...args) => api.systemGraph.computeCore(...args);

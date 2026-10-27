@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { whenOsGraphReady } from './systemGraph';
 import { OsController } from './controller';
 import type { OsHost } from './host';
 import { applyTheme } from './theme';
@@ -32,6 +33,9 @@ export type OsViewHandle = {
 /** Renders the System view into `root`, backed by `host`, and starts its change feed. */
 export function mountOsView(root: HTMLElement, host: OsHost, opts: MountOptions = {}): OsViewHandle {
   const doc = opts.doc ?? document;
+  // Start compiling the OS graph core now, off the synchronous path (see wasm/index.ts). The
+  // brain shows its loading state until it is ready.
+  void whenOsGraphReady();
   const controller = new OsController(
     {
       host,

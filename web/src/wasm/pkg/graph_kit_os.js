@@ -1,5 +1,23 @@
 /* @ts-self-types="./graph_kit_os.d.ts" */
 
+export function __wbg_reset_state () {
+    __wbg_instance_id++;
+    cachedDataViewMemory0 = null;
+    cachedUint8ArrayMemory0 = null;
+    if (typeof numBytesDecoded !== 'undefined') numBytesDecoded = 0;
+    if (typeof WASM_VECTOR_LEN !== 'undefined') WASM_VECTOR_LEN = 0;
+    if (typeof heap !== 'undefined') {
+        heap = new Array(1024).fill(undefined);
+        heap = heap.concat([undefined, null, true, false]);
+        if (typeof heap_next !== 'undefined')
+        heap_next = heap.length;
+    }
+    __wbg_reinit_scheduled = false;
+    wasmInstance = new WebAssembly.Instance(wasmModule, __wbg_get_imports());
+    wasm = wasmInstance.exports;
+    wasm.__wbindgen_start();
+}
+
 /**
  * @param {string} snapshot_json
  * @param {string} project_json
@@ -17,6 +35,7 @@ export function build_system_graph_json(snapshot_json, project_json, opts_json) 
         const len1 = WASM_VECTOR_LEN;
         const ptr2 = passStringToWasm0(opts_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len2 = WASM_VECTOR_LEN;
+        __wbg_call_guard();
         wasm.build_system_graph_json(retptr, ptr0, len0, ptr1, len1, ptr2, len2);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
@@ -25,6 +44,7 @@ export function build_system_graph_json(snapshot_json, project_json, opts_json) 
         return getStringFromWasm0(r0, r1);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
+        __wbg_call_guard();
         wasm.__wbindgen_export(deferred4_0, deferred4_1, 1);
     }
 }
@@ -43,6 +63,7 @@ export function orbit_layout_json(system_graph_json, opts_json) {
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passStringToWasm0(opts_json, wasm.__wbindgen_export2, wasm.__wbindgen_export3);
         const len1 = WASM_VECTOR_LEN;
+        __wbg_call_guard();
         wasm.orbit_layout_json(retptr, ptr0, len0, ptr1, len1);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
@@ -51,8 +72,18 @@ export function orbit_layout_json(system_graph_json, opts_json) {
         return getStringFromWasm0(r0, r1);
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
+        __wbg_call_guard();
         wasm.__wbindgen_export(deferred3_0, deferred3_1, 1);
     }
+}
+
+/**
+ * Runs when the module is instantiated. It exists so wasm-bindgen emits `__wbindgen_start`,
+ * which the generated `__wbg_reset_state` (see web/src/wasm/index.ts) calls after a trap.
+ */
+export function start() {
+    __wbg_call_guard();
+    wasm.start();
 }
 function __wbg_get_imports() {
     const import0 = {
@@ -65,6 +96,7 @@ function __wbg_get_imports() {
                 deferred0_1 = arg1;
                 console.error(getStringFromWasm0(arg0, arg1));
             } finally {
+                __wbg_call_guard();
                 wasm.__wbindgen_export(deferred0_0, deferred0_1, 1);
             }
         },
@@ -88,6 +120,16 @@ function __wbg_get_imports() {
         "./graph_kit_os_bg.js": import0,
     };
 }
+
+function __wbg_call_guard() {
+    if (__wbg_reinit_scheduled) {
+        __wbg_reset_state();
+        return;
+    }
+}
+
+
+let __wbg_instance_id = 0;
 
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
@@ -168,6 +210,8 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 
+let __wbg_reinit_scheduled = false;
+
 function takeObject(idx) {
     const ret = getObject(idx);
     dropObject(idx);
@@ -210,6 +254,7 @@ function __wbg_finalize_init(instance, module) {
     wasmModule = module;
     cachedDataViewMemory0 = null;
     cachedUint8ArrayMemory0 = null;
+    wasm.__wbindgen_start();
     return wasm;
 }
 

@@ -15,8 +15,21 @@ import type {
   SystemRingItem,
   Vec3,
 } from '../../typescript/src/system/types';
-import { buildSystemGraph, orbitLayout } from './wasm';
+import { buildSystemGraph, initOsGraphAsync, orbitLayout, osGraphStatus } from './wasm';
+import type { OsGraphStatus } from './wasm';
 import type { OsSnapshot } from './types';
+
+export { osGraphReady, osGraphStatus } from './wasm';
+export type { OsGraphStatus } from './wasm';
+
+/**
+ * Starts loading the core (off the synchronous path) and resolves once it has settled: ready,
+ * or failed. Never rejects; read osGraphStatus() afterwards. Idempotent. The page calls this
+ * on mount, so the brain can show its loading state until the core is instantiated.
+ */
+export function whenOsGraphReady(): Promise<void> {
+  return initOsGraphAsync().catch(() => undefined);
+}
 
 /** Hard caps the page applies. A caller can ask for less, never for more. */
 export const SYSTEM_VIEW_LIMITS = { maxCoreNodes: 4000, maxRingItems: 24 } as const;
@@ -101,4 +114,48 @@ export function computeRing(
   const view: RingView = { items, positions: layout.ring };
   ringMemo = { key, view };
   return view;
+}
+
+/** What the brain draws: the core and ring, or the empty views with a flag saying why. */
+export type DrawnViews = {
+  core: CoreView;
+  ring: RingView;
+  /** The core threw (a bad graph or a crashed core). The brain says it could not draw. */
+  drawFailed: boolean;
+  /** The core is still compiling. The brain shows its loading state, not a failure. */
+  loading: boolean;
+};
+
+/** The two calls drawViews makes; a parameter so tests can make one of them throw. */
+export type DrawDeps = {
+  computeCore: (project: CGData | null, opts: SystemViewOptions) => CoreView;
+  computeRing: (snapshot: OsSnapshot | null, opts: SystemViewOptions) => RingView;
+};
+
+const REAL_DRAW: DrawDeps = { computeCore, computeRing };
+
+/**
+ * The brain's two inputs. The core depends on the project alone and the ring on the activity,
+ * so a change refresh rebuilds only the ring. While the core is compiling the result is the
+ * loading state; a throw from either call is the failed state. Neither escapes as an exception.
+ * The caller passes osGraphStatus() implicitly: the result changes once the core is ready.
+ */
+export function drawViews(
+  project: CGData | null,
+  snapshot: OsSnapshot | null,
+  deps: DrawDeps = REAL_DRAW,
+): DrawnViews {
+  if (osGraphStatus() === 'loading') {
+    return { core: EMPTY_CORE_VIEW, ring: EMPTY_RING_VIEW, drawFailed: false, loading: true };
+  }
+  try {
+    return {
+      core: deps.computeCore(project, SYSTEM_VIEW_LIMITS),
+      ring: deps.computeRing(snapshot, SYSTEM_VIEW_LIMITS),
+      drawFailed: false,
+      loading: false,
+    };
+  } catch {
+    return { core: EMPTY_CORE_VIEW, ring: EMPTY_RING_VIEW, drawFailed: true, loading: false };
+  }
 }

@@ -10,6 +10,13 @@ fn install_panic_hook() {
     PANIC_HOOK.call_once(console_error_panic_hook::set_once);
 }
 
+/// Runs when the module is instantiated. It exists so wasm-bindgen emits `__wbindgen_start`,
+/// which the generated `__wbg_reset_state` (see web/src/wasm/index.ts) calls after a trap.
+#[wasm_bindgen(start)]
+pub fn start() {
+    install_panic_hook();
+}
+
 #[wasm_bindgen]
 pub fn build_system_graph_json(snapshot_json: &str, project_json: &str, opts_json: &str) -> String {
     install_panic_hook();

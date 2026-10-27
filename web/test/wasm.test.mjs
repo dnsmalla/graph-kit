@@ -17,6 +17,8 @@ const TOLERANCE = 1e-9;
 
 let server;
 let wasm;
+let glue;
+let systemGraph;
 
 before(async () => {
   server = await createServer({
@@ -29,6 +31,8 @@ before(async () => {
     optimizeDeps: { noDiscovery: true, include: [] },
   });
   wasm = await server.ssrLoadModule(path.join(WASM_DIR, 'index.ts'));
+  glue = await server.ssrLoadModule(path.join(WASM_DIR, 'pkg', 'graph_kit_os.js'));
+  systemGraph = await server.ssrLoadModule(path.join(ROOT, 'src', 'systemGraph.ts'));
 });
 
 after(async () => {
@@ -70,6 +74,93 @@ function assertOrbit(name, layout, want) {
   );
 }
 
+// Runs first on purpose: the async tests need a core nothing has started synchronously yet.
+describe('async init (Chromium: no synchronous compile on the main thread)', () => {
+  it('starts idle, compiles with WebAssembly.compile while loading, then is ready', async () => {
+    assert.equal(wasm.osGraphStatus(), 'idle');
+    assert.equal(wasm.osGraphReady(), false);
+    const realCompile = WebAssembly.compile;
+    let compiles = 0;
+    WebAssembly.compile = (...args) => {
+      compiles += 1;
+      return realCompile(...args);
+    };
+    try {
+      const first = wasm.initOsGraphAsync();
+      assert.equal(wasm.osGraphStatus(), 'loading');
+      assert.equal(wasm.initOsGraphAsync(), first, 'a second call shares the in-flight promise');
+      await first;
+    } finally {
+      WebAssembly.compile = realCompile;
+    }
+    assert.equal(compiles, 1, 'the async path compiles exactly once');
+    assert.equal(wasm.osGraphStatus(), 'ready');
+    assert.equal(wasm.osGraphReady(), true);
+  });
+
+  it('is idempotent once ready: resolves at once, with no second compile', async () => {
+    const realCompile = WebAssembly.compile;
+    let compiles = 0;
+    WebAssembly.compile = (...args) => {
+      compiles += 1;
+      return realCompile(...args);
+    };
+    try {
+      await wasm.initOsGraphAsync();
+      await wasm.initOsGraphAsync();
+      wasm.initOsGraph();
+    } finally {
+      WebAssembly.compile = realCompile;
+    }
+    assert.equal(compiles, 0);
+  });
+
+  it('while the core compiles, the brain draws the loading state, not a failure', async () => {
+    // A fresh core is not in this process any more, so this uses the status directly: the
+    // loading state is what drawViews reports whenever the status is 'loading'.
+    const drawn = systemGraph.drawViews(null, null);
+    assert.equal(drawn.loading, false, 'a ready core is not loading');
+    assert.equal(drawn.drawFailed, false);
+  });
+
+  it('a sync init afterwards is a no-op and the wrappers work', () => {
+    wasm.initOsGraph();
+    const graph = wasm.buildSystemGraph(null, null, {});
+    assert.deepStrictEqual(graph.core, []);
+  });
+});
+
+describe('crash recovery (panic = abort traps as WebAssembly.RuntimeError)', () => {
+  it('a trap is reported as a restart with the trap as its cause, and the next call works', () => {
+    wasm.initOsGraph();
+    const before = glue.initSync();
+    // An out-of-bounds read inside the core: a real trap from the real module, not a fake.
+    const retptr = before.__wbindgen_add_to_stack_pointer(-16);
+    assert.throws(
+      () =>
+        wasm.runCore(() => before.build_system_graph_json(retptr, 0, 0x7fffffff, 0, 0, 0, 0)),
+      (err) =>
+        err instanceof Error &&
+        err.message === 'OS graph core crashed; it was restarted' &&
+        err.cause instanceof WebAssembly.RuntimeError,
+    );
+    const after = glue.initSync();
+    assert.notEqual(after, before, 'the glue re-instantiated the core');
+    const graph = wasm.buildSystemGraph(null, null, {});
+    assert.deepStrictEqual(graph.core, []);
+    const layout = wasm.orbitLayout(graph, {});
+    assert.equal(layout.core.size, 0);
+  });
+
+  it('a non-trap error passes through unchanged and does not restart the core', () => {
+    wasm.initOsGraph();
+    const before = glue.initSync();
+    const original = new TypeError('not a trap');
+    assert.throws(() => wasm.runCore(() => { throw original; }), (err) => err === original);
+    assert.equal(glue.initSync(), before, 'no restart for an ordinary error');
+  });
+});
+
 describe('embedded WASM core reproduces the parity goldens', () => {
   const cases = goldenCases();
 
@@ -95,6 +186,15 @@ describe('embedded WASM core reproduces the parity goldens', () => {
 });
 
 describe('wrapper contract', () => {
+  it('parseResult throws only for the { error: string } object the core builds', () => {
+    assert.throws(() => wasm.parseResult('{"error":"boom"}', 'what'), /^Error: what: boom$/);
+    // Any other object is a result, even one with an error key.
+    assert.deepStrictEqual(wasm.parseResult('{"error":"x","extra":1}', 'w'), { error: 'x', extra: 1 });
+    assert.deepStrictEqual(wasm.parseResult('{"error":5}', 'w'), { error: 5 });
+    assert.deepStrictEqual(wasm.parseResult('{"core":[]}', 'w'), { core: [] });
+    assert.deepStrictEqual(wasm.parseResult('[]', 'w'), []);
+  });
+
   it('throws the core error instead of returning it', () => {
     assert.throws(() => wasm.orbitLayout(null, {}), /orbitLayout: .*must not be null/);
     const bad = { activity: { items: [{ id: true, kind: 'x', title: 't', createdAt: 't' }] } };

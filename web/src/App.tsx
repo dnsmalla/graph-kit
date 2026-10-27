@@ -1,18 +1,10 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { CGData } from '../../typescript/src/models';
 import type { OsController, ViewState } from './controller';
 import type { OsRange } from './host';
 import type { OsLiveStatus, OsSnapshot } from './types';
 import { fmtTime } from './format';
-import {
-  computeCore,
-  computeRing,
-  EMPTY_CORE_VIEW,
-  EMPTY_RING_VIEW,
-  type CoreView,
-  type RingView,
-  SYSTEM_VIEW_LIMITS,
-} from './systemGraph';
+import { drawViews, osGraphStatus, whenOsGraphReady, type OsGraphStatus } from './systemGraph';
 import { Brain } from './components/Brain';
 import { Knowledge } from './components/Knowledge';
 import { Routines } from './components/Routines';
@@ -66,27 +58,30 @@ function Header({ state, controller }: { state: ViewState; controller: OsControl
   );
 }
 
-/**
- * The brain's two inputs. The core depends on the project alone and the ring on
- * the activity, so a change refresh rebuilds only the ring. A failure to draw
- * either yields the empty view and `drawFailed`, never a crashed page.
- */
-function drawViews(project: CGData | null, snapshot: OsSnapshot | null): { core: CoreView; ring: RingView; drawFailed: boolean } {
-  try {
-    return {
-      core: computeCore(project, SYSTEM_VIEW_LIMITS),
-      ring: computeRing(snapshot, SYSTEM_VIEW_LIMITS),
-      drawFailed: false,
+/** The core's status, re-read once the core has settled (ready or failed). */
+function useOsGraphStatus(): OsGraphStatus {
+  const [status, setStatus] = useState<OsGraphStatus>(osGraphStatus);
+  useEffect(() => {
+    let live = true;
+    void whenOsGraphReady().then(() => {
+      if (live) setStatus(osGraphStatus());
+    });
+    return () => {
+      live = false;
     };
-  } catch {
-    return { core: EMPTY_CORE_VIEW, ring: EMPTY_RING_VIEW, drawFailed: true };
-  }
+  }, []);
+  return status;
 }
 
 export function App({ controller }: { controller: OsController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const data = state.data;
-  const drawn = useMemo(() => drawViews(state.projectGraph, data), [state.projectGraph, data]);
+  // The core's status is a dependency: drawViews reads it, and it changes once when the core is ready.
+  const graphStatus = useOsGraphStatus();
+  const drawn = useMemo(
+    () => drawViews(state.projectGraph, data),
+    [state.projectGraph, data, graphStatus],
+  );
 
   return (
     <div className="os">
@@ -123,6 +118,7 @@ export function App({ controller }: { controller: OsController }) {
             core={drawn.core}
             ring={drawn.ring}
             drawFailed={drawn.drawFailed}
+            coreLoading={drawn.loading}
             activity={data.activity.items}
           />
 
