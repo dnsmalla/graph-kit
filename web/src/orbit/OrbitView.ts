@@ -25,6 +25,8 @@ import {
   buildEdgeData,
   buildPointBuffers,
   categoryColorVar,
+  coreFramingRadius,
+  coreSizeScale,
   clusterColorVar,
   colorToHex,
   DEFAULT_CATEGORY_COLORS,
@@ -112,7 +114,14 @@ export function orbitKeyAction(key: string): OrbitKeyAction | null {
 const FOV_DEG = 45;
 /** Converts a world-space point size to pixels (tuned by eye, see scene units). */
 const POINT_SCALE = 0.5;
-const CORE_OPACITY = 0.9;
+/** Core points are alpha-blended (never additive, which saturates to white) with a little transparency. */
+const CORE_OPACITY = 0.85;
+/** Points farther than the scene's middle fade towards this fraction of their alpha. */
+const DEPTH_FADE_MIN = 0.45;
+/** Pick radius in CSS pixels: the ray's threshold grows with the camera distance, so a node is hit at any zoom. */
+const PICK_RADIUS_PX = 8;
+/** The core fills this fraction of the stage's shorter side on framing; the ring may extend past the edges. */
+const CORE_FRAME_FRACTION = 0.6;
 /** Light theme: normal blending needs a little more alpha to read on white. */
 const LIGHT_POINT_BOOST = 1.25;
 const RING_POINT_SIZE = 6;
@@ -122,7 +131,7 @@ const RING_RGB: Record<OrbitTheme, [number, number, number]> = {
 };
 const LINE_STYLE = {
   edge: {
-    dark: { color: 0x8a93a6, opacity: 0.08 },
+    dark: { color: 0x8a93a6, opacity: 0.12 },
     light: { color: 0x3d4454, opacity: 0.22 },
   },
   ring: {
@@ -130,13 +139,11 @@ const LINE_STYLE = {
     light: { color: 0x3d4454, opacity: 0.35 },
   },
 } as const;
-const RING_SPIN_FACTOR = 1.6;
 const CLICK_SLOP_PX = 4;
 const MAX_FRAME_DT = 0.1;
 /** Hover is re-resolved at most this often while the view moves under the pointer. */
 const REPICK_INTERVAL_MS = 150;
-/** Framing: sphere fit with a 25% margin, camera looking slightly down. */
-const FRAME_MARGIN = 1.25;
+/** Framing: camera looking slightly down. */
 const FRAME_ELEVATION = 0.35;
 /** The camera is re-framed when the core's node count moves by more than this fraction. */
 const REFRAME_CHANGE_RATIO = 0.2;
@@ -164,14 +171,19 @@ attribute float aSize;
 attribute float aAlpha;
 attribute vec3 aColor;
 uniform float uScale;
+uniform vec2 uDepth;
 varying vec3 vColor;
 varying float vAlpha;
+varying float vFade;
 void main() {
   vColor = aColor;
   vAlpha = aAlpha;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
   gl_PointSize = clamp(aSize * uScale / -mv.z, 1.0, 48.0);
+  // Depth fade: the far side of the scene is dimmer, so the near side reads as the front of the cluster.
+  float t = clamp((-mv.z - uDepth.x) / max(uDepth.y - uDepth.x, 1e-6), 0.0, 1.0);
+  vFade = 1.0 - (1.0 - ${DEPTH_FADE_MIN.toFixed(2)}) * t;
 }
 `;
 
@@ -179,11 +191,12 @@ const FRAGMENT_SHADER = `
 uniform float uOpacity;
 varying vec3 vColor;
 varying float vAlpha;
+varying float vFade;
 void main() {
   float d = length(gl_PointCoord - vec2(0.5));
   if (d > 0.5) discard;
   float a = 1.0 - smoothstep(0.15, 0.5, d);
-  gl_FragColor = vec4(vColor, a * uOpacity * vAlpha);
+  gl_FragColor = vec4(vColor, a * uOpacity * vAlpha * vFade);
 }
 `;
 
@@ -301,6 +314,8 @@ export class OrbitView {
   private readonly pickTargets: THREE.Object3D[] = [];
   /** Shared by every point material; updated on resize. */
   private readonly scaleUniform = { value: 1 };
+  /** Depth range (near, far) of the scene from the camera, shared by every point material. */
+  private readonly depthUniform = { value: new THREE.Vector2(1, 2) };
   private readonly pointMaterials = new Set<THREE.ShaderMaterial>();
   private readonly lineMaterials = new Set<THREE.LineBasicMaterial>();
 
@@ -328,7 +343,10 @@ export class OrbitView {
   private ringColorAttr: THREE.BufferAttribute | null = null;
   private ringSizeAttr: THREE.BufferAttribute | null = null;
   private ringAlphaAttr: THREE.BufferAttribute | null = null;
+  /** Zoom and clip scale: the core and the ring together. */
   private radius = 1;
+  /** Radius of the core's own nodes (no ring): what framing fits. */
+  private coreRadius = 0;
   /** Core node count at the last framing, or null before the first framing. */
   private framedCoreCount: number | null = null;
   private ringCount = 0;
@@ -336,8 +354,6 @@ export class OrbitView {
   private selectedId: string | null = null;
   private selection: SelectionRef | null = null;
 
-  private coreAngle = 0;
-  private ringAngle = 0;
   private frameId: number | null = null;
   private lastTime: number | null = null;
   private disposed = false;
@@ -450,6 +466,8 @@ export class OrbitView {
     this.clusterPalette = readClusterPalette();
     this.resize();
     this.updateAutoRotate();
+    // Arm the first frame now: without it the canvas stays blank until something else asks for a render.
+    this.requestRender();
   }
 
   /**
@@ -484,7 +502,14 @@ export class OrbitView {
     }
 
     const pts = buildPointBuffers(graph, layout, this.categoryColors);
+    // Fewer, larger points when the core is sparse; smaller ones when it is dense.
+    const sizeScale = coreSizeScale(pts.ids.length);
+    for (let i = 0; i < pts.sizes.length; i++) pts.sizes[i]! *= sizeScale;
     this.baseSizes = pts.sizes;
+    this.coreRadius = coreFramingRadius(
+      nodes.map((n) => n.id),
+      layout,
+    );
     this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
     if (pts.ids.length > 0) {
@@ -512,7 +537,8 @@ export class OrbitView {
       this.coreGroup.add(new THREE.LineSegments(geo, this.makeLineMaterial("edge")));
     }
 
-    this.radius = Math.max(layout.bounds.radius, this.ringRadius, 1);
+    this.radius = Math.max(this.coreRadius, this.ringRadius, 1);
+    this.applyZoomLimits();
     this.setHover(null);
     this.applySelection();
     this.frameCore();
@@ -573,7 +599,8 @@ export class OrbitView {
     }
 
     this.ringRadius = ringRadius;
-    this.radius = Math.max(this.layout?.bounds.radius ?? 0, this.ringRadius, 1);
+    this.radius = Math.max(this.coreRadius, this.ringRadius, 1);
+    this.applyZoomLimits();
     this.applySelection();
     this.frameCore();
     this.requestRender();
@@ -622,6 +649,10 @@ export class OrbitView {
       toPos: world.clone().addScaledVector(dir, dist),
       toTarget: world,
     };
+    // The flight owns the camera: no auto-rotation during it, and for RESUME_MS after it ends (see stepTween).
+    this.interacting = true;
+    this.clearResume();
+    this.updateAutoRotate();
     this.requestRender();
     return true;
   }
@@ -639,7 +670,7 @@ export class OrbitView {
   /** Back to the framed view of the current scene (the toolbar button and the 0 key). */
   resetView(): void {
     if (!this.renderer || this.disposed) return;
-    this.tween = null;
+    this.cancelTween();
     this.userMoved = false;
     // Flush the damping residue first (a leftover rotation or pan would otherwise land on the home pose).
     const c = this.controls;
@@ -772,7 +803,7 @@ export class OrbitView {
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
-      uniforms: { uScale: this.scaleUniform, uOpacity: { value: opacity } },
+      uniforms: { uScale: this.scaleUniform, uDepth: this.depthUniform, uOpacity: { value: opacity } },
       transparent: true,
       depthWrite: false,
     });
@@ -783,9 +814,10 @@ export class OrbitView {
   }
 
   private stylePointMaterial(mat: THREE.ShaderMaterial): void {
+    // Normal blending on both themes: additive points saturate to white where they overlap and hide the colours.
     const light = this.theme === "light";
     const base = mat.userData.baseOpacity as number;
-    mat.blending = light ? THREE.NormalBlending : THREE.AdditiveBlending;
+    mat.blending = THREE.NormalBlending;
     mat.uniforms.uOpacity.value = light ? Math.min(1, base * LIGHT_POINT_BOOST) : base;
     mat.needsUpdate = true;
   }
@@ -805,13 +837,16 @@ export class OrbitView {
     mat.opacity = style.opacity;
   }
 
-  /** Frames the camera on the scene: the home pose, the orbit centre at the origin and the zoom limits. */
+  /**
+   * Frames the camera on the scene: the core fills CORE_FRAME_FRACTION of the shorter
+   * side of the stage (the ring may run past the edges), the orbit centre is the origin.
+   */
   private fitCamera(): void {
-    // Bounding-sphere fit: the narrower of the vertical and horizontal half-angles governs.
     const vHalf = THREE.MathUtils.degToRad(FOV_DEG) / 2;
     const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
     const half = Math.min(vHalf, hHalf);
-    const dist = (FRAME_MARGIN * this.radius) / Math.sin(half);
+    const framed = this.coreItems.length > 0 ? Math.max(this.coreRadius, 1) : Math.max(this.ringRadius, 1);
+    const dist = framed / (CORE_FRAME_FRACTION * Math.tan(half));
     const n = Math.hypot(FRAME_ELEVATION, 1);
     this.home = {
       position: new THREE.Vector3(0, (dist * FRAME_ELEVATION) / n, dist / n),
@@ -820,14 +855,19 @@ export class OrbitView {
     this.camera.position.copy(this.home.position);
     this.controls.target.copy(this.home.target);
     this.camera.lookAt(0, 0, 0);
-    this.controls.minDistance = Math.max(this.radius * MIN_DISTANCE_RATIO, 1e-3);
-    this.controls.maxDistance = Math.max(this.radius * MAX_DISTANCE_RATIO, this.controls.minDistance * 2);
+    this.applyZoomLimits();
     this.camera.near = Math.max(1e-3, this.radius * 0.01);
     this.camera.far = Math.max(dist * 5, this.radius * 20);
     this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld();
     this.userMoved = false;
-    this.tween = null;
+    this.cancelTween();
+  }
+
+  /** Zoom bounds as multiples of the scene radius (core and ring). Recomputed whenever the radius changes. */
+  private applyZoomLimits(): void {
+    this.controls.minDistance = Math.max(this.radius * MIN_DISTANCE_RATIO, 1e-3);
+    this.controls.maxDistance = Math.max(this.radius * MAX_DISTANCE_RATIO, this.controls.minDistance * 2);
   }
 
   /**
@@ -874,6 +914,7 @@ export class OrbitView {
     this.kindRgb = new Float32Array(0);
     this.clusterRgb = new Float32Array(0);
     this.baseSizes = new Float32Array(0);
+    this.coreRadius = 0;
     this.graph = null;
     this.layout = null;
   }
@@ -945,9 +986,8 @@ export class OrbitView {
           if (mark[i] === 2) s *= HIGHLIGHT_SIZE;
           else if (mark[i] === 1) s *= NEIGHBOUR_SIZE;
           else a = DIM_ALPHA;
-        } else if (sel) {
-          a = DIM_ALPHA;
         }
+        // A ring selection highlights its ring point only: the core keeps full alpha.
         alpha[i] = a;
         size[i] = s;
       }
@@ -963,8 +1003,6 @@ export class OrbitView {
         if (sel?.kind === "core") {
           const touching = ends[k * 2] === sel.index || ends[k * 2 + 1] === sel.index;
           a = touching ? EDGE_HOT : EDGE_DIM;
-        } else if (sel) {
-          a = EDGE_DIM;
         }
         rgba[(k * 2) * 4 + 3] = a;
         rgba[(k * 2 + 1) * 4 + 3] = a;
@@ -983,11 +1021,6 @@ export class OrbitView {
       this.ringAlphaAttr.needsUpdate = true;
       this.ringSizeAttr.needsUpdate = true;
     }
-  }
-
-  private applyRotation(): void {
-    this.coreGroup.rotation.y = this.coreAngle;
-    this.ringGroup.rotation.y = this.ringAngle;
   }
 
   private autoRotateWanted(): boolean {
@@ -1024,14 +1057,10 @@ export class OrbitView {
     this.lastTime = now;
     this.inFrame = true;
     try {
+      // One rotation only: the camera orbits (controls.autoRotate); the scene groups stay put.
       const spinning = this.autoRotateWanted();
       this.controls.autoRotate = spinning;
       const tweening = this.stepTween(now);
-      if (spinning) {
-        this.coreAngle += this.speed * dt;
-        this.ringAngle += this.speed * RING_SPIN_FACTOR * dt;
-        this.applyRotation();
-      }
       const moved = this.controls.update(dt);
       if (
         this.hovering &&
@@ -1042,6 +1071,8 @@ export class OrbitView {
         this.lastPickAt = now;
         this.repickHover();
       }
+      const d = this.distance();
+      this.depthUniform.value.set(Math.max(1e-3, d - this.radius), d + this.radius);
       this.renderer.render(this.scene, this.camera);
       if (spinning || tweening || moved) this.schedule();
     } finally {
@@ -1058,7 +1089,10 @@ export class OrbitView {
     const e = easeInOutCubic(p);
     this.camera.position.lerpVectors(t.fromPos, t.toPos, e);
     this.controls.target.lerpVectors(t.fromTarget, t.toTarget, e);
-    if (p >= 1) this.tween = null;
+    if (p >= 1) {
+      this.tween = null;
+      this.endInteraction();
+    }
     return true;
   }
 
@@ -1067,6 +1101,10 @@ export class OrbitView {
   };
 
   private readonly onControlsChange = (): void => {
+    // Only a change the user makes counts as a camera move (auto-rotation and damping do not), and a click
+    // that has not yet moved past the drag slop is not one either.
+    const clickPending = this.dragging && !this.dragMoved;
+    if (this.interacting && !clickPending) this.userMoved = true;
     if (!this.inFrame) this.requestRender();
   };
 
@@ -1080,7 +1118,6 @@ export class OrbitView {
 
   private beginInteraction(): void {
     if (this.disposed) return;
-    this.userMoved = true;
     this.interacting = true;
     this.tween = null;
     this.clearResume();
@@ -1097,6 +1134,13 @@ export class OrbitView {
       this.updateAutoRotate();
       this.requestRender();
     }, RESUME_MS);
+  }
+
+  /** Stops a focus flight in progress; the auto-rotation resumes after RESUME_MS like after any interaction. */
+  private cancelTween(): void {
+    if (!this.tween) return;
+    this.tween = null;
+    this.endInteraction();
   }
 
   private clearResume(): void {
@@ -1128,7 +1172,7 @@ export class OrbitView {
   private stepZoom(inward: boolean): void {
     if (!this.renderer || this.disposed) return;
     this.userMoved = true;
-    this.tween = null;
+    this.cancelTween();
     // dolly*() calls update() without a delta, which would add an auto-rotation step: switch it off around the call.
     const c = this.controls;
     const spinning = c.autoRotate;
@@ -1167,7 +1211,9 @@ export class OrbitView {
     if (rect.width === 0 || rect.height === 0) return null;
     this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-    this.raycaster.params.Points.threshold = Math.max(this.radius * 0.02, 0.5);
+    // PICK_RADIUS_PX on screen, as a world distance at the current camera distance.
+    const worldPerPx = (this.distance() * 2 * Math.tan(THREE.MathUtils.degToRad(FOV_DEG) / 2)) / rect.height;
+    this.raycaster.params.Points.threshold = worldPerPx * PICK_RADIUS_PX;
     // The controls move the camera between renders, so the ray is built from its current matrices.
     this.camera.updateMatrixWorld();
     this.raycaster.setFromCamera(this.pointer, this.camera);
@@ -1208,6 +1254,7 @@ export class OrbitView {
     if (!this.canvas) return;
     this.dragging = true;
     this.dragMoved = false;
+    this.gestureBase = null;
     this.dragButton = e.button;
     this.hovering = false;
     this.dragStartX = e.clientX;

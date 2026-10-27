@@ -65,6 +65,8 @@ export function NodeSearch({
   const optionId = (i: number) => `${baseId}-opt-${i}`;
   const results = useMemo(() => searchCoreNodes(graph, query), [graph, query]);
   const showList = open && query.trim() !== '';
+  // The listbox exists only when there are hits; the ARIA links point at it only then.
+  const hasResults = showList && results.length > 0;
   const activeIndex = Math.min(active, Math.max(0, results.length - 1));
   const disabled = !graph || graph.core.length === 0;
 
@@ -103,9 +105,9 @@ export function NodeSearch({
         className="os-search-input"
         aria-label="Search project nodes"
         aria-autocomplete="list"
-        aria-expanded={showList}
-        aria-controls={showList ? listId : undefined}
-        aria-activedescendant={showList && results[activeIndex] ? optionId(activeIndex) : undefined}
+        aria-expanded={hasResults}
+        aria-controls={hasResults ? listId : undefined}
+        aria-activedescendant={hasResults && results[activeIndex] ? optionId(activeIndex) : undefined}
         placeholder="Find a node…"
         disabled={disabled}
         value={query}

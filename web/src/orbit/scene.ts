@@ -57,6 +57,33 @@ export function uniqueCoreNodes(graph: SystemGraph): SystemCoreNode[] {
   return out;
 }
 
+/** Core size reference: a core of this many nodes draws at the base point size. */
+const CORE_REF_COUNT = 400;
+
+/**
+ * Point-size multiplier for a core of `count` nodes: sqrt(REF / count), clamped. A sparse
+ * core gets fewer, larger points; a dense one smaller points, so overlap stays readable.
+ */
+export function coreSizeScale(count: number): number {
+  if (!Number.isFinite(count) || count <= 0) return 1;
+  return Math.min(2, Math.max(0.4, Math.sqrt(CORE_REF_COUNT / count)));
+}
+
+/**
+ * The radius framing fits: the 90th percentile of the core nodes' distances from the origin.
+ * A few far-out nodes would otherwise shrink the whole core on screen; they may run past the edge.
+ */
+export function coreFramingRadius(ids: string[], layout: OrbitLayout, quantile = 0.9): number {
+  const norms: number[] = [];
+  for (const id of ids) {
+    const p = layout.core.get(id);
+    if (p) norms.push(Math.hypot(p.x, p.y, p.z));
+  }
+  if (norms.length === 0) return 0;
+  norms.sort((a, b) => a - b);
+  return norms[Math.min(norms.length - 1, Math.floor(quantile * (norms.length - 1)))] ?? 0;
+}
+
 export interface PointBuffers {
   /** x, y, z per node. */
   positions: Float32Array;

@@ -99,6 +99,26 @@ describe('scene colour helpers', () => {
   });
 });
 
+describe('coreFramingRadius', () => {
+  it('is the 90th percentile of the core distances, so a few far outliers do not set the framing', () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `n${i}`);
+    const layout = { core: new Map(ids.map((id, i) => [id, { x: i < 9 ? i + 1 : 1000, y: 0, z: 0 }])), ring: new Map(), communityCenters: [], bounds: { radius: 1000 } };
+    assert.equal(scene.coreFramingRadius(ids, layout), 9, 'the 9th of 10 sorted distances');
+    assert.equal(scene.coreFramingRadius([], layout), 0);
+  });
+});
+
+describe('coreSizeScale', () => {
+  it('is 1 at the reference size, larger when sparse and smaller when dense, within clamps', () => {
+    assert.equal(scene.coreSizeScale(400), 1);
+    assert.ok(scene.coreSizeScale(100) > scene.coreSizeScale(400), 'sparse: larger points');
+    assert.ok(scene.coreSizeScale(2500) < scene.coreSizeScale(400), 'dense: smaller points');
+    assert.equal(scene.coreSizeScale(1), 2, 'clamped at 2');
+    assert.equal(scene.coreSizeScale(1e6), 0.4, 'clamped at 0.4');
+    assert.equal(scene.coreSizeScale(0), 1);
+  });
+});
+
 describe('buildPointBuffers', () => {
   it('lays out one entry per core node in graph order, with matching lengths', () => {
     const graph = sampleGraph();
@@ -315,6 +335,8 @@ function fakeElement(tag, size = {}) {
     getBoundingClientRect() {
       return { left: 0, top: 0, width: el.clientWidth, height: el.clientHeight };
     },
+    setPointerCapture() {},
+    releasePointerCapture() {},
   };
   return el;
 }
@@ -521,16 +543,27 @@ describe('OrbitView (fake renderer)', () => {
     assert.equal(frames.size, 1, 'frame queued again');
   });
 
-  it('setTheme("light") switches to normal blending on the point materials', () => {
+  it('core points use normal blending on both themes (additive saturates to white)', () => {
     const v = make();
     v.setGraph(sampleGraph(), orbit.orbitLayout(sampleGraph()));
-    // THREE.AdditiveBlending = 2, THREE.NormalBlending = 1.
-    assert.equal(v.corePoints.material.blending, 2);
+    // THREE.NormalBlending = 1 (AdditiveBlending = 2 is never used for the core).
+    assert.equal(v.corePoints.material.blending, 1, 'dark');
+    assert.ok(Math.abs(v.corePoints.material.uniforms.uOpacity.value - 0.85) < 1e-9, 'alpha ~0.85 on dark');
     v.setTheme('light');
-    assert.equal(v.corePoints.material.blending, 1, 'NormalBlending in light');
+    assert.equal(v.corePoints.material.blending, 1, 'light');
     assert.ok(v.corePoints.material.uniforms.uOpacity.value > 0.9);
     v.setTheme('dark');
-    assert.equal(v.corePoints.material.blending, 2);
+    assert.equal(v.corePoints.material.blending, 1, 'dark again');
+  });
+
+  it('core point sizes are scaled by the node count (sparse larger than dense)', () => {
+    const small = make();
+    const sg = chainGraph(40);
+    small.setGraph(sg, orbit.orbitLayout(sg));
+    const sparseSize = small.coreSizeAttr.array[0];
+    const base = scene.buildPointBuffers(sg, orbit.orbitLayout(sg), CATEGORY_HEX).sizes[0];
+    assert.ok(Math.abs(sparseSize - base * scene.coreSizeScale(40)) < 1e-5, 'scaled by coreSizeScale');
+    assert.ok(sparseSize > base, 'a 40-node core draws larger points than the base size');
   });
 
   /** A core of `n` nodes in one community, chained so the layout has edges. */
@@ -707,8 +740,10 @@ describe('OrbitView (fake renderer)', () => {
     v.controls.update();
     assert.notDeepEqual(v.camera.position.toArray(), pose);
     v.resetView();
-    assert.deepEqual(v.camera.position.toArray(), pose);
-    assert.deepEqual(v.controls.target.toArray(), target);
+    // The controls recompute the position from spherical coordinates, so compare to rounding error.
+    const near = (a, b) => a.every((x, i) => Math.abs(x - b[i]) < 1e-9);
+    assert.ok(near(v.camera.position.toArray(), pose), 'camera back on the framed pose');
+    assert.ok(near(v.controls.target.toArray(), target), 'orbit centre back at the origin');
   });
 
   it('zoomIn and zoomOut move the distance by a step, inside the bounds', () => {
@@ -801,8 +836,9 @@ describe('OrbitView (fake renderer)', () => {
     assert.equal(alpha[0], 1, 'a neighbour stays bright');
     assert.equal(alpha[3], 1, 'a neighbour stays bright');
     assert.ok(Math.abs(alpha[1] - 0.15) < 1e-6, 'a non-neighbour dims');
-    assert.ok(Math.abs(sizes[2] - 1.5 * 1.8) < 1e-4, 'the selected node grows');
-    assert.ok(Math.abs(sizes[0] - 4 * 1.35) < 1e-4, 'a neighbour grows less');
+    const k = scene.coreSizeScale(4); // the size scale of a four-node core
+    assert.ok(Math.abs(sizes[2] - 1.5 * k * 1.8) < 1e-4, 'the selected node grows');
+    assert.ok(Math.abs(sizes[0] - 4 * k * 1.35) < 1e-4, 'a neighbour grows less');
     const edgeAlpha = Array.from({ length: edgeColors.length / 4 }, (_, i) => edgeColors[i * 4 + 3]);
     assert.ok(edgeAlpha.includes(4), 'edges touching the selection are brighter');
     assert.ok(edgeAlpha.includes(0.25), 'the other edges dim');
@@ -822,6 +858,155 @@ describe('OrbitView (fake renderer)', () => {
     const alpha = v.ringPoints.geometry.attributes.aAlpha.array;
     assert.equal(alpha[1], 1);
     assert.ok(Math.abs(alpha[0] - 0.15) < 1e-6);
+  });
+
+  it('a ring selection leaves every core alpha and every edge alpha at 1 (the core is not dimmed)', () => {
+    const v = make({ reducedMotion: true });
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    v.setRing(graph.ring, layout.ring);
+    v.setSelection('activity:2');
+    assert.ok(Array.from(v.corePoints.geometry.attributes.aAlpha.array).every((a) => a === 1), 'core alphas');
+    const edgeColors = v.coreGroup.children.find((o) => o.isLineSegments).geometry.attributes.color.array;
+    assert.ok(Array.from(edgeColors).filter((_, i) => i % 4 === 3).every((a) => a === 1), 'edge alphas');
+  });
+
+  it('the core fills about 60% of the stage height on framing, and the ring may run past it', () => {
+    const v = make({ reducedMotion: true });
+    const graph = sampleGraph();
+    const layout = orbit.orbitLayout(graph);
+    v.setGraph(graph, layout);
+    v.setRing(graph.ring, layout.ring);
+    const coreR = scene.coreFramingRadius(graph.core.map((n) => n.id), layout);
+    const vHalf = Math.PI / 8; // half of the 45 degree field of view
+    const fraction = coreR / (dist(v) * Math.tan(vHalf));
+    assert.ok(Math.abs(fraction - 0.6) < 1e-6, `core/height fraction ${fraction}`);
+    assert.ok(v.radius > coreR, 'the ring radius is larger than the framed core');
+  });
+
+  it('zoom limits follow the layout radius on every setGraph, not only on framing', () => {
+    const v = make({ reducedMotion: true });
+    const small = chainGraph(4);
+    v.setGraph(small, orbit.orbitLayout(small));
+    const max1 = v.controls.maxDistance;
+    const big = chainGraph(400, 'q');
+    v.setGraph(big, orbit.orbitLayout(big));
+    assert.ok(v.controls.maxDistance > max1, 'a larger layout raises the zoom-out limit');
+    assert.ok(Math.abs(v.controls.maxDistance - v.radius * 6) < 1e-9, 'limit = MAX_DISTANCE_RATIO * radius');
+  });
+
+  it('a render is requested on start and after setGraph, with no input (the first frame is never skipped)', () => {
+    const v = make({ reducedMotion: true });
+    assert.ok(frames.size >= 1, 'armed on construction');
+    runFrames(0);
+    assert.equal(renderers[0].calls.render, 1, 'the first frame renders the empty scene');
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    assert.ok(frames.size >= 1, 'setGraph queues a frame');
+    runFrames(16);
+    assert.equal(renderers[0].calls.render, 2, 'and it renders');
+  });
+
+  it('auto-rotation rotates the camera only: the scene groups keep rotation 0', () => {
+    const v = make({ rotationSpeed: 0.05 });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    for (let t = 0; t <= 2000; t += 100) runFrames(t);
+    assert.equal(v.controls.autoRotate, true, 'spinning');
+    assert.equal(v.coreGroup.rotation.y, 0, 'core group not rotated');
+    assert.equal(v.ringGroup.rotation.y, 0, 'ring group not rotated');
+  });
+
+  it('a focus flight pauses the auto-rotation, and it resumes RESUME_MS (4 s) after the flight', () => {
+    const timers = [];
+    const v = make({
+      rotationSpeed: 0.05,
+      setTimer: (fn, ms) => {
+        timers.push({ fn, ms });
+        return timers.length - 1;
+      },
+      clearTimer: (h) => {
+        if (timers[h]) timers[h].fn = null;
+      },
+    });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    runFrames(0);
+    runFrames(100);
+    assert.equal(v.controls.autoRotate, true);
+    assert.equal(v.focusNode('c'), true);
+    assert.equal(v.controls.autoRotate, false, 'no rotation during the flight');
+    for (const t of [200, 400, 600, 800]) runFrames(t);
+    assert.equal(v.controls.autoRotate, false, 'still paused right after the flight');
+    const resume = timers.filter((t) => t.fn && t.ms === 4000).at(-1);
+    assert.ok(resume, 'a resume timer of 4000 ms is armed');
+    resume.fn();
+    assert.equal(v.controls.autoRotate, true, 'rotation resumes');
+  });
+
+  it('after a focus flight the orbit centre stays on the node and the distance is constant while rotating', () => {
+    const timers = [];
+    const v = make({
+      rotationSpeed: 0.05,
+      setTimer: (fn, ms) => {
+        timers.push({ fn, ms });
+        return timers.length - 1;
+      },
+      clearTimer: (h) => {
+        if (timers[h]) timers[h].fn = null;
+      },
+    });
+    const g = sampleGraph();
+    const layout = orbit.orbitLayout(g);
+    v.setGraph(g, layout);
+    v.focusNode('c');
+    for (const t of [0, 200, 400, 600, 800]) runFrames(t);
+    timers.filter((t) => t.fn && t.ms === 4000).at(-1).fn();
+    const node = layout.core.get('c');
+    const d0 = dist(v);
+    for (let i = 0; i < 30; i++) runFrames(1000 + i * 16);
+    assert.ok(v.controls.target.distanceTo(node) < 1e-4, 'the orbit centre is still on the node');
+    assert.ok(Math.abs(dist(v) - d0) < 1e-4, 'the camera orbits at a constant distance');
+    assert.equal(v.coreGroup.rotation.y, 0);
+  });
+
+  it('pick threshold scales with the camera distance (about 8 px in world units)', () => {
+    const v = make({ reducedMotion: true });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    const d0 = dist(v);
+    v.pickAt(200, 150);
+    const t0 = v.raycaster.params.Points.threshold;
+    const vHalf = Math.PI / 8;
+    assert.ok(Math.abs(t0 - (d0 * Math.tan(vHalf) * 2 * 8) / 300) < 1e-9, 'distance * tan(fov/2) * 2 * 8 / height');
+    v.zoomIn();
+    v.pickAt(200, 150);
+    const t1 = v.raycaster.params.Points.threshold;
+    assert.ok(Math.abs(t1 / t0 - dist(v) / d0) < 1e-9, 'scales with the distance');
+  });
+
+  it('a plain click does not count as a camera move; a drag past the slop does', () => {
+    const v = make({ reducedMotion: true });
+    const g = sampleGraph();
+    v.setGraph(g, orbit.orbitLayout(g));
+    const canvas = renderers[0].domElement;
+    const ptr = (type, x, y) => ({ type, button: 0, pointerId: 1, clientX: x, clientY: y, preventDefault() {} });
+    canvas.dispatch('pointerdown', ptr('pointerdown', 200, 150));
+    runFrames(0);
+    canvas.dispatch('pointerup', ptr('pointerup', 200, 150));
+    runFrames(0);
+    assert.equal(v.userMoved, false, 'a click leaves the view auto-framed');
+    // The controls listen for pointermove and pointerup on the document (as in the browser, the event bubbles there).
+    const doc = globalThis.document;
+    canvas.dispatch('pointerdown', ptr('pointerdown', 200, 150));
+    canvas.dispatch('pointermove', ptr('pointermove', 260, 180));
+    doc.dispatch('pointermove', ptr('pointermove', 260, 180));
+    runFrames(0);
+    canvas.dispatch('pointerup', ptr('pointerup', 260, 180));
+    doc.dispatch('pointerup', ptr('pointerup', 260, 180));
+    runFrames(0);
+    assert.equal(v.userMoved, true, 'a drag is a camera move');
   });
 
   it('focusNode moves the orbit centre to the node and leaves the selection alone', () => {
