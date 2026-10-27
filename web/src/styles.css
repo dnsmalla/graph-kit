@@ -61,12 +61,16 @@ h1 {
 }
 
 .os {
-  max-width: 1120px;
+  max-width: 1600px;
+  min-height: 100vh;
   margin: 0 auto;
   padding: var(--tok-space-lg);
   display: flex;
   flex-direction: column;
   gap: var(--tok-space-lg);
+  /* The dark stage: a soft pool of light behind the brain, fading to the page colour. */
+  background: radial-gradient(ellipse at 50% 35%, var(--tok-color-surface) 0%, var(--tok-color-body) 70%) no-repeat;
+  background-attachment: fixed;
 }
 
 /* ---- header ---- */
@@ -139,16 +143,217 @@ h1 {
 
 /* ---- layout ---- */
 
-.os-grid {
+.os-stage {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(260px, 320px);
   gap: var(--tok-space-lg);
   align-items: start;
 }
 
+.os-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-lg);
+  min-width: 0;
+}
+
+.os-col-left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.os-centre {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-md);
+  min-width: 0;
+}
+
+.os-col-right {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.os-centre-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tok-space-sm);
+}
+
+/* The brain fills the centre column. Its stage is absolutely placed, so the
+   three.js view gets a definite height without the column's height depending on it. */
+.os-brain {
+  position: relative;
+  min-height: 560px;
+  height: clamp(560px, 70vh, 820px);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-md);
+  overflow: hidden;
+  background: var(--tok-color-surface);
+}
+
+.os-brain-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.os-brain-status {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tok-color-body);
+  color: var(--os-muted);
+}
+
+/* Selection sits over the brain, bottom-left, so the view stays visible behind it. */
+.os-selection {
+  position: absolute;
+  left: var(--tok-space-md);
+  bottom: var(--tok-space-md);
+  z-index: 2;
+  width: min(300px, calc(100% - 2 * var(--tok-space-md)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-sm);
+  padding: var(--tok-space-md);
+  background: var(--tok-color-surface2);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-md);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--tok-color-body) 60%, transparent);
+}
+
+.os-selection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tok-space-sm);
+}
+
+.os-selection-head .btn {
+  padding: 2px var(--tok-space-sm);
+}
+
+.os-selection-title {
+  overflow-wrap: anywhere;
+}
+
+.os-selection-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-xs);
+}
+
+.os-selection-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--tok-space-sm);
+  font-size: var(--tok-type-caption-size);
+}
+
+.os-selection-facts dt {
+  color: var(--os-muted);
+}
+
+.os-selection-facts dd {
+  margin: 0;
+  text-align: right;
+}
+
+.os-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tok-space-xs) var(--tok-space-md);
+  font-size: var(--tok-type-caption-size);
+  color: var(--os-muted);
+}
+
+.os-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tok-space-xs);
+}
+
+.os-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.os-cat-code {
+  background: var(--os-cat-code);
+}
+
+.os-cat-docs {
+  background: var(--os-cat-docs);
+}
+
+.os-cat-tests {
+  background: var(--os-cat-tests);
+}
+
+.os-cat-knowledge {
+  background: var(--os-cat-knowledge);
+}
+
+.os-cat-other {
+  background: var(--os-cat-other);
+}
+
+.os-swatch-ring {
+  background: transparent;
+  border: 1px solid var(--tok-color-text-muted);
+}
+
+.os-recent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-xs);
+}
+
+.os-recent-list li + li {
+  border-top: 1px solid var(--tok-color-border);
+}
+
+.os-recent-item {
+  font: inherit;
+  font-size: var(--tok-type-body-size);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tok-space-sm);
+  width: 100%;
+  padding: var(--tok-space-xs) 0;
+  background: transparent;
+  border: 0;
+  color: var(--tok-color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.os-recent-item time {
+  font-family: var(--tok-type-mono-family);
+  font-size: var(--tok-type-mono-size);
+  color: var(--os-muted);
+}
+
+.os-recent-title {
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .card {
   min-width: 0;
-  background: var(--tok-color-surface);
+  background: color-mix(in srgb, var(--tok-color-surface) 86%, transparent);
   border: 1px solid var(--tok-color-border);
   border-radius: var(--tok-radius-md);
   padding: var(--tok-space-lg);
@@ -157,8 +362,19 @@ h1 {
   gap: var(--tok-space-md);
 }
 
-.card-wide {
-  grid-column: 1 / -1;
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tok-space-sm);
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tok-space-sm);
 }
 
 .card-title {
@@ -167,6 +383,70 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--os-muted);
+}
+
+.chip {
+  font-size: var(--tok-type-caption-strong-size);
+  font-weight: var(--tok-type-caption-strong-weight);
+  color: var(--tok-color-accent2);
+  border: 1px solid var(--tok-color-border);
+  border-radius: 999px;
+  padding: 0 var(--tok-space-sm);
+  white-space: nowrap;
+}
+
+/* ---- skills and routines ---- */
+
+.skill-deck {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tok-space-sm);
+}
+
+.skill-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-xs);
+  padding: var(--tok-space-sm) var(--tok-space-md);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-sm);
+  background: var(--tok-color-surface2);
+}
+
+.skill-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tok-space-xs);
+}
+
+.skill-name {
+  overflow-wrap: anywhere;
+}
+
+.skill-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--tok-type-caption-size);
+  color: var(--os-muted);
+}
+
+.routine-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tok-space-sm);
+  padding: var(--tok-space-sm) 0;
+}
+
+.routine-list li + li {
+  border-top: 1px solid var(--tok-color-border);
+}
+
+.routine-list .dot {
+  margin-top: 6px;
 }
 
 .sub-title {
@@ -264,8 +544,7 @@ select:focus-visible {
 
 .checks li,
 .plain li,
-.rows li,
-.timeline li {
+.rows li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -275,7 +554,6 @@ select:focus-visible {
 
 .checks li + li,
 .rows li + li,
-.timeline li + li,
 .plain li + li,
 .kits .kit + .kit {
   border-top: 1px solid var(--tok-color-border);
@@ -331,22 +609,6 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.timeline li {
-  gap: var(--tok-space-md);
-}
-
-.timeline time {
-  font-family: var(--tok-type-mono-family);
-  font-size: var(--tok-type-mono-size);
-  color: var(--os-muted);
-  min-width: 9em;
-}
-
-.timeline-title {
-  flex: 1 1 200px;
-  overflow-wrap: anywhere;
-}
-
 .tag {
   font-size: var(--tok-type-caption-strong-size);
   font-weight: var(--tok-type-caption-strong-weight);
@@ -355,10 +617,6 @@ select:focus-visible {
   border-radius: var(--tok-radius-sm);
   padding: 0 var(--tok-space-xs);
   white-space: nowrap;
-}
-
-.plain.actions li {
-  justify-content: space-between;
 }
 
 /* ---- totals, bars ---- */
@@ -416,18 +674,48 @@ select:focus-visible {
   border-radius: 4px;
 }
 
-/* ---- phone and narrow widths ---- */
+/* ---- widths: three columns above 1100px; below it, the brain first, then the side panels ---- */
+
+@media (max-width: 1100px) {
+  .os-stage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .os-centre {
+    order: -1;
+  }
+
+  .os-brain {
+    min-height: 480px;
+    height: clamp(480px, 70vh, 640px);
+  }
+}
 
 @media (max-width: 720px) {
   .os {
     padding: var(--tok-space-lg);
   }
 
-  .os-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .os-brain {
+    min-height: 420px;
+    height: 420px;
   }
 
-  .timeline time {
-    min-width: 0;
+  .os-selection {
+    left: var(--tok-space-sm);
+    right: var(--tok-space-sm);
+    bottom: var(--tok-space-sm);
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os *,
+  .os *::before,
+  .os *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
   }
 }

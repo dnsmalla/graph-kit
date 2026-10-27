@@ -1,13 +1,20 @@
 // The System view's state and behaviour, kept out of React so the same logic
 // runs in the app's web view, in the demo and in tests. Everything that talks to
 // a server or to native code goes through the OsHost the page was mounted with.
+import type { CGData } from '../../typescript/src/models';
 import { OsAuthError, type OsHost, type OsOpenTarget, type OsRange } from './host';
-import type { OsCancel, OsLiveStatus, OsSnapshot } from './types';
+import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
 
 export const REFRESH_DEBOUNCE_MS = 300;
 
 const DEFAULT_OPEN_NOTICE = 'Open this in the app.';
 const DEFAULT_SIGNED_OUT_NOTICE = 'Your session has ended. Sign in again.';
+
+/** Load state of one optional host data set. 'none' = the host cannot supply it (or sent an unusable value). */
+export type ExtraStatus = 'idle' | 'loading' | 'ready' | 'none' | 'error';
+
+/** The item the user picked in the brain or the recent list. Same shape as the orbit's pick. */
+export type OsSelection = { type: 'core' | 'ring'; id: string; label: string; detail: string };
 
 export type ViewState = {
   projectName: string | null;
@@ -21,6 +28,16 @@ export type ViewState = {
   signedOut: boolean;
   /** Key of the running item whose Stop request is in flight, or null. */
   stopping: string | null;
+  /** The project's code graph (host.loadProjectGraph). Loaded on start, project change and retry, not on change refreshes. */
+  projectGraph: CGData | null;
+  projectGraphStatus: ExtraStatus;
+  /** Skills (host.loadSkills). null when not loaded or not available; [] when the host has none. */
+  skills: OsSkill[] | null;
+  skillsStatus: ExtraStatus;
+  /** Routines (host.loadRoutines). null when not loaded or not available; [] when there are none. */
+  routines: OsRoutine[] | null;
+  routinesStatus: ExtraStatus;
+  selected: OsSelection | null;
 };
 
 export type ControllerDeps = {
@@ -46,6 +63,17 @@ function isAuthError(err: unknown): boolean {
   return err instanceof OsAuthError || (err instanceof Error && err.name === 'OsAuthError');
 }
 
+/** A project graph is usable when it is an object with `nodes` and `edges` arrays. */
+function isProjectGraph(value: unknown): value is CGData {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as { nodes?: unknown; edges?: unknown };
+  return Array.isArray(v.nodes) && Array.isArray(v.edges);
+}
+
+function isSelectionType(value: unknown): value is OsSelection['type'] {
+  return value === 'core' || value === 'ring';
+}
+
 export class OsController {
   private state: ViewState;
   private readonly listeners = new Set<() => void>();
@@ -60,6 +88,10 @@ export class OsController {
   private disposed = false;
   /** The message of the last failed stop, re-applied after the trailing refresh. */
   private stopError: string | null = null;
+  /** Separate sequence numbers for the optional loads, so each one drops only its own stale responses. */
+  private graphSeq = 0;
+  private skillsSeq = 0;
+  private routinesSeq = 0;
 
   /** The notice the page shows when the host refuses the session. Read-only. */
   readonly signedOutNotice: string;
@@ -77,6 +109,13 @@ export class OsController {
       live: 'idle',
       signedOut: false,
       stopping: null,
+      projectGraph: null,
+      projectGraphStatus: 'idle',
+      skills: null,
+      skillsStatus: 'idle',
+      routines: null,
+      routinesStatus: 'idle',
+      selected: null,
     };
   }
 
@@ -95,25 +134,27 @@ export class OsController {
     if (this.disposed || this.watching) return;
     this.attachFeed();
     void this.refresh();
+    this.loadExtras();
   }
 
   /**
    * Resumes the view after the host refreshed its session: clears the sign-out,
-   * re-watches the change feed and reloads the state.
+   * re-watches the change feed and reloads the state and the optional data sets.
    */
   retry(): void {
     if (this.disposed) return;
     this.set({ signedOut: false, error: null });
     if (this.watching) {
       void this.refresh();
+      this.loadExtras();
       return;
     }
     this.start();
   }
 
   /**
-   * Theme and project. A theme is applied when given; a project change re-fetches
-   * once the view has started (start() does the first fetch).
+   * Theme and project. A theme is applied when given; a project change clears the
+   * project's data and re-fetches once the view has started (start() does the first fetch).
    */
   configure(cfg: ConfigureInput): void {
     if (this.disposed) return;
@@ -122,7 +163,31 @@ export class OsController {
     const projectName = cfg.projectName === undefined ? this.state.projectName : cfg.projectName;
     const projectChanged = projectName !== this.state.projectName;
     this.set({ projectName, error: null });
-    if (projectChanged && this.watching) void this.refresh();
+    if (!projectChanged) return;
+    this.set({
+      selected: null,
+      projectGraph: null,
+      projectGraphStatus: 'idle',
+      skills: null,
+      skillsStatus: 'idle',
+      routines: null,
+      routinesStatus: 'idle',
+    });
+    if (this.watching) {
+      void this.refresh();
+      this.loadExtras();
+    }
+  }
+
+  /** Selects a brain or ring item, or clears the selection with null. */
+  select(item: OsSelection | null): void {
+    if (this.disposed) return;
+    if (item === null) {
+      this.set({ selected: null });
+      return;
+    }
+    if (!item || typeof item !== 'object' || !isSelectionType(item.type)) return;
+    this.set({ selected: { type: item.type, id: item.id, label: item.label, detail: item.detail } });
   }
 
   /** The host saw a change: state changed, re-fetch once the burst settles. */
@@ -186,6 +251,17 @@ export class OsController {
     }
   }
 
+  /**
+   * Loads the project graph, skills and routines. Each is independent: a failure
+   * or a missing host method sets only that data set's status, never the page error.
+   * Not called by change-feed refreshes (the graph is expensive to build).
+   */
+  loadExtras(): void {
+    void this.loadProjectGraph();
+    void this.loadSkills();
+    void this.loadRoutines();
+  }
+
   /** Asks the host to navigate to one of its screens. */
   open(target: OsOpenTarget): void {
     if (this.disposed) return;
@@ -197,8 +273,71 @@ export class OsController {
   dispose(): void {
     this.disposed = true;
     this.requestSeq++;
+    this.graphSeq++;
+    this.skillsSeq++;
+    this.routinesSeq++;
     this.stopWatching();
     this.cancelRefresh();
+  }
+
+  private async loadProjectGraph(): Promise<void> {
+    const host = this.deps.host;
+    const load = host.loadProjectGraph;
+    if (typeof load !== 'function') {
+      this.set({ projectGraph: null, projectGraphStatus: 'none' });
+      return;
+    }
+    const seq = ++this.graphSeq;
+    this.set({ projectGraphStatus: 'loading' });
+    try {
+      const raw: unknown = await load.call(host);
+      if (this.disposed || seq !== this.graphSeq) return;
+      if (isProjectGraph(raw)) this.set({ projectGraph: raw, projectGraphStatus: 'ready' });
+      else this.set({ projectGraph: null, projectGraphStatus: 'none' });
+    } catch {
+      if (this.disposed || seq !== this.graphSeq) return;
+      this.set({ projectGraph: null, projectGraphStatus: 'error' });
+    }
+  }
+
+  private async loadSkills(): Promise<void> {
+    const host = this.deps.host;
+    const load = host.loadSkills;
+    if (typeof load !== 'function') {
+      this.set({ skills: null, skillsStatus: 'none' });
+      return;
+    }
+    const seq = ++this.skillsSeq;
+    this.set({ skillsStatus: 'loading' });
+    try {
+      const raw: unknown = await load.call(host);
+      if (this.disposed || seq !== this.skillsSeq) return;
+      if (Array.isArray(raw)) this.set({ skills: raw as OsSkill[], skillsStatus: 'ready' });
+      else this.set({ skills: null, skillsStatus: 'none' });
+    } catch {
+      if (this.disposed || seq !== this.skillsSeq) return;
+      this.set({ skills: null, skillsStatus: 'error' });
+    }
+  }
+
+  private async loadRoutines(): Promise<void> {
+    const host = this.deps.host;
+    const load = host.loadRoutines;
+    if (typeof load !== 'function') {
+      this.set({ routines: null, routinesStatus: 'none' });
+      return;
+    }
+    const seq = ++this.routinesSeq;
+    this.set({ routinesStatus: 'loading' });
+    try {
+      const raw: unknown = await load.call(host);
+      if (this.disposed || seq !== this.routinesSeq) return;
+      if (Array.isArray(raw)) this.set({ routines: raw as OsRoutine[], routinesStatus: 'ready' });
+      else this.set({ routines: null, routinesStatus: 'none' });
+    } catch {
+      if (this.disposed || seq !== this.routinesSeq) return;
+      this.set({ routines: null, routinesStatus: 'error' });
+    }
   }
 
   /** Attaches the host's change feed. Callers check `watching` first. */

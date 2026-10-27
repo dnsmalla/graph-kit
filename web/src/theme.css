@@ -119,3 +119,23 @@
   --tok-color-category-teal: rgb(52% 86% 90%);
   --tok-color-category-amber: rgb(95% 78% 45%);
 }
+
+/* ---- Agentic OS category colours (web-only; not in the generated token source) ----
+ * The brain's node colours and the legend swatches. Values equal
+ * DEFAULT_CATEGORY_COLORS in orbit/scene.ts for the dark and midnight themes; the
+ * light theme uses darker shades so each swatch keeps 3:1 against the light surfaces. */
+:root {
+  --os-cat-code: rgb(36% 55% 94%);
+  --os-cat-docs: rgb(88% 70% 25%);
+  --os-cat-tests: rgb(31% 75% 53%);
+  --os-cat-knowledge: rgb(76% 48% 90%);
+  --os-cat-other: rgb(54% 58% 65%);
+}
+
+:root[data-theme="light"] {
+  --os-cat-code: rgb(18% 37% 77%);
+  --os-cat-docs: rgb(54% 38% 0%);
+  --os-cat-tests: rgb(12% 48% 30%);
+  --os-cat-knowledge: rgb(49% 25% 72%);
+  --os-cat-other: rgb(36% 39% 46%);
+}

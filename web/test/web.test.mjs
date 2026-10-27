@@ -31,6 +31,7 @@ before(async () => {
     theme: await load('/src/theme.ts'),
     render: await load('/test/support/render.tsx'),
     fixture: await load('/demo/fixture.ts'),
+    systemGraph: await load('/src/systemGraph.ts'),
   };
 });
 
@@ -108,6 +109,15 @@ function fakeHost(overrides = {}) {
       return overrides.open ? overrides.open(target) : true;
     },
   };
+  // The optional data sets exist on the host only when the test supplies them.
+  for (const name of ['loadProjectGraph', 'loadSkills', 'loadRoutines']) {
+    if (!overrides[name]) continue;
+    calls[name] = 0;
+    host[name] = () => {
+      calls[name]++;
+      return overrides[name]();
+    };
+  }
   return {
     host,
     calls,
@@ -431,10 +441,12 @@ describe('rendering', () => {
     for (const heading of [
       'System map',
       'Running now',
-      'Activity timeline',
+      'Skills',
+      'Project brain',
+      'Recent',
       'Token flow',
       'Memory and knowledge',
-      'On this Mac',
+      'Routines',
     ]) {
       assert.ok(html.includes(heading), `section "${heading}" is rendered`);
     }
@@ -498,6 +510,314 @@ describe('rendering', () => {
     await flush();
     assert.ok(api.render.renderApp(controller).includes('Sign in to the host app.'));
     controller.dispose();
+  });
+});
+
+describe('controller: project graph, skills, routines and selection', () => {
+  const graph = () => api.fixture.buildDemoProjectGraph();
+
+  it('loads the graph, skills and routines once on start, and not on a change refresh', async () => {
+    const fake = fakeHost({
+      loadProjectGraph: () => Promise.resolve(graph()),
+      loadSkills: () => Promise.resolve(api.fixture.demoSkills),
+      loadRoutines: () => Promise.resolve(api.fixture.demoRoutines),
+    });
+    const { controller, timers } = makeController({ host: fake.host, projectName: 'Demo' });
+    controller.start();
+    await flush();
+    const state = controller.getSnapshot();
+    assert.equal(fake.calls.loadProjectGraph, 1);
+    assert.equal(fake.calls.loadSkills, 1);
+    assert.equal(fake.calls.loadRoutines, 1);
+    assert.equal(state.projectGraphStatus, 'ready');
+    assert.equal(state.skills.length, 8);
+    assert.equal(state.routines.length, 5);
+
+    fake.emitChange();
+    timers.runTimers(300);
+    await flush();
+    assert.equal(fake.calls.loadState.length, 2, 'the snapshot is re-fetched');
+    assert.equal(fake.calls.loadProjectGraph, 1, 'the graph is not reloaded on a change');
+    assert.equal(fake.calls.loadSkills, 1);
+    assert.equal(fake.calls.loadRoutines, 1);
+    controller.dispose();
+  });
+
+  it('reloads them on a real project change and on retry, not on a same-project configure', async () => {
+    const fake = fakeHost({
+      loadProjectGraph: () => Promise.resolve(graph()),
+      loadSkills: () => Promise.resolve([]),
+      loadRoutines: () => Promise.resolve([]),
+    });
+    const { controller } = makeController({ host: fake.host, projectName: 'A' });
+    controller.start();
+    await flush();
+    controller.configure({ projectName: 'A' });
+    await flush();
+    assert.equal(fake.calls.loadProjectGraph, 1);
+    controller.configure({ projectName: 'B' });
+    await flush();
+    assert.equal(fake.calls.loadProjectGraph, 2);
+    assert.equal(fake.calls.loadSkills, 2);
+    assert.equal(fake.calls.loadRoutines, 2);
+    controller.retry();
+    await flush();
+    assert.equal(fake.calls.loadProjectGraph, 3);
+    assert.equal(fake.calls.loadRoutines, 3);
+    controller.dispose();
+  });
+
+  it('a host without the optional methods gives status none and null, and no page error', async () => {
+    const { controller } = makeController({ host: fakeHost().host });
+    controller.start();
+    await flush();
+    const state = controller.getSnapshot();
+    assert.equal(state.projectGraphStatus, 'none');
+    assert.equal(state.skillsStatus, 'none');
+    assert.equal(state.routinesStatus, 'none');
+    assert.equal(state.skills, null);
+    assert.equal(state.routines, null);
+    assert.equal(state.error, null);
+    controller.dispose();
+  });
+
+  it('an invalid graph shape is treated as no graph', async () => {
+    for (const bad of [null, undefined, 'graph', {}, { nodes: 'x', edges: [] }, { nodes: [] }]) {
+      const fake = fakeHost({ loadProjectGraph: () => Promise.resolve(bad) });
+      const { controller } = makeController({ host: fake.host });
+      controller.start();
+      await flush();
+      assert.equal(controller.getSnapshot().projectGraphStatus, 'none', `shape ${JSON.stringify(bad)}`);
+      assert.equal(controller.getSnapshot().projectGraph, null);
+      controller.dispose();
+    }
+    const ok = fakeHost({ loadProjectGraph: () => Promise.resolve({ nodes: [], edges: [] }) });
+    const { controller } = makeController({ host: ok.host });
+    controller.start();
+    await flush();
+    assert.equal(controller.getSnapshot().projectGraphStatus, 'ready', 'an empty but well-formed graph is ready');
+    controller.dispose();
+  });
+
+  it('a failing loadSkills sets only its own status and never the page error', async () => {
+    const fake = fakeHost({
+      loadProjectGraph: () => Promise.resolve(graph()),
+      loadSkills: () => Promise.reject(new Error('skills down')),
+      loadRoutines: () => Promise.resolve(api.fixture.demoRoutines),
+    });
+    const { controller } = makeController({ host: fake.host });
+    controller.start();
+    await flush();
+    const state = controller.getSnapshot();
+    assert.equal(state.skillsStatus, 'error');
+    assert.equal(state.skills, null);
+    assert.equal(state.error, null);
+    assert.ok(state.data, 'the snapshot still loads');
+    assert.equal(state.routinesStatus, 'ready');
+    assert.equal(state.projectGraphStatus, 'ready');
+    controller.dispose();
+  });
+
+  it('a failing loadProjectGraph sets only the graph status', async () => {
+    const fake = fakeHost({ loadProjectGraph: () => Promise.reject(new Error('graph down')) });
+    const { controller } = makeController({ host: fake.host });
+    controller.start();
+    await flush();
+    assert.equal(controller.getSnapshot().projectGraphStatus, 'error');
+    assert.equal(controller.getSnapshot().projectGraph, null);
+    assert.equal(controller.getSnapshot().error, null);
+    controller.dispose();
+  });
+
+  it('drops a stale graph that lands after a newer project loaded', async () => {
+    const pending = [];
+    const fake = fakeHost({
+      loadProjectGraph: () => {
+        const d = deferred();
+        pending.push(d);
+        return d.promise;
+      },
+    });
+    const { controller } = makeController({ host: fake.host, projectName: 'A' });
+    controller.start();
+    controller.configure({ projectName: 'B' });
+    const first = graph();
+    const second = { nodes: [], edges: [] };
+    pending[1].resolve(second);
+    await flush();
+    pending[0].resolve(first);
+    await flush();
+    assert.equal(controller.getSnapshot().projectGraph, second, 'the newer project wins');
+    assert.equal(controller.getSnapshot().projectGraphStatus, 'ready');
+    controller.dispose();
+  });
+
+  it('dispose drops late graph, skill and routine responses', async () => {
+    const d = deferred();
+    const r = deferred();
+    const fake = fakeHost({
+      loadProjectGraph: () => d.promise,
+      loadSkills: () => r.promise,
+      loadRoutines: () => r.promise,
+    });
+    const { controller } = makeController({ host: fake.host });
+    controller.start();
+    const before = controller.getSnapshot();
+    controller.dispose();
+    d.resolve(graph());
+    r.resolve([]);
+    await flush();
+    assert.equal(controller.getSnapshot(), before, 'the state is unchanged after dispose');
+    assert.equal(controller.getSnapshot().projectGraph, null);
+  });
+
+  it('select sets a copy of the item, clears it with null, and refuses a bad type', () => {
+    const { controller } = makeController({ host: fakeHost().host });
+    const item = { type: 'ring', id: 'activity:7', label: 'Chat turn', detail: 'chat_turn' };
+    controller.select(item);
+    assert.deepEqual(controller.getSnapshot().selected, item);
+    assert.notEqual(controller.getSnapshot().selected, item, 'the state holds a copy');
+    controller.select({ type: 'bogus', id: 'x', label: 'x', detail: 'x' });
+    assert.deepEqual(controller.getSnapshot().selected, item, 'a bad type leaves the selection alone');
+    controller.select(null);
+    assert.equal(controller.getSnapshot().selected, null);
+    controller.dispose();
+  });
+
+  it('a project change clears the selection and the previous project data', async () => {
+    const fake = fakeHost({ loadProjectGraph: () => Promise.resolve(graph()) });
+    const { controller } = makeController({ host: fake.host, projectName: 'A' });
+    controller.start();
+    await flush();
+    controller.select({ type: 'core', id: 'c1-1', label: 'fn1', detail: 'code' });
+    controller.configure({ projectName: 'B' });
+    assert.equal(controller.getSnapshot().selected, null);
+    assert.equal(controller.getSnapshot().projectGraph, null);
+    controller.dispose();
+  });
+});
+
+describe('rendering: the Agentic OS layout', () => {
+  async function renderWith(overrides, snapshot = seeded()) {
+    const fake = fakeHost({ loadState: () => Promise.resolve(snapshot), ...overrides });
+    const { controller } = makeController({ host: fake.host, projectName: 'Demo project' });
+    controller.start();
+    await flush();
+    return { html: api.render.renderApp(controller), controller };
+  }
+
+  const graphOverrides = {
+    loadProjectGraph: () => Promise.resolve(api.fixture.buildDemoProjectGraph()),
+    loadSkills: () => Promise.resolve(api.fixture.demoSkills),
+    loadRoutines: () => Promise.resolve(api.fixture.demoRoutines),
+  };
+
+  it('lays the page out as three columns with the brain in the middle', async () => {
+    const { html, controller } = await renderWith(graphOverrides);
+    const left = html.indexOf('os-col-left');
+    const centre = html.indexOf('os-centre');
+    const right = html.indexOf('os-col-right');
+    assert.ok(left > 0 && centre > left && right > centre, 'DOM order is left, centre, right');
+    assert.ok(html.indexOf('System map') < centre, 'the system map is in the left column');
+    assert.ok(html.indexOf('Token flow') > centre, 'token flow is in the right column');
+    assert.ok(html.indexOf('Routines') > centre, 'routines are in the right column');
+    controller.dispose();
+  });
+
+  it('renders skills and routines with their data, and the header buttons', async () => {
+    const { html, controller } = await renderWith(graphOverrides);
+    assert.ok(html.includes(api.fixture.demoSkills[0].name));
+    assert.ok(html.includes(api.fixture.demoSkills[0].description));
+    assert.ok(html.includes('>8<'), 'the skill count sits in the header');
+    assert.ok(html.includes('Regression sweep'));
+    assert.ok(html.includes('Every weekday at 09:00'));
+    assert.ok(html.includes('Open Loop') && html.includes('Open Auto Tasks'));
+    controller.dispose();
+  });
+
+  it('shows the empty and not-available states for skills and routines', async () => {
+    const none = await renderWith({});
+    assert.ok(none.html.includes('Skills are not available in this host.'));
+    assert.ok(none.html.includes('Routines are not available in this host.'));
+    assert.ok(none.html.includes('Open Loop'), 'the Loop button stays even without routines');
+    none.controller.dispose();
+
+    const empty = await renderWith({ loadSkills: () => Promise.resolve([]), loadRoutines: () => Promise.resolve([]) });
+    assert.ok(empty.html.includes('No skills yet.'));
+    assert.ok(empty.html.includes('No routines yet.'));
+    empty.controller.dispose();
+  });
+
+  it('shows the loading text over the brain while the graph loads, and the error when it fails', async () => {
+    const pending = deferred();
+    const loading = await renderWith({ loadProjectGraph: () => pending.promise });
+    assert.ok(loading.html.includes('Loading the project graph'));
+    loading.controller.dispose();
+
+    const failed = await renderWith({ loadProjectGraph: () => Promise.reject(new Error('down')) });
+    assert.ok(failed.html.includes('Could not load the project graph.'));
+    failed.controller.dispose();
+  });
+
+  it('the recent list shows at most five items', async () => {
+    const snap = seeded();
+    const template = snap.activity.items[0];
+    snap.activity.items = Array.from({ length: 12 }, (_, i) => ({ ...template, id: 500 - i, title: `Item ${i}` }));
+    const { html, controller } = await renderWith({}, snap);
+    const rows = html.split('class="os-recent-item"').length - 1;
+    assert.equal(rows, 5);
+    assert.ok(html.includes('Item 0') && !html.includes('Item 5'));
+    controller.dispose();
+  });
+
+  it('the recent list and the selection both render for a ring item', async () => {
+    const snap = seeded();
+    const { html, controller } = await renderWith(graphOverrides, snap);
+    const first = snap.activity.items[0];
+    controller.select({ type: 'ring', id: `activity:${first.id}`, label: first.title, detail: first.kind });
+    const after = api.render.renderApp(controller);
+    assert.ok(after.includes('os-selection'));
+    assert.ok(after.includes(first.title));
+    assert.ok(after.includes('>Close<'));
+    controller.dispose();
+  });
+
+  it('leaves no OnThisMac or Activity sections behind', async () => {
+    const { html, controller } = await renderWith(graphOverrides);
+    assert.ok(!html.includes('sec-mac'));
+    assert.ok(!html.includes('sec-activity'));
+    assert.ok(!html.includes('Activity timeline'));
+    assert.ok(!html.includes('On this Mac'));
+    controller.dispose();
+  });
+});
+
+describe('system view: memoisation and caps', () => {
+  it('returns the same view for the same snapshot activity and project', () => {
+    const s = seeded();
+    const p = api.fixture.buildDemoProjectGraph();
+    const first = api.systemGraph.computeSystemView(s, p);
+    assert.equal(api.systemGraph.computeSystemView(s, p), first, 'same inputs, same object');
+    assert.notEqual(api.systemGraph.computeSystemView({ ...s, activity: { ...s.activity } }, p), first, 'new activity recomputes');
+    assert.notEqual(api.systemGraph.computeSystemView(s, { ...p }), first, 'new project recomputes');
+  });
+
+  it('caps the ring at 24 items and the core at 4000 nodes, and never raises a cap', () => {
+    const s = seeded();
+    const template = s.activity.items[0];
+    s.activity.items = Array.from({ length: 30 }, (_, i) => ({ ...template, id: 900 - i }));
+    const p = api.fixture.buildDemoProjectGraph();
+    assert.equal(api.systemGraph.computeSystemView(s, p).graph.ring.length, 24);
+    assert.equal(api.systemGraph.computeSystemView(s, p, { maxRingItems: 50 }).graph.ring.length, 24, 'a larger request is capped');
+    const small = api.systemGraph.computeSystemView(s, p, { maxCoreNodes: 100 });
+    assert.ok(small.graph.core.length <= 100);
+  });
+
+  it('an empty input gives an empty view with a layout', () => {
+    const view = api.systemGraph.computeSystemView(null, null);
+    assert.equal(view.graph.core.length, 0);
+    assert.equal(view.graph.ring.length, 0);
+    assert.equal(view.layout.core.size, 0);
   });
 });
 

@@ -3,10 +3,12 @@ import type { OsController, ViewState } from './controller';
 import type { OsRange } from './host';
 import type { OsLiveStatus } from './types';
 import { fmtTime } from './format';
-import { Activity } from './components/Activity';
+import { computeSystemView, SYSTEM_VIEW_LIMITS } from './systemGraph';
+import { Brain } from './components/Brain';
 import { Knowledge } from './components/Knowledge';
-import { OnThisMac } from './components/OnThisMac';
+import { Routines } from './components/Routines';
 import { RunningNow } from './components/RunningNow';
+import { SkillsDeck } from './components/SkillsDeck';
 import { SystemMap } from './components/SystemMap';
 import { TokenFlow } from './components/TokenFlow';
 
@@ -58,6 +60,8 @@ function Header({ state, controller }: { state: ViewState; controller: OsControl
 export function App({ controller }: { controller: OsController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const data = state.data;
+  // Memoised inside computeSystemView, so re-renders with the same inputs reuse the view.
+  const view = data ? computeSystemView(data, state.projectGraph, SYSTEM_VIEW_LIMITS) : null;
 
   return (
     <div className="os">
@@ -74,20 +78,27 @@ export function App({ controller }: { controller: OsController }) {
         </p>
       ) : null}
 
-      {!data ? <p className="empty">Loading the System view…</p> : null}
+      {!data || !view ? <p className="empty">Loading the System view…</p> : null}
 
-      {data ? (
-        <div className="os-grid">
-          <SystemMap system={data.system} controller={controller} />
-          <RunningNow
-            running={data.running}
-            stopping={state.stopping}
-            onStop={(cancel, key) => void controller.stopItem(cancel, key)}
-          />
-          <Activity activity={data.activity} />
-          <TokenFlow tokens={data.tokens} />
-          <Knowledge knowledge={data.knowledge} controller={controller} />
-          <OnThisMac controller={controller} />
+      {data && view ? (
+        <div className="os-stage">
+          <div className="os-col os-col-left">
+            <SystemMap system={data.system} controller={controller} />
+            <RunningNow
+              running={data.running}
+              stopping={state.stopping}
+              onStop={(cancel, key) => void controller.stopItem(cancel, key)}
+            />
+            <SkillsDeck skills={state.skills} status={state.skillsStatus} />
+          </div>
+
+          <Brain state={state} controller={controller} view={view} activity={data.activity.items} />
+
+          <div className="os-col os-col-right">
+            <TokenFlow tokens={data.tokens} />
+            <Knowledge knowledge={data.knowledge} controller={controller} />
+            <Routines routines={state.routines} status={state.routinesStatus} controller={controller} />
+          </div>
         </div>
       ) : null}
     </div>

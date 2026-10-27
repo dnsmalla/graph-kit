@@ -28,8 +28,15 @@ export interface OsHost {
   watch(onChange: () => void, onStatus: (status: OsLiveStatus, detail?: string) => void): () => void;
   /** Navigates the host to one of its screens. false = there is nowhere to go from here. */
   open(target: OsOpenTarget): boolean;
-  /** Later steps: the project's code graph, skills and routines. Optional. */
+  /**
+   * The project's code graph as a CGData object ({ nodes, edges, layers, tour }). Optional.
+   * Resolve null (or anything without `nodes` and `edges` arrays) when there is no graph.
+   * Called on start, on a project change and on retry; not on change-feed refreshes.
+   * A rejection only marks the graph as failed; the rest of the page still loads.
+   */
   loadProjectGraph?(): Promise<unknown | null>;
+  /** Skills for the Skills panel. Optional. Called on the same occasions as loadProjectGraph. */
   loadSkills?(): Promise<OsSkill[]>;
+  /** Scheduled routines for the Routines panel. Optional. Called on the same occasions as loadProjectGraph. */
   loadRoutines?(): Promise<OsRoutine[]>;
 }

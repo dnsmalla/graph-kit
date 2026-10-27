@@ -3,19 +3,23 @@ import type { ReactNode } from 'react';
 export function Card({
   id,
   title,
-  wide = false,
+  actions,
   children,
 }: {
   id: string;
   title: string;
-  wide?: boolean;
+  /** Optional controls or a count shown at the right of the title. */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className={wide ? 'card card-wide' : 'card'} aria-labelledby={id}>
-      <h2 id={id} className="card-title">
-        {title}
-      </h2>
+    <section className="card" aria-labelledby={id}>
+      <div className="card-head">
+        <h2 id={id} className="card-title">
+          {title}
+        </h2>
+        {actions ? <div className="card-actions">{actions}</div> : null}
+      </div>
       {children}
     </section>
   );
