@@ -1,7 +1,7 @@
 {
   "name": "@dnsmalla/graph-kit",
   "version": "1.6.2",
-  "description": "TypeScript implementation of the GraphKit canonical graph engine — code/text → typed node/edge graph. Schema-compatible with the Swift package.",
+  "description": "TypeScript implementation of the GraphKit canonical graph engine \u2014 code/text \u2192 typed node/edge graph. Schema-compatible with the Swift package.",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -31,13 +31,11 @@
     "bundle": "esbuild src/cli.ts --bundle --platform=node --target=node18 --format=cjs --minify --outfile=../bin/graph-kit.js"
   },
   "dependencies": {
-    "three": "0.185.1",
     "typescript": "^5.4.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "@types/three": "0.185.1",
     "esbuild": "^0.28.2"
   }
 }
