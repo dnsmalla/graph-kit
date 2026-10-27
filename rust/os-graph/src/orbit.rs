@@ -417,6 +417,109 @@ pub(crate) fn layout_raw(
     }
 }
 
+/// Members sit on a shell this fraction of the ring radius around their anchor.
+const HUB_SHELL_FRACTION: f64 = 0.25;
+/// Vertical stagger of the OS hubs, as a fraction of the ring radius (alternating up and down).
+const HUB_STAGGER_FRACTION: f64 = 0.08;
+
+/// One node of the hub layout: its id, whether it is a hub (the centre of a cluster) and its
+/// group (the cluster it belongs to). Read leniently by the caller.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct HubNode<'a> {
+    pub id: &'a str,
+    pub is_hub: bool,
+    pub group: Option<f64>,
+}
+
+/// The hub layout of a graph with hub nodes (see `crate::api::viz_layout_json`).
+///
+/// * The OS (two or more hubs): the hubs sit evenly on a ring in the XZ plane, alternately
+///   staggered up and down; each hub's members sit on a shell around it at a quarter of the
+///   ring radius, spread by the golden angle.
+/// * One hub (a drill-down): the hub is at the origin, the groups it holds are anchors evenly
+///   on the ring, and each group's members sit on a shell around its anchor.
+///
+/// Deterministic: members are ordered by id within their group, so the input order does not
+/// change the output. The first occurrence of a duplicate id wins, as in [`layout_raw`]. The
+/// returned `community_centers` are the anchors (the hubs at the OS level).
+pub(crate) fn hub_layout(nodes: &[HubNode], core_radius: f64) -> OrbitLayout {
+    // The hubs (OS) or the family anchors (a drill-down) sit on a circle of the core radius.
+    let ring_radius = core_radius;
+    let shell_radius = ring_radius * HUB_SHELL_FRACTION;
+    let mut seen: HashSet<&str> = HashSet::new();
+    let items: Vec<&HubNode> = nodes.iter().filter(|n| seen.insert(n.id)).collect();
+    let group_of = |n: &HubNode| non_neg_int(n.group, 0.0);
+
+    let mut hubs: Vec<&HubNode> = items.iter().copied().filter(|n| n.is_hub).collect();
+    hubs.sort_by(|a, b| group_of(a).total_cmp(&group_of(b)).then_with(|| crate::builder::js_cmp(a.id, b.id)));
+    let mut members: Vec<&HubNode> = items.iter().copied().filter(|n| !n.is_hub).collect();
+    members.sort_by(|a, b| group_of(a).total_cmp(&group_of(b)).then_with(|| crate::builder::js_cmp(a.id, b.id)));
+
+    // Anchor of each group, and the centre hub's position.
+    let mut anchors: Vec<(f64, Vec3)> = Vec::new();
+    let mut centres: Vec<(&str, Vec3)> = Vec::new();
+    let mut centre_of: HashMap<u64, Vec3> = HashMap::new();
+    if hubs.len() >= 2 {
+        let n = hubs.len();
+        for (i, hub) in hubs.iter().enumerate() {
+            let a = TAU * i as f64 / n as f64;
+            let stagger = if i % 2 == 0 { -1.0 } else { 1.0 } * ring_radius * HUB_STAGGER_FRACTION;
+            let p = Vec3 { x: ring_radius * a.cos(), y: stagger, z: ring_radius * a.sin() };
+            centres.push((hub.id, p));
+            centre_of.insert(group_of(hub).to_bits(), p);
+            anchors.push((group_of(hub), p));
+        }
+    } else if hubs.len() == 1 {
+        centres.push((hubs[0].id, ORIGIN));
+        let mut groups: Vec<f64> = members.iter().map(|m| group_of(m)).collect();
+        groups.dedup();
+        let k = groups.len();
+        for (i, g) in groups.iter().enumerate() {
+            let a = TAU * i as f64 / k as f64;
+            let p = Vec3 { x: ring_radius * a.cos(), y: 0.0, z: ring_radius * a.sin() };
+            anchors.push((*g, p));
+            centre_of.insert(g.to_bits(), p);
+        }
+    }
+
+    // Members: a shell around their anchor, spread by the golden angle in id order.
+    let mut placed: HashMap<&str, Vec3> = HashMap::new();
+    for (id, p) in &centres {
+        placed.insert(id, *p);
+    }
+    let mut i = 0;
+    while i < members.len() {
+        let g = group_of(members[i]);
+        let mut j = i;
+        while j < members.len() && group_of(members[j]) == g {
+            j += 1;
+        }
+        let anchor = centre_of
+            .get(&g.to_bits())
+            .copied()
+            .or_else(|| anchors.get((g as usize) % anchors.len().max(1)).map(|a| a.1))
+            .unwrap_or(ORIGIN);
+        let shell = fibonacci_sphere(j - i, shell_radius);
+        for (k, member) in members[i..j].iter().enumerate() {
+            let s = shell[k];
+            placed.insert(member.id, Vec3 { x: anchor.x + s.x, y: anchor.y + s.y, z: anchor.z + s.z });
+        }
+        i = j;
+    }
+
+    let core: Vec<(String, Vec3)> = items
+        .iter()
+        .map(|n| (n.id.to_owned(), placed.get(n.id).copied().unwrap_or(ORIGIN)))
+        .collect();
+    let radius = core.iter().map(|(_, p)| norm(*p)).fold(0.0, f64::max);
+    OrbitLayout {
+        core,
+        ring: Vec::new(),
+        community_centers: anchors.iter().map(|a| a.1).collect(),
+        bounds: Bounds { radius },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -603,6 +706,108 @@ mod tests {
         for p in pts {
             assert!((origin_dist(p) - 37.0).abs() < 1e-9);
         }
+    }
+
+    /// An owned spec for a hub-layout input: `(id, is_hub, group)`. The ids live in the caller.
+    fn spec(ids: &[(String, bool, f64)]) -> Vec<HubNode<'_>> {
+        ids.iter()
+            .map(|(id, is_hub, group)| HubNode { id, is_hub: *is_hub, group: Some(*group) })
+            .collect()
+    }
+
+    fn at(layout: &OrbitLayout, id: &str) -> Vec3 {
+        layout.core.iter().find(|(i, _)| i == id).map(|(_, p)| *p).expect("placed")
+    }
+
+    #[test]
+    fn hub_layout_os_puts_eight_hubs_on_a_ring_with_a_slight_stagger() {
+        let mut ids: Vec<(String, bool, f64)> = (0..8).map(|g| (format!("hub:{g}"), true, g as f64)).collect();
+        for g in 0..8 {
+            ids.push((format!("m:{g}:a"), false, g as f64));
+        }
+        let layout = hub_layout(&spec(&ids), 100.0);
+        assert_eq!(layout.community_centers.len(), 8);
+        for g in 0..8 {
+            let h = at(&layout, &format!("hub:{g}"));
+            // On the XZ ring of the core radius, staggered only a little in Y.
+            assert!((h.x * h.x + h.z * h.z).sqrt() - 100.0 < 1e-9);
+            assert!(h.y.abs() <= 100.0 * HUB_STAGGER_FRACTION + 1e-9);
+        }
+        // Neighbouring hubs are well apart: the ring spacing is 2R sin(pi/8), about 76 units.
+        let spacing = dist(at(&layout, "hub:0"), at(&layout, "hub:1"));
+        assert!(spacing > 70.0, "neighbouring hubs too close: {spacing}");
+    }
+
+    #[test]
+    fn hub_layout_members_sit_on_their_hubs_shell_and_groups_do_not_overlap() {
+        let mut ids: Vec<(String, bool, f64)> = vec![
+            ("hub:a".into(), true, 0.0),
+            ("hub:b".into(), true, 1.0),
+            ("hub:c".into(), true, 2.0),
+        ];
+        for i in 0..30 {
+            ids.push((format!("a{i:02}"), false, 0.0));
+            ids.push((format!("b{i:02}"), false, 1.0));
+        }
+        let layout = hub_layout(&spec(&ids), 100.0);
+        let shell = 100.0 * HUB_SHELL_FRACTION;
+        let hub = at(&layout, "hub:a");
+        for i in 0..30 {
+            let d = dist(at(&layout, &format!("a{i:02}")), hub);
+            assert!((d - shell).abs() < 1e-6, "member off its shell: {d}");
+        }
+        // No member of one hub comes closer to another hub's members than the gap between the shells.
+        let mut closest = f64::INFINITY;
+        for (ia, pa) in layout.core.iter().filter(|(id, _)| id.starts_with('a')) {
+            for (ib, pb) in layout.core.iter().filter(|(id, _)| id.starts_with('b')) {
+                let _ = (ia, ib);
+                closest = closest.min(dist(*pa, *pb));
+            }
+        }
+        assert!(closest > 2.0 * shell, "groups overlap: {closest}");
+    }
+
+    #[test]
+    fn hub_layout_drill_centres_the_hub_and_rings_its_groups() {
+        let mut ids: Vec<(String, bool, f64)> = vec![("hub:models".into(), true, 4.0)];
+        for g in 1..=3 {
+            for i in 0..4 {
+                ids.push((format!("g{g}:{i}"), false, g as f64));
+            }
+        }
+        let layout = hub_layout(&spec(&ids), 100.0);
+        assert_eq!(at(&layout, "hub:models"), ORIGIN);
+        assert_eq!(layout.community_centers.len(), 3, "one anchor per group");
+        for c in &layout.community_centers {
+            assert!((norm(*c) - 100.0).abs() < 1e-9, "anchor off the ring");
+        }
+        let shell = 100.0 * HUB_SHELL_FRACTION;
+        for g in 1..=3 {
+            let anchor = layout.community_centers[g - 1];
+            for i in 0..4 {
+                assert!((dist(at(&layout, &format!("g{g}:{i}")), anchor) - shell).abs() < 1e-6);
+            }
+        }
+    }
+
+    #[test]
+    fn hub_layout_ignores_input_order_and_drops_duplicate_ids() {
+        let ids: Vec<(String, bool, f64)> = vec![
+            ("hub:x".into(), true, 0.0),
+            ("hub:y".into(), true, 1.0),
+            ("m1".into(), false, 0.0),
+            ("m2".into(), false, 0.0),
+            ("m1".into(), false, 0.0),
+        ];
+        let a = spec(&ids);
+        let mut b = a.clone();
+        b.reverse();
+        let la = hub_layout(&a, 100.0);
+        let lb = hub_layout(&b, 100.0);
+        for (id, p) in &la.core {
+            assert!(dist(*p, at(&lb, id)) < 1e-12, "{id} moved with the input order");
+        }
+        assert_eq!(la.core.iter().filter(|(id, _)| id == "m1").count(), 1);
     }
 
     #[test]

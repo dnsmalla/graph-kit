@@ -3,7 +3,7 @@
 
 use crate::builder::{build_system_graph, BuildOptions, SystemGraph};
 use crate::models::{lenient_f64, lenient_vec, CGData};
-use crate::orbit::{layout_raw, OrbitLayout, OrbitOptions};
+use crate::orbit::{hub_layout, layout_raw, HubNode, OrbitLayout, OrbitOptions, MAX_RADIUS};
 use crate::snapshot::OsSnapshot;
 use crate::viz::{build_os_view, code_summary, OsVizInput};
 use serde::de::DeserializeOwned;
@@ -127,6 +127,9 @@ struct VizLayoutNode {
     /// The layout community. Missing or non-number: community 0.
     #[serde(default, deserialize_with = "lenient_f64")]
     group: Option<f64>,
+    /// `"hub"` marks a cluster centre (see [`crate::orbit::hub_layout`]); anything else is a member.
+    #[serde(default)]
+    kind: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -159,7 +162,23 @@ fn viz_layout_inner(viz_json: &str, opts_json: &str) -> Result<String, String> {
             )
         })
         .collect();
-    let layout: OrbitLayout = layout_raw(&core, &edges, &[], &opts);
+    // A graph with hub nodes (the OS, or a part's drill-down) gets the hub layout; any other
+    // graph keeps the force-free orbit layout over its communities.
+    let hubs: Vec<HubNode> = graph
+        .nodes
+        .iter()
+        .map(|n| HubNode {
+            id: n.id.as_str(),
+            is_hub: n.kind.as_ref().and_then(serde_json::Value::as_str) == Some("hub"),
+            group: n.group,
+        })
+        .collect();
+    let layout: OrbitLayout = if hubs.iter().any(|h| h.is_hub) {
+        let core_radius = opts.core_radius.filter(|r| r.is_finite() && *r > 0.0).unwrap_or(100.0);
+        hub_layout(&hubs, core_radius.min(MAX_RADIUS))
+    } else {
+        layout_raw(&core, &edges, &[], &opts)
+    };
     serde_json::to_string(&layout).map_err(|e| e.to_string())
 }
 
@@ -357,6 +376,35 @@ mod tests {
         assert!(!hubs.contains_key("code"));
         let bad = parse_value(&build_os_view_json("{not json"));
         assert!(bad["error"].as_str().unwrap().starts_with("osInput:"));
+    }
+
+    #[test]
+    fn viz_layout_of_the_os_is_the_hub_ring_and_of_other_graphs_the_orbit() {
+        let view = parse_value(&build_os_view_json(r#"{"snapshot":{"tokens":{"byModel":[{"provider":"p","model":"m","billable":4}]}}}"#));
+        let os = serde_json::to_string(&view["os"]).unwrap();
+        let layout = parse_value(&viz_layout_json(&os, "{}"));
+        let hub = |key: &str| {
+            let p = layout["core"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|e| e[0] == format!("hub:{key}"))
+                .unwrap()[1]
+                .clone();
+            (p["x"].as_f64().unwrap(), p["y"].as_f64().unwrap(), p["z"].as_f64().unwrap())
+        };
+        let (x, _, z) = hub("models");
+        assert!(((x * x + z * z).sqrt() - 100.0).abs() < 1e-6, "hubs sit on the ring of the core radius");
+        // A non-hub graph with the same shape keeps the orbit layout (no hub kind, no ring).
+        let weird = r#"{"nodes":[{"id":"a","group":0},{"id":"b","group":1}],"edges":[]}"#;
+        assert_eq!(parse_value(&viz_layout_json(weird, "{}"))["communityCenters"].as_array().unwrap().len(), 2);
+        // A hub-free layout of an OS-shaped graph still works with the core radius option.
+        let sized = parse_value(&viz_layout_json(&os, r#"{"coreRadius":50}"#));
+        let (sx, _, sz) = {
+            let p = sized["core"].as_array().unwrap().iter().find(|e| e[0] == "hub:models").unwrap()[1].clone();
+            (p["x"].as_f64().unwrap(), 0.0, p["z"].as_f64().unwrap())
+        };
+        assert!(((sx * sx + sz * sz).sqrt() - 50.0).abs() < 1e-6);
     }
 
     #[test]

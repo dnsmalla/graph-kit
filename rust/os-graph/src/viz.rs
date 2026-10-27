@@ -153,8 +153,8 @@ pub const OS_MEMBER_CAP: usize = 40;
 /// Most leaf members a hub drill-down shows per list (models, callers, endpoints, skills per
 /// source, ...); the rest are counted in the centre's `more` meta.
 pub const DRILL_MEMBER_CAP: usize = 60;
-const LABELLED_OS_MEMBERS: usize = 6;
-const LABELLED_HUB_MEMBERS: usize = 30;
+/// The OS level labels only its hubs; a drill-down labels its largest members up to this many.
+const LABELLED_HUB_MEMBERS: usize = 12;
 
 fn hub_title(key: &str) -> &'static str {
     match key {
@@ -1055,7 +1055,8 @@ pub fn build_os_graph(input: &OsVizInput) -> VizGraph {
                 n
             })
             .collect();
-        mark_labels(&mut list, LABELLED_OS_MEMBERS);
+        // The OS level labels its hubs only: members are dots until the part is opened.
+        mark_labels(&mut list, 0);
         for n in &list {
             edges.push(spoke(&hub, &n.id));
         }
@@ -1480,6 +1481,34 @@ mod tests {
         }
         assert!(build_hub_graph("code", &input).is_none());
         assert!(build_hub_graph("nope", &input).is_none());
+    }
+
+    #[test]
+    fn os_level_labels_hubs_only_and_a_drill_labels_at_most_twelve_members() {
+        let rows: Vec<String> = (0..30)
+            .map(|i| format!(r#"{{"provider":"p","model":"m{i:02}","billable":{}}}"#, i + 1))
+            .collect();
+        let text = format!(r#"{{"tokens":{{"byModel":[{}]}}}}"#, rows.join(","));
+        let input = input_of(snapshot(&text));
+        let os = build_os_graph(&input);
+        for n in &os.nodes {
+            assert_eq!(n.labelled, n.kind == "hub", "{} labelled {}", n.id, n.labelled);
+        }
+        let drill = build_hub_graph("models", &input).expect("models drill");
+        let members: Vec<&VizNode> = drill.nodes.iter().filter(|n| n.kind == "model").collect();
+        assert_eq!(members.len(), 30);
+        // The cap counts every member (a provider row shares it with the models); group rows are always labelled.
+        let capped: Vec<&VizNode> = drill
+            .nodes
+            .iter()
+            .filter(|n| n.labelled && n.kind != "hub" && n.kind != "group")
+            .collect();
+        assert_eq!(capped.len(), LABELLED_HUB_MEMBERS);
+        let labelled: Vec<&&VizNode> = members.iter().filter(|n| n.labelled).collect();
+        // The labelled ones are the largest: m29 (billable 30) is among them, m00 is not.
+        assert!(labelled.iter().any(|n| n.id == "model:p/m29"));
+        assert!(!labelled.iter().any(|n| n.id == "model:p/m00"));
+        assert!(drill.nodes.iter().find(|n| n.kind == "hub").unwrap().labelled);
     }
 
     #[test]

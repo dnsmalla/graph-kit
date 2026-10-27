@@ -1261,7 +1261,7 @@
           "id": "knowledge:meetings",
           "kind": "sourceKind",
           "label": "Meetings",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "count": 4
           },
@@ -1274,7 +1274,7 @@
           "id": "knowledge:reviews",
           "kind": "activity",
           "label": "Pending reviews",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "count": 3
           },
@@ -1287,7 +1287,7 @@
           "id": "source:email",
           "kind": "sourceKind",
           "label": "email",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "count": 3,
             "lastIndexedAt": "2026-10-26 10:00:00"
@@ -1301,7 +1301,7 @@
           "id": "source:code",
           "kind": "sourceKind",
           "label": "code",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "count": 2,
             "lastIndexedAt": null
@@ -1333,7 +1333,7 @@
           "id": "memory:/work/llm-ide",
           "kind": "memoryRepo",
           "label": "llm-ide",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "active": 8,
             "facts": 10,
@@ -1366,7 +1366,7 @@
           "id": "skillSource:kit",
           "kind": "skillSource",
           "label": "kit",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "count": 1,
             "source": "kit"
@@ -1380,7 +1380,7 @@
           "id": "skillSource:project",
           "kind": "skillSource",
           "label": "project",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "count": 1,
             "source": "project"
@@ -1412,7 +1412,7 @@
           "id": "model:anthropic/claude-sonnet-5",
           "kind": "model",
           "label": "claude-sonnet-5",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "billable": 5000,
             "cacheHitRatio": 0.7920792079207921,
@@ -1435,7 +1435,7 @@
           "id": "model:anthropic/claude-haiku-5-5",
           "kind": "model",
           "label": "claude-haiku-5-5",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "billable": 1185,
             "cacheHitRatio": 0.7858546168958742,
@@ -1458,7 +1458,7 @@
           "id": "model:custom:abc/local-7b",
           "kind": "model",
           "label": "local-7b",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "billable": 15,
             "cacheHitRatio": 0.0,
@@ -1499,7 +1499,7 @@
           "id": "chatTurn:chat-9",
           "kind": "chatTurn",
           "label": "Chat chat-9",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "cancelPath": "/agent/v2/cancel",
             "cancellable": true,
@@ -1514,7 +1514,7 @@
           "id": "liveSession:live-4",
           "kind": "liveSession",
           "label": "Live live-4",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "cancelPath": null,
             "cancellable": false,
@@ -1549,7 +1549,7 @@
           "id": "routine:r-b",
           "kind": "routine",
           "label": "Nightly graph",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "enabled": true,
             "lastRunAt": null,
@@ -1565,7 +1565,7 @@
           "id": "routine:r-a",
           "kind": "routine",
           "label": "Digest",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "enabled": false,
             "lastRunAt": null,
@@ -1599,7 +1599,7 @@
           "id": "kit:graph-kit",
           "kind": "kit",
           "label": "graph-kit",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "enabled": true,
             "requires": [
@@ -1615,7 +1615,7 @@
           "id": "kit:workspace-kit",
           "kind": "kit",
           "label": "workspace-kit",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "enabled": false,
             "requires": [
@@ -1632,7 +1632,7 @@
           "id": "feature:code_graph_3d",
           "kind": "feature",
           "label": "code_graph_3d",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "enabled": true
           },
@@ -1645,7 +1645,7 @@
           "id": "feature:file_explorer",
           "kind": "feature",
           "label": "file_explorer",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "enabled": false
           },
@@ -1658,7 +1658,7 @@
           "id": "feature:terminal",
           "kind": "feature",
           "label": "terminal",
-          "labelled": true,
+          "labelled": false,
           "meta": {
             "enabled": true
           },
