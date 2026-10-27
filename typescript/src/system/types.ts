@@ -208,3 +208,77 @@ export type OsRoutine = {
   lastRunAt?: string | null;
   enabled: boolean;
 };
+
+// ---- OS graph core: types only. The implementation is the Rust crate rust/os-graph,
+// run in the web page as embedded WASM (web/src/wasm). The TypeScript package keeps
+// these declarations so hosts can type what the core returns. ----
+
+export type CoreCategory = "code" | "docs" | "tests" | "knowledge" | "other";
+
+export interface SystemCoreNode {
+  id: string;
+  /** Absent when the node has no string title (the Rust core leaves it out). Hosts fall back to the id. */
+  label?: string;
+  category: CoreCategory;
+  /** Index into the community ordering: 0 = largest community. */
+  community: number;
+  /** Weighted degree within the kept graph. */
+  degree: number;
+}
+
+export interface SystemCoreEdge {
+  source: string;
+  target: string;
+  /** Number of original edges collapsed into this one. */
+  weight: number;
+}
+
+export interface SystemRingItem {
+  id: string;
+  label: string;
+  kind: string;
+  at: string;
+  link: string | null;
+}
+
+export interface SystemGraph {
+  core: SystemCoreNode[];
+  edges: SystemCoreEdge[];
+  ring: SystemRingItem[];
+  truncated: { totalNodes: number; keptNodes: number; keptCommunities: number };
+}
+
+export interface BuildOptions {
+  /** Maximum number of core nodes kept. Default 4000. */
+  maxCoreNodes?: number;
+  /** Maximum number of ring items. Default 24. */
+  maxRingItems?: number;
+}
+
+export interface Vec3 { x: number; y: number; z: number; }
+
+export interface OrbitOptions {
+  /** Radius of the core sphere. Default 100. */
+  coreRadius?: number;
+  /** Radius of the activity ring (plane y = 0). Default 170. */
+  ringRadius?: number;
+  /** Relaxation steps over the core. Default 60. */
+  iterations?: number;
+  /** PRNG seed for the initial scatter. Default 1. */
+  seed?: number;
+}
+
+export interface OrbitLayout {
+  /** Every core node id -> position (keyed by the original node ids). */
+  core: Map<string, Vec3>;
+  /** Every ring item id -> position. */
+  ring: Map<string, Vec3>;
+  /**
+   * Index = COMPACTED community index, not the raw `SystemCoreNode.community`
+   * value. The distinct community values present in the core are mapped to
+   * 0..k-1 in ascending order, so a sparse value such as 1e9 costs nothing.
+   */
+  communityCenters: Vec3[];
+  /** Max distance from the origin of any core or ring point (0 when empty). */
+  bounds: { radius: number };
+}

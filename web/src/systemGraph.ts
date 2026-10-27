@@ -1,6 +1,6 @@
 // The one place the page calls the System view's pure core (buildSystemGraph and
-// orbitLayout). The core is TypeScript today; the Rust crate (rust/os-graph) will
-// replace it behind WASM, and only this file changes when that lands.
+// orbitLayout). The core is the Rust crate rust/os-graph, run as embedded WASM (./wasm);
+// only this file and ./wasm change when the core does.
 //
 // The view is split in two so a change-feed refresh never rebuilds the project:
 //   - computeCore(project): the project's nodes, edges and their 3D layout. It
@@ -9,14 +9,13 @@
 //     memoised on the ring's ids, times and labels, so identical activity gives
 //     the same object.
 import type { CGData } from '../../typescript/src/models';
-import {
-  buildSystemGraph,
-  orbitLayout,
-  type OrbitLayout,
-  type SystemGraph,
-  type SystemRingItem,
-  type Vec3,
-} from '../../typescript/src/system/index';
+import type {
+  OrbitLayout,
+  SystemGraph,
+  SystemRingItem,
+  Vec3,
+} from '../../typescript/src/system/types';
+import { buildSystemGraph, orbitLayout } from './wasm';
 import type { OsSnapshot } from './types';
 
 /** Hard caps the page applies. A caller can ask for less, never for more. */

@@ -3,35 +3,8 @@
 // activity orbiting it. Pure and seeded; no I/O, no dependencies. Relaxation is
 // O(E + N) per step (no all-pairs repulsion), so it stays cheap at ~20k nodes.
 
-import type { SystemGraph } from "./builder.js";
+import type { OrbitLayout, OrbitOptions, SystemGraph, Vec3 } from "./types.js";
 
-export interface Vec3 { x: number; y: number; z: number; }
-
-export interface OrbitOptions {
-  /** Radius of the core sphere. Default 100. */
-  coreRadius?: number;
-  /** Radius of the activity ring (plane y = 0). Default 170. */
-  ringRadius?: number;
-  /** Relaxation steps over the core. Default 60. */
-  iterations?: number;
-  /** PRNG seed for the initial scatter. Default 1. */
-  seed?: number;
-}
-
-export interface OrbitLayout {
-  /** Every core node id -> position (keyed by the original node ids). */
-  core: Map<string, Vec3>;
-  /** Every ring item id -> position. */
-  ring: Map<string, Vec3>;
-  /**
-   * Index = COMPACTED community index, not the raw `SystemCoreNode.community`
-   * value. The distinct community values present in the core are mapped to
-   * 0..k-1 in ascending order, so a sparse value such as 1e9 costs nothing.
-   */
-  communityCenters: Vec3[];
-  /** Max distance from the origin of any core or ring point (0 when empty). */
-  bounds: { radius: number };
-}
 
 const TAU = Math.PI * 2;
 const ORIGIN: Vec3 = { x: 0, y: 0, z: 0 };

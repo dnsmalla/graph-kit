@@ -367,7 +367,7 @@ fn collapse_edges(ids: &[&str], edges: &[CGEdge]) -> Vec<(usize, usize, u64)> {
             }
         }
     }
-    pairs.sort_by(|x, y| (x.0, x.1).cmp(&(y.0, y.1)));
+    pairs.sort_by_key(|x| (x.0, x.1));
     pairs
 }
 

@@ -303,7 +303,7 @@ export class OrbitView {
     this.graph = graph;
     this.layout = layout;
 
-    this.coreItems = uniqueCoreNodes(graph).map((n) => ({ id: n.id, label: n.label, category: n.category }));
+    this.coreItems = uniqueCoreNodes(graph).map((n) => ({ id: n.id, label: n.label ?? n.id, category: n.category }));
     const pts = buildPointBuffers(graph, layout, this.colors);
     if (pts.ids.length > 0) {
       const geo = new THREE.BufferGeometry();

@@ -11,7 +11,8 @@ import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SYSTEM = path.join(ROOT, '..', 'typescript', 'src', 'system', 'orbit.ts');
+// The layout runs in the page as WASM (src/wasm); the TS layout no longer exists.
+const WASM = path.join(ROOT, 'src', 'wasm', 'index.ts');
 
 let server;
 let scene;
@@ -31,7 +32,7 @@ before(async () => {
   });
   scene = await server.ssrLoadModule('/src/orbit/scene.ts');
   panel = await server.ssrLoadModule('/src/orbit/OrbitPanel.tsx');
-  orbit = await server.ssrLoadModule(SYSTEM);
+  orbit = await server.ssrLoadModule(WASM);
   view = await server.ssrLoadModule('/src/orbit/OrbitView.ts');
 });
 

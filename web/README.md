@@ -43,12 +43,30 @@ Below 1100px the columns stack: the brain first, then the left and right
 panels. Category colours are the `--os-cat-*` tokens in `src/os-tokens.css`; the
 light theme uses darker shades so each swatch keeps 3:1 against its surface.
 
-`src/systemGraph.ts` is the only module that calls the pure core
-(`buildSystemGraph`, `orbitLayout`), in two parts so a change refresh never redraws
-the project: `computeCore(project)` (memoised on the project's identity) and
-`computeRing(snapshot)` (memoised on the ring's ids, times, labels and kinds). The
-core is capped at 4000 nodes and the ring at 24 items. A Rust (WASM) core will
-replace the TypeScript one behind that module alone.
+`src/systemGraph.ts` is the only module that calls the pure core, in two parts so a
+change refresh never redraws the project: `computeCore(project)` (memoised on the
+project's identity) and `computeRing(snapshot)` (memoised on the ring's ids, times,
+labels and kinds). The core is capped at 4000 nodes and the ring at 24 items.
+
+The core is the Rust crate `rust/os-graph`, run as **embedded WASM**. The page is a
+`file://` document in a macOS WKWebView loaded as one classic script, so it cannot
+fetch a `.wasm` file. `src/wasm/bytes.ts` holds the module as base64 and
+`src/wasm/index.ts` instantiates it synchronously (`initSync`) on first call, then
+wraps `buildSystemGraph` and `orbitLayout` (JSON in, JSON out, a core error thrown).
+`src/wasm/pkg/` is the wasm-bindgen glue, built with `--target web
+--omit-default-module-path`, so it has no `import.meta.url` and Vite emits no
+separate asset. The generated files are committed (CI has no Rust).
+
+To rebuild after a change to `rust/os-graph`, from the graph-kit root:
+
+```sh
+scripts/build-os-wasm.sh          # regenerates src/wasm/pkg/ and src/wasm/bytes.ts
+scripts/build-os-wasm.sh --check  # builds into a temp dir and diffs against the committed files
+```
+
+`--check` is skipped (exit 0, with a message) when the local rustc differs from the one
+recorded in `bytes.ts`: wasm output is only reproducible with the same toolchain. The
+`wasm-bindgen` CLI must match the `wasm-bindgen` version in `rust/Cargo.lock` (0.2.129).
 
 ## Mounting
 
@@ -86,5 +104,5 @@ override the default colours.
 
 - `npm run dev`: serves the demo (`demo/`) with the fixture host.
 - `npm run type-check`: `tsc --noEmit`.
-- `npm test`: the page's tests (fake host, fake timers, SSR render).
+- `npm test`: the page's tests (fake host, fake timers, SSR render), and `test/wasm.test.mjs`, which runs every parity golden through the embedded core.
 - `npx vite build --config vite.config.ts --outDir <dir>`: builds the demo.

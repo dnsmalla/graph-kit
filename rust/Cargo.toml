@@ -1,3 +1,12 @@
 [workspace]
 resolver = "2"
 members = ["os-graph"]
+
+# The wasm bundle ships embedded in web/ (base64 in JS), so size matters more than speed.
+# Native tests and the parity gate are unaffected: they check output, not timing, at this profile.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

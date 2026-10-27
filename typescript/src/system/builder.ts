@@ -3,48 +3,16 @@
 // No I/O and no dependencies; output is deterministic for a given input.
 
 import type { CGData, CGNode } from "../models.js";
-import type { OsSnapshot } from "./types.js";
+import type {
+  BuildOptions,
+  CoreCategory,
+  OsSnapshot,
+  SystemCoreEdge,
+  SystemCoreNode,
+  SystemGraph,
+  SystemRingItem,
+} from "./types.js";
 
-export type CoreCategory = "code" | "docs" | "tests" | "knowledge" | "other";
-
-export interface SystemCoreNode {
-  id: string;
-  label: string;
-  category: CoreCategory;
-  /** Index into the community ordering: 0 = largest community. */
-  community: number;
-  /** Weighted degree within the kept graph. */
-  degree: number;
-}
-
-export interface SystemCoreEdge {
-  source: string;
-  target: string;
-  /** Number of original edges collapsed into this one. */
-  weight: number;
-}
-
-export interface SystemRingItem {
-  id: string;
-  label: string;
-  kind: string;
-  at: string;
-  link: string | null;
-}
-
-export interface SystemGraph {
-  core: SystemCoreNode[];
-  edges: SystemCoreEdge[];
-  ring: SystemRingItem[];
-  truncated: { totalNodes: number; keptNodes: number; keptCommunities: number };
-}
-
-export interface BuildOptions {
-  /** Maximum number of core nodes kept. Default 4000. */
-  maxCoreNodes?: number;
-  /** Maximum number of ring items. Default 24. */
-  maxRingItems?: number;
-}
 
 const TEST_PATH = /(^|[\/._-])(test|tests|spec|__tests__)([\/._-]|$)/i;
 const DOC_EXT = /\.(md|mdx|txt|rst)$/i;
