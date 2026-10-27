@@ -1,10 +1,21 @@
-import type { ExtraStatus } from '../controller';
+import type { ExtraStatus, OsController } from '../controller';
 import type { OsSkill } from '../types';
 import { fmtInt } from '../format';
 import { Card, Empty } from './common';
 
-/** The skills the host reports, as a deck of cards. The count sits in the header. */
-export function SkillsDeck({ skills, status }: { skills: OsSkill[] | null; status: ExtraStatus }) {
+/**
+ * The skills the host reports, as a deck of cards. The count sits in the header. A card opens
+ * the Skills part of the brain and selects the skill there.
+ */
+export function SkillsDeck({
+  skills,
+  status,
+  controller,
+}: {
+  skills: OsSkill[] | null;
+  status: ExtraStatus;
+  controller: OsController;
+}) {
   const count = skills ? fmtInt(skills.length) : null;
   return (
     <Card id="sec-skills" title="Skills" actions={count !== null ? <span className="meta">{count}</span> : null}>
@@ -12,11 +23,18 @@ export function SkillsDeck({ skills, status }: { skills: OsSkill[] | null; statu
         <ul className="skill-deck">
           {skills.map((skill) => (
             <li key={skill.id} className="skill-card">
-              <div className="skill-head">
-                <strong className="skill-name">{skill.name}</strong>
-                {skill.source ? <span className="chip">{skill.source}</span> : null}
-              </div>
-              {skill.description ? <p className="skill-desc">{skill.description}</p> : null}
+              <button
+                type="button"
+                className="os-open-btn"
+                aria-label={`Show ${skill.name} in the brain`}
+                onClick={() => controller.openNode('skills', { id: `skill:${skill.id}`, label: skill.name, detail: 'skill' })}
+              >
+                <span className="skill-head">
+                  <strong className="skill-name">{skill.name}</strong>
+                  {skill.source ? <span className="chip">{skill.source}</span> : null}
+                </span>
+                {skill.description ? <span className="skill-desc">{skill.description}</span> : null}
+              </button>
             </li>
           ))}
         </ul>

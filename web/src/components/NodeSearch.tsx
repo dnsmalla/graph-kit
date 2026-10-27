@@ -1,6 +1,7 @@
 import { useId, useMemo, useState, type KeyboardEvent } from 'react';
 import type { SystemGraph } from '../../../typescript/src/system/index.js';
-import { searchCoreNodes, type NodeSearchHit } from '../orbit/search';
+import { searchCoreNodes, searchVizNodes, type NodeSearchHit } from '../orbit/search';
+import type { VizGraph } from '../viz';
 
 /**
  * The search results as a listbox. Keyboard focus stays in the input (aria-activedescendant),
@@ -46,15 +47,18 @@ export function SearchResults({
 }
 
 /**
- * Type-ahead over the project's core nodes (label or id, case-insensitive, top matches).
- * Arrow keys move through the results, Enter chooses, Escape clears. Choosing calls
- * `onChoose`; the caller flies the brain to the node and selects it.
+ * Type-ahead over the nodes the brain draws: the project's core nodes, or the OS graph's nodes
+ * when `viz` is given (label or id, case-insensitive, top matches). Arrow keys move through the
+ * results, Enter chooses, Escape clears. Choosing calls `onChoose`; the caller flies the brain
+ * to the node and selects it.
  */
 export function NodeSearch({
   graph,
+  viz = null,
   onChoose,
 }: {
   graph: SystemGraph | null;
+  viz?: VizGraph | null;
   onChoose: (hit: NodeSearchHit) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -63,12 +67,15 @@ export function NodeSearch({
   const baseId = useId();
   const listId = `${baseId}-list`;
   const optionId = (i: number) => `${baseId}-opt-${i}`;
-  const results = useMemo(() => searchCoreNodes(graph, query), [graph, query]);
+  const results = useMemo(
+    () => (viz ? searchVizNodes(viz, query) : searchCoreNodes(graph, query)),
+    [graph, viz, query],
+  );
   const showList = open && query.trim() !== '';
   // The listbox exists only when there are hits; the ARIA links point at it only then.
   const hasResults = showList && results.length > 0;
   const activeIndex = Math.min(active, Math.max(0, results.length - 1));
-  const disabled = !graph || graph.core.length === 0;
+  const disabled = viz ? viz.nodes.length === 0 : !graph || graph.core.length === 0;
 
   const choose = (hit: NodeSearchHit) => {
     onChoose(hit);

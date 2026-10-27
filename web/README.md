@@ -84,6 +84,34 @@ scripts/build-os-wasm.sh --check  # builds into a temp dir and diffs against the
 recorded in `bytes.ts`: wasm output is only reproducible with the same toolchain. The
 `wasm-bindgen` CLI must match the `wasm-bindgen` version in `rust/Cargo.lock` (0.2.129).
 
+### The OS as a graph
+
+The brain opens on the whole OS: one centre per part (Code, Knowledge, Memory, Skills, Models,
+Agents, Routines, Kits) with that part's members around it. The core builds it
+(`build_os_view_json`, see `rust/os-graph/src/viz.rs`); `src/wasm/index.ts` wraps it as
+`buildOsView`, `vizLayout` and `codeSummary`, and `src/systemGraph.ts` memoises the view
+(`computeOsView`, keyed on the core's identity and the content of the snapshot parts the view
+reads, so an activity-only refresh keeps it) and each graph's layout (`computeVizLayout`).
+
+- **Click a hub** to open its part. The breadcrumb reads `OS › <part>`; `OS` and Back return,
+  and Escape returns from a part (not while typing in a field). The OS returns with that hub
+  selected. Code is the part whose graph is the project's own (the code brain).
+- **Each level remembers its camera**: leaving a level records its pose, and returning puts the
+  camera back. The brain registers how to read its camera with the controller
+  (`setCameraSource`), so every navigation records the level it leaves.
+- **Select a node** for its details card: a status chip, a meta table (numbers with separators,
+  dates relative, arrays as counts, nested objects as key: value lines) and the actions its kind
+  offers: Explore on a hub, Open Auto Tasks (routines), Open Settings (kits, features, checks),
+  Open Library (source kinds), and Stop for a running chat turn or meeting agent.
+- **Side panels** open their node: a kit card, a routine row, a skill card, or a knowledge row
+  opens its part and selects the node there.
+- **Colour**: a point takes its kind's colour; a status tints it (ok green, warn amber, running
+  blue with a pulse, off greyed, unknown neutral); hubs are larger and brighter. Labels are HTML
+  over the canvas for the labelled nodes only. A labelled edge shows its label on hover.
+
+The code brain is unchanged: `computeCore` and `computeRing` draw it. The OS graph's types are
+in `src/viz.ts` (not in `typescript/src/system/types.ts`).
+
 ## Mounting
 
 ```ts

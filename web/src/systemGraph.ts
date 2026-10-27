@@ -15,9 +15,10 @@ import type {
   SystemRingItem,
   Vec3,
 } from '../../typescript/src/system/types';
-import { buildSystemGraph, initOsGraphAsync, orbitLayout, osGraphStatus } from './wasm';
+import { buildOsView, buildSystemGraph, codeSummary, initOsGraphAsync, orbitLayout, osGraphStatus, vizLayout } from './wasm';
 import type { OsGraphStatus } from './wasm';
-import type { OsSnapshot } from './types';
+import type { OsRoutine, OsSkill, OsSnapshot } from './types';
+import type { OsView, VizGraph } from './viz';
 
 export { osGraphReady, osGraphStatus } from './wasm';
 export type { OsGraphStatus } from './wasm';
@@ -158,4 +159,108 @@ export function drawViews(
   } catch {
     return { core: EMPTY_CORE_VIEW, ring: EMPTY_RING_VIEW, drawFailed: true, loading: false };
   }
+}
+
+// ---- The OS view: the whole OS as a graph, and one graph per part ----------------
+
+/** The code part's summary keeps this many largest communities. */
+const CODE_SUMMARY_TOP = 6;
+
+type OsMemo = {
+  core: CoreView;
+  skills: OsSkill[] | null;
+  routines: OsRoutine[] | null;
+  key: string;
+  view: OsView;
+};
+
+/** Single-slot memo: the page draws one OS view at a time. */
+let osMemo: OsMemo | null = null;
+
+/**
+ * The fields of the snapshot the OS view reads, as a content key. A change refresh re-fetches
+ * every object, so identity would never hit; the content of these four parts decides whether
+ * the view can change at all (activity and the ring do not feed it).
+ */
+function osSnapshotKey(snapshot: OsSnapshot | null): string {
+  if (!snapshot) return 'none';
+  return JSON.stringify([snapshot.system, snapshot.running, snapshot.tokens, snapshot.knowledge]);
+}
+
+/**
+ * The OS view for a snapshot: the OS graph and every hub's graph. The code part is a summary of
+ * the project's core graph (`core`). Memoised on the core's identity, the skills' and routines'
+ * identity, and the content of the snapshot parts above: an unchanged view returns the same object.
+ */
+export function computeOsView(
+  snapshot: OsSnapshot | null,
+  skills: OsSkill[] | null,
+  routines: OsRoutine[] | null,
+  core: CoreView,
+): OsView {
+  const key = osSnapshotKey(snapshot);
+  if (
+    osMemo &&
+    osMemo.core === core &&
+    osMemo.skills === skills &&
+    osMemo.routines === routines &&
+    osMemo.key === key
+  ) {
+    return osMemo.view;
+  }
+  const code = core.graph.core.length > 0 ? codeSummary(core.graph, CODE_SUMMARY_TOP) : null;
+  const view = buildOsView({ snapshot, skills: skills ?? [], routines: routines ?? [], code });
+  osMemo = { core, skills, routines, key, view };
+  return view;
+}
+
+/** Per-VizGraph layout memo: the same graph object returns the same layout. */
+const vizLayoutMemo = new WeakMap<VizGraph, OrbitLayout>();
+
+/** The 3D layout of a VizGraph (the OS graph or a hub graph), memoised per graph object. */
+export function computeVizLayout(viz: VizGraph): OrbitLayout {
+  const hit = vizLayoutMemo.get(viz);
+  if (hit) return hit;
+  const layout = vizLayout(viz, { seed: LAYOUT_SEED });
+  vizLayoutMemo.set(viz, layout);
+  return layout;
+}
+
+/** What the OS brain draws: the OS view, or the empty state with a flag saying why. */
+export type DrawnOs = {
+  view: OsView | null;
+  /** The core is still compiling: the brain shows its loading state. */
+  loading: boolean;
+  /** The core threw. The brain says it could not draw the OS. */
+  failed: boolean;
+};
+
+/** The two inputs of the OS view, with the same loading and failure rules as drawViews. */
+export function drawOs(
+  snapshot: OsSnapshot | null,
+  skills: OsSkill[] | null,
+  routines: OsRoutine[] | null,
+  core: CoreView,
+  opts: { loading?: boolean } = {},
+): DrawnOs {
+  if (opts.loading || osGraphStatus() === 'loading') return { view: null, loading: true, failed: false };
+  try {
+    return { view: computeOsView(snapshot, skills, routines, core), loading: false, failed: false };
+  } catch {
+    return { view: null, loading: false, failed: true };
+  }
+}
+
+/** A graph the brain draws, with its layout. */
+export type VizView = { graph: VizGraph; layout: OrbitLayout };
+
+/**
+ * The graph the brain draws at a level: the OS graph at `os`, a hub's graph at a hub. `null`
+ * for `code` (the project's own graph) and for a hub the view does not have. Throws when the
+ * core cannot lay the graph out; the caller turns that into the failed state.
+ */
+export function vizForLevel(os: OsView, level: string): VizView | null {
+  const graph = level === 'os' ? os.os : os.hubs[level];
+  if (!graph) return null;
+  return { graph, layout: computeVizLayout(graph) };
 }

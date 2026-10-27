@@ -20,8 +20,11 @@
 // `{ "error": ... }` object the core returns on bad input into a thrown Error.
 import {
   initSync,
+  build_os_view_json,
   build_system_graph_json,
+  code_summary_json,
   orbit_layout_json,
+  viz_layout_json,
   __wbg_reset_state,
 } from './pkg/graph_kit_os.js';
 import { OS_GRAPH_WASM_BASE64 } from './bytes';
@@ -34,6 +37,7 @@ import type {
   SystemGraph,
   Vec3,
 } from '../../../typescript/src/system/types';
+import type { CodeSummary, OsView, OsViewInput, VizGraph } from '../viz';
 
 type Base64Decoder = { from(data: string, encoding: 'base64'): Uint8Array<ArrayBuffer> };
 
@@ -166,15 +170,48 @@ type WireLayout = {
   bounds: { radius: number };
 };
 
-/** The 3D layout of a system graph. Maps are keyed by id, in the order the core gives them. */
-export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitLayout {
-  initOsGraph();
-  const json = runCore(() => orbit_layout_json(JSON.stringify(graph), JSON.stringify(opts ?? null)));
-  const wire = parseResult(json, 'orbitLayout') as WireLayout;
+/** The core's layout JSON as an OrbitLayout (maps keyed by id, in the order the core gives them). */
+function toLayout(wire: WireLayout): OrbitLayout {
   return {
     core: new Map(wire.core),
     ring: new Map(wire.ring),
     communityCenters: wire.communityCenters,
     bounds: wire.bounds,
   };
+}
+
+/** The 3D layout of a system graph. Maps are keyed by id, in the order the core gives them. */
+export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitLayout {
+  initOsGraph();
+  const json = runCore(() => orbit_layout_json(JSON.stringify(graph), JSON.stringify(opts ?? null)));
+  return toLayout(parseResult(json, 'orbitLayout') as WireLayout);
+}
+
+/**
+ * The 3D layout of a VizGraph (the OS graph or one hub graph). Node `group` is the community.
+ * Same OrbitLayout shape as orbitLayout; a core error is thrown.
+ */
+export function vizLayout(viz: VizGraph, opts: OrbitOptions = {}): OrbitLayout {
+  initOsGraph();
+  const json = runCore(() => viz_layout_json(JSON.stringify(viz), JSON.stringify(opts ?? null)));
+  return toLayout(parseResult(json, 'vizLayout') as WireLayout);
+}
+
+/**
+ * The OS view: the whole OS as one VizGraph plus one graph per hub (every hub except `code`).
+ * `input` is `{snapshot, skills, routines, code}`; each is optional (null / [] is empty).
+ * `code` is codeSummary(projectSystemGraph) when the project graph is loaded.
+ */
+export function buildOsView(input: OsViewInput): OsView {
+  initOsGraph();
+  const json = runCore(() => build_os_view_json(JSON.stringify(input ?? null)));
+  return parseResult(json, 'buildOsView') as OsView;
+}
+
+/** The code part's summary: the totals and the `top` largest communities of a built SystemGraph. */
+export function codeSummary(graph: SystemGraph, top: number): CodeSummary {
+  initOsGraph();
+  const count = Math.max(0, Math.floor(Number.isFinite(top) ? top : 0));
+  const json = runCore(() => code_summary_json(JSON.stringify(graph), count));
+  return parseResult(json, 'codeSummary') as CodeSummary;
 }

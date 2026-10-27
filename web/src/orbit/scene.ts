@@ -332,3 +332,150 @@ export function buildEdgeData(
   });
   return { positions, ends };
 }
+
+// ---- The OS graph (VizGraph): kinds, status tints, sizes and labels ----------------
+
+/**
+ * Point colour per node kind. Mid-saturation hues that keep contrast on both the dark and the
+ * light surface (the light theme darkens them, see vizNodeRgb). Unknown kinds use VIZ_KIND_FALLBACK.
+ */
+export const VIZ_KIND_COLORS: Record<string, string> = {
+  hub: "#66b8d1",
+  codeCluster: "#5b8def",
+  sourceKind: "#c17be6",
+  memoryRepo: "#4cc4d4",
+  skill: "#e0b341",
+  skillSource: "#d9a878",
+  model: "#ef7b6b",
+  provider: "#f2a0c6",
+  caller: "#8f9bff",
+  endpoint: "#a4d65e",
+  chatTurn: "#4fbf86",
+  agentRun: "#3fa7a0",
+  liveSession: "#ff8fa3",
+  routine: "#9fd16b",
+  kit: "#d4a84a",
+  feature: "#8a93a6",
+  check: "#5ec8a8",
+  activity: "#e5e7ee",
+};
+export const VIZ_KIND_FALLBACK = "#8a93a6";
+
+/** Status tints: an ok, warn or running node takes a share of its colour from its status. */
+export const VIZ_STATUS_COLORS: Record<VizStatusName, string> = {
+  ok: "#4fbf86",
+  warn: "#e0b341",
+  off: "#8a93a6",
+  running: "#66b8d1",
+  unknown: "#8a93a6",
+};
+export type VizStatusName = "ok" | "warn" | "off" | "running" | "unknown";
+
+/** How much of a node's colour the status takes (0 = none). Off nodes are greyed instead. */
+const STATUS_MIX = 0.35;
+const OFF_MIX = 0.6;
+/** Alpha of a node whose status is off: it is still there, just quiet. */
+export const VIZ_OFF_ALPHA = 0.4;
+/** Hubs are brighter: their colour mixes this much toward white (dark) or stays (light). */
+const HUB_LIGHTEN = 0.25;
+/** The light theme darkens every hue this much so it keeps contrast on white. */
+const LIGHT_DARKEN = 0.22;
+
+/** Pulse of a running node: alpha swings between these two values, one cycle per PULSE_MS. */
+export const VIZ_PULSE_MIN = 0.45;
+export const VIZ_PULSE_MS = 1400;
+
+/** Mixes two rgb triples (0..1); t = 0 keeps `a`, t = 1 gives `b`. */
+export function mixRgb(
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number,
+): [number, number, number] {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+/** The colour of a kind (VIZ_KIND_FALLBACK for an unknown one), as rgb 0..1. */
+export function vizKindRgb(kind: string): [number, number, number] {
+  return hexToRgb01(VIZ_KIND_COLORS[kind] ?? VIZ_KIND_FALLBACK);
+}
+
+/** A status name the page knows, or null. */
+function statusName(status: string | null | undefined): VizStatusName | null {
+  return status === "ok" || status === "warn" || status === "off" || status === "running" || status === "unknown"
+    ? status
+    : null;
+}
+
+/**
+ * The point colour of one VizGraph node, as rgb 0..1. The kind gives the hue; a status tints it
+ * (ok green, warn amber, running blue, off greyed); a hub is lightened; the light theme darkens
+ * the result. An unknown or missing status keeps the plain kind colour.
+ */
+export function vizNodeRgb(node: { kind: string; status: string | null }, theme: "dark" | "light"): [number, number, number] {
+  let rgb = vizKindRgb(node.kind);
+  const status = statusName(node.status);
+  if (status === "off") rgb = mixRgb(rgb, hexToRgb01(VIZ_STATUS_COLORS.off), OFF_MIX);
+  else if (status && status !== "unknown") rgb = mixRgb(rgb, hexToRgb01(VIZ_STATUS_COLORS[status]), STATUS_MIX);
+  if (node.kind === "hub") rgb = mixRgb(rgb, [1, 1, 1], HUB_LIGHTEN);
+  if (theme === "light") rgb = mixRgb(rgb, [0, 0, 0], LIGHT_DARKEN);
+  return rgb;
+}
+
+/** Base alpha of a VizGraph node: an off node is quiet, everything else is full. */
+export function vizNodeAlpha(node: { status: string | null }): number {
+  return statusName(node.status) === "off" ? VIZ_OFF_ALPHA : 1;
+}
+
+/** Hubs draw this much larger than the members they hold, so each part reads as its centre. */
+export const VIZ_HUB_SCALE = 1.6;
+
+/**
+ * Point size of a VizGraph node in scene units: 1.5 + 1.3 * size (log-scaled by the core), and a
+ * hub at VIZ_HUB_SCALE times that. The hub's own size (4) is what makes it the largest point.
+ */
+export function vizNodeSize(node: { kind: string; size: number }): number {
+  const s = Number.isFinite(node.size) ? Math.max(0, node.size) : 1;
+  const base = 1.5 + 1.3 * s;
+  return node.kind === "hub" ? base * VIZ_HUB_SCALE : base;
+}
+
+/** Edge alpha by weight: the lightest edge keeps a third of the full alpha, the heaviest is full. */
+export function vizEdgeAlphas(weights: number[]): Float32Array {
+  const out = new Float32Array(weights.length);
+  let max = 0;
+  for (const w of weights) if (Number.isFinite(w)) max = Math.max(max, w);
+  weights.forEach((w, i) => {
+    const r = max > 0 && Number.isFinite(w) ? Math.min(1, Math.max(0, w / max)) : 0.5;
+    out[i] = 0.33 + 0.67 * r;
+  });
+  return out;
+}
+
+/** Per-node rgb (0..1) of a VizGraph node list, in order, for the kind colouring. */
+export function buildVizKindColors(
+  nodes: Array<{ kind: string; status: string | null }>,
+  theme: "dark" | "light",
+): Float32Array {
+  const out = new Float32Array(nodes.length * 3);
+  nodes.forEach((node, i) => out.set(vizNodeRgb(node, theme), i * 3));
+  return out;
+}
+
+/** The kinds in a node list with their counts, in first-seen order (the legend's rows). */
+export function vizKindSummary(nodes: Array<{ kind: string }>): Array<{ kind: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const node of nodes) counts.set(node.kind, (counts.get(node.kind) ?? 0) + 1);
+  return [...counts.entries()].map(([kind, count]) => ({ kind, count }));
+}
+
+/** The labelled nodes of a node list, in order (first occurrence per id). */
+export function vizLabelled<T extends { id: string; labelled: boolean }>(nodes: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const node of nodes) {
+    if (!node.labelled || seen.has(node.id)) continue;
+    seen.add(node.id);
+    out.push(node);
+  }
+  return out;
+}

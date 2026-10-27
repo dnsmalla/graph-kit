@@ -3,7 +3,10 @@ import type { OsRoutine } from '../types';
 import { fmtTime } from '../format';
 import { Card, Empty } from './common';
 
-/** Scheduled routines, with the two buttons that open Loop and Auto Tasks on this Mac. */
+/**
+ * Scheduled routines, with the two buttons that open Loop and Auto Tasks on this Mac. A routine
+ * row opens the Routines part of the brain and selects the routine there.
+ */
 export function Routines({
   routines,
   status,
@@ -31,15 +34,22 @@ export function Routines({
           {routines.map((routine) => (
             <li key={routine.id} className="routine">
               <span className={routine.enabled ? 'dot dot-ok' : 'dot'} aria-hidden="true" />
-              <div className="row-main">
-                <strong>{routine.title}</strong>
-                <div className="meta">
-                  {routine.enabled ? 'Enabled' : 'Paused'} · {routine.schedule ? routine.schedule : 'No schedule'}
-                </div>
-                <div className="meta">
-                  Next {routine.nextRunAt ? fmtTime(routine.nextRunAt) : '—'} · last {routine.lastRunAt ? fmtTime(routine.lastRunAt) : '—'}
-                </div>
-              </div>
+              <button
+                type="button"
+                className="os-open-btn"
+                aria-label={`Show ${routine.title} in the brain`}
+                onClick={() => controller.openNode('routines', { id: `routine:${routine.id}`, label: routine.title, detail: 'routine' })}
+              >
+                <span className="row-main">
+                  <strong>{routine.title}</strong>
+                  <span className="meta block">
+                    {routine.enabled ? 'Enabled' : 'Paused'} · {routine.schedule ? routine.schedule : 'No schedule'}
+                  </span>
+                  <span className="meta block">
+                    Next {routine.nextRunAt ? fmtTime(routine.nextRunAt) : '—'} · last {routine.lastRunAt ? fmtTime(routine.lastRunAt) : '—'}
+                  </span>
+                </span>
+              </button>
             </li>
           ))}
         </ul>

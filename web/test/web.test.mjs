@@ -442,7 +442,7 @@ describe('rendering', () => {
       'System map',
       'Running now',
       'Skills',
-      'Project brain',
+      'The whole OS',
       'Recent',
       'Token flow',
       'Memory and knowledge',
@@ -698,9 +698,10 @@ describe('controller: project graph, skills, routines and selection', () => {
 });
 
 describe('rendering: the Agentic OS layout', () => {
-  async function renderWith(overrides, snapshot = seeded()) {
+  async function renderWith(overrides, snapshot = seeded(), opts = {}) {
     const fake = fakeHost({ loadState: () => Promise.resolve(snapshot), ...overrides });
     const { controller } = makeController({ host: fake.host, projectName: 'Demo project' });
+    if (opts.code) controller.drill('code');
     controller.start();
     await flush();
     return { html: api.render.renderApp(controller), controller };
@@ -793,9 +794,10 @@ describe('rendering: the Agentic OS layout', () => {
 });
 
 describe('rendering: accessibility, empty states and fallbacks', () => {
-  async function renderWith(overrides, snapshot = seeded()) {
+  async function renderWith(overrides, snapshot = seeded(), opts = {}) {
     const fake = fakeHost({ loadState: () => Promise.resolve(snapshot), ...overrides });
     const { controller } = makeController({ host: fake.host, projectName: 'Demo project' });
+    if (opts.code) controller.drill('code');
     controller.start();
     await flush();
     return { html: api.render.renderApp(controller), controller };
@@ -854,7 +856,7 @@ describe('rendering: accessibility, empty states and fallbacks', () => {
   });
 
   it('once the graph has settled with none, the empty text shows and is not a second status region', async () => {
-    const { html, controller } = await renderWith({});
+    const { html, controller } = await renderWith({}, seeded(), { code: true });
     assert.match(html, /No project graph yet/);
     assert.doesNotMatch(html, /role="status"[^>]*>\s*No project graph yet/);
     assert.doesNotMatch(html, /class="orbit-empty"[^>]*role="status"/);
@@ -872,7 +874,7 @@ describe('rendering: accessibility, empty states and fallbacks', () => {
     const raw = { nodes: [{ id: 'bad', title: 'Bad', kind: 'function', metadata }], edges: [] };
     const { html, controller } = await renderWith({ loadProjectGraph: () => Promise.resolve(raw) });
     assert.match(html, /Could not draw the project graph\./);
-    assert.ok(html.includes('Project brain') && html.includes('Recent'), 'the rest of the page renders');
+    assert.ok(html.includes('The whole OS') && html.includes('Recent'), 'the rest of the page renders');
     assert.doesNotMatch(html, /Could not load the project graph/);
     controller.dispose();
   });
@@ -918,7 +920,7 @@ describe('system view: drawing the brain', () => {
     const { controller } = makeController({ host: fakeHost().host });
     const html = api.render.renderBrain(controller, { drawFailed: true });
     assert.match(html, /Could not draw the project graph\./);
-    assert.match(html, /Project brain/);
+    assert.match(html, /The whole OS/);
     controller.dispose();
   });
 

@@ -35,14 +35,29 @@ import {
   ringLabels,
   type RingLabel,
   uniqueCoreNodes,
+  buildVizKindColors,
+  vizEdgeAlphas,
+  vizLabelled,
+  vizNodeAlpha,
+  vizNodeSize,
+  VIZ_PULSE_MS,
+  VIZ_PULSE_MIN,
 } from "./scene";
+import type { CameraPose, VizEdge, VizGraph, VizNode } from "../viz";
 
+/**
+ * A picked item. `core` is a project node, `ring` an activity item, `viz` a node of the OS
+ * graph (with its `drill` hub, or null), and `edge` a labelled edge of the OS graph (hover only:
+ * the page does not select an edge).
+ */
 export interface OrbitPick {
-  type: "core" | "ring";
+  type: "core" | "ring" | "viz" | "edge";
   id: string;
   label: string;
-  /** Category for core nodes, activity kind for ring items. */
+  /** Category for core nodes, activity kind for ring items and viz nodes, kind for edges. */
   detail: string;
+  /** The hub a viz node opens (null when it opens none). */
+  drill?: string | null;
 }
 
 export type OrbitTheme = "dark" | "light";
@@ -134,6 +149,10 @@ const LINE_STYLE = {
     dark: { color: 0x8a93a6, opacity: 0.12 },
     light: { color: 0x3d4454, opacity: 0.22 },
   },
+  vizEdge: {
+    dark: { color: 0xb4bccb, opacity: 0.3 },
+    light: { color: 0x3d4454, opacity: 0.32 },
+  },
   ring: {
     dark: { color: 0xffffff, opacity: 0.25 },
     light: { color: 0x3d4454, opacity: 0.35 },
@@ -165,6 +184,11 @@ const NEIGHBOUR_SIZE = 1.35;
 /** Edge alpha multipliers (the material's opacity still applies): touching the selection, and the rest. */
 const EDGE_HOT = 4;
 const EDGE_DIM = 0.25;
+/** Labels of the OS graph: a little above the node, and the label layer's text colours per theme. */
+const LABEL_STYLE = {
+  dark: { color: "#f2f4f8", shadow: "0 0 3px rgba(0, 0, 0, 0.9)" },
+  light: { color: "#1c2230", shadow: "0 0 3px rgba(255, 255, 255, 0.95)" },
+} as const;
 
 const VERTEX_SHADER = `
 attribute float aSize;
@@ -210,6 +234,12 @@ interface CoreItem {
 interface SelectionRef {
   kind: "core" | "ring";
   index: number;
+}
+
+/** The OS graph's node label: a text element pinned to a point of the scene. */
+interface VizLabel {
+  el: HTMLElement;
+  pos: THREE.Vector3;
 }
 
 interface Tween {
@@ -318,6 +348,27 @@ export class OrbitView {
   private readonly depthUniform = { value: new THREE.Vector2(1, 2) };
   private readonly pointMaterials = new Set<THREE.ShaderMaterial>();
   private readonly lineMaterials = new Set<THREE.LineBasicMaterial>();
+  /** Which graph the core group holds: the project's code graph, or the OS graph (VizGraph). */
+  private mode: "code" | "viz" = "code";
+  private vizGraph: VizGraph | null = null;
+  /** The OS graph's nodes in core index order (first occurrence per id). */
+  private vizNodes: VizNode[] | null = null;
+  /** Per core node: its base alpha (off nodes are quiet) and its selection factor. */
+  private baseAlpha: Float32Array = new Float32Array(0);
+  private selAlpha: Float32Array = new Float32Array(0);
+  /** Per drawn edge: its alpha by weight (the selection multiplies it). */
+  private edgeBase: Float32Array = new Float32Array(0);
+  /** Core indexes of the running nodes of the OS graph: their alpha pulses. */
+  private pulsing: number[] = [];
+  /** The OS graph's labelled nodes, drawn as HTML text over the canvas. */
+  private labelLayer: HTMLElement | null = null;
+  private labels: VizLabel[] = [];
+  /** Labelled edges of the OS graph: hover-only, found by a line raycast. */
+  private labelledEdges: VizEdge[] = [];
+  private labelEdgeObj: THREE.LineSegments | null = null;
+  private readonly labelScratch = new THREE.Vector3();
+  /** Time of the last frame (ms). The pulse of running nodes reads it. */
+  private lastNow = 0;
 
   private graph: SystemGraph | null = null;
   private layout: OrbitLayout | null = null;
@@ -436,6 +487,12 @@ export class OrbitView {
     // The canvas is positioned against the container, so the container must be positioned too.
     if (isStaticPosition(container)) container.style.position = "relative";
     container.appendChild(canvas);
+    // The OS graph's labels sit over the canvas and take no pointer events (the canvas keeps them).
+    const layer = document.createElement("div");
+    layer.className = "orbit-labels";
+    Object.assign(layer.style, { position: "absolute", top: "0", right: "0", bottom: "0", left: "0", overflow: "hidden", pointerEvents: "none" });
+    container.appendChild(layer);
+    this.labelLayer = layer;
     canvas.addEventListener("pointerdown", this.onPointerDown);
     canvas.addEventListener("pointermove", this.onPointerMove);
     canvas.addEventListener("pointerup", this.onPointerUp);
@@ -479,8 +536,9 @@ export class OrbitView {
    */
   setGraph(graph: SystemGraph, layout: OrbitLayout): void {
     if (!this.renderer || this.disposed) return;
-    if (graph === this.graph && layout === this.layout) return;
+    if (graph === this.graph && layout === this.layout && this.mode === "code") return;
     this.clearCore();
+    this.enterMode("code");
     this.graph = graph;
     this.layout = layout;
 
@@ -513,21 +571,23 @@ export class OrbitView {
     this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
     if (pts.ids.length > 0) {
-      const n = pts.ids.length;
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(pts.positions, 3));
       this.coreColorAttr = new THREE.BufferAttribute(new Float32Array(this.activeCoreColors()), 3);
       geo.setAttribute("aColor", this.coreColorAttr);
       this.coreSizeAttr = new THREE.BufferAttribute(new Float32Array(pts.sizes), 1);
       geo.setAttribute("aSize", this.coreSizeAttr);
-      this.coreAlphaAttr = new THREE.BufferAttribute(new Float32Array(n).fill(1), 1);
+      this.coreAlphaAttr = new THREE.BufferAttribute(new Float32Array(pts.ids.length).fill(1), 1);
       geo.setAttribute("aAlpha", this.coreAlphaAttr);
       this.corePoints = new THREE.Points(geo, this.makePointMaterial(CORE_OPACITY));
       this.coreGroup.add(this.corePoints);
     }
 
+    this.baseAlpha = new Float32Array(this.coreItems.length).fill(1);
+    this.selAlpha = new Float32Array(this.coreItems.length).fill(1);
     const edges = buildEdgeData(graph, layout, this.coreIndex);
     this.edgeEnds = edges.ends;
+    this.edgeBase = new Float32Array(edges.ends.length / 2).fill(1);
     if (edges.positions.length > 0) {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(edges.positions, 3));
@@ -537,12 +597,233 @@ export class OrbitView {
       this.coreGroup.add(new THREE.LineSegments(geo, this.makeLineMaterial("edge")));
     }
 
-    this.radius = Math.max(this.coreRadius, this.ringRadius, 1);
+    this.recomputeRadius();
     this.applyZoomLimits();
     this.setHover(null);
     this.applySelection();
     this.frameCore();
+    this.updateLabels();
     this.requestRender();
+  }
+
+  /**
+   * Replace the core with the OS graph (a VizGraph) and its layout: one point per node (coloured
+   * by kind with its status, or by group), the edges by weight, and HTML labels for the labelled
+   * nodes. Running nodes pulse. The ring is hidden. Calling again with the same objects is a
+   * no-op. The camera is re-framed on the graph; a caller restores a remembered pose after.
+   */
+  setViz(viz: VizGraph, layout: OrbitLayout): void {
+    if (!this.renderer || this.disposed) return;
+    if (viz === this.vizGraph && layout === this.layout && this.mode === "viz") return;
+    this.clearCore();
+    this.enterMode("viz");
+    this.vizGraph = viz;
+    this.layout = layout;
+
+    // Nodes in order, first occurrence per id; the core index of a node is its place here.
+    const seen = new Set<string>();
+    const nodes: VizNode[] = [];
+    for (const node of viz.nodes) {
+      if (seen.has(node.id)) continue;
+      seen.add(node.id);
+      nodes.push(node);
+    }
+    this.vizNodes = nodes;
+    this.coreItems = nodes.map((n) => ({ id: n.id, label: n.label || n.id, category: "other", community: n.group }));
+    this.coreIndex = new Map(this.coreItems.map((c, i) => [c.id, i]));
+    const n = nodes.length;
+    this.adjacency = this.coreItems.map(() => []);
+
+    const positions = new Float32Array(n * 3);
+    const sizes = new Float32Array(n);
+    this.baseAlpha = new Float32Array(n);
+    this.selAlpha = new Float32Array(n).fill(1);
+    const pulsing: number[] = [];
+    nodes.forEach((node, i) => {
+      const p = layout.core.get(node.id) ?? { x: 0, y: 0, z: 0 };
+      positions[i * 3] = p.x;
+      positions[i * 3 + 1] = p.y;
+      positions[i * 3 + 2] = p.z;
+      sizes[i] = vizNodeSize(node);
+      this.baseAlpha[i] = vizNodeAlpha(node);
+      if (node.status === "running") pulsing.push(i);
+    });
+    this.pulsing = pulsing;
+    this.baseSizes = sizes;
+    this.coreRadius = coreFramingRadius(nodes.map((node) => node.id), layout);
+    this.kindRgb = buildVizKindColors(nodes, this.theme);
+    this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
+
+    if (n > 0) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      this.coreColorAttr = new THREE.BufferAttribute(new Float32Array(this.activeCoreColors()), 3);
+      geo.setAttribute("aColor", this.coreColorAttr);
+      this.coreSizeAttr = new THREE.BufferAttribute(new Float32Array(sizes), 1);
+      geo.setAttribute("aSize", this.coreSizeAttr);
+      this.coreAlphaAttr = new THREE.BufferAttribute(new Float32Array(n).fill(1), 1);
+      geo.setAttribute("aAlpha", this.coreAlphaAttr);
+      this.corePoints = new THREE.Points(geo, this.makePointMaterial(CORE_OPACITY));
+      this.coreGroup.add(this.corePoints);
+    }
+
+    // Edges: both ends must be drawn nodes. Kept in graph order so each drawn edge maps to its VizEdge.
+    const drawn: VizEdge[] = [];
+    for (const edge of viz.edges) {
+      const a = this.coreIndex.get(edge.source);
+      const b = this.coreIndex.get(edge.target);
+      if (a === undefined || b === undefined || a === b) continue;
+      if (!layout.core.has(edge.source) || !layout.core.has(edge.target)) continue;
+      this.adjacency[a]!.push(b);
+      this.adjacency[b]!.push(a);
+      drawn.push(edge);
+    }
+    const ends = new Uint32Array(drawn.length * 2);
+    const edgePositions = new Float32Array(drawn.length * 6);
+    const alphas = vizEdgeAlphas(drawn.map((e) => e.weight));
+    drawn.forEach((edge, k) => {
+      const a = this.coreIndex.get(edge.source)!;
+      const b = this.coreIndex.get(edge.target)!;
+      const pa = layout.core.get(edge.source)!;
+      const pb = layout.core.get(edge.target)!;
+      edgePositions.set([pa.x, pa.y, pa.z, pb.x, pb.y, pb.z], k * 6);
+      ends[k * 2] = a;
+      ends[k * 2 + 1] = b;
+    });
+    this.edgeEnds = ends;
+    this.edgeBase = alphas;
+    if (drawn.length > 0) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(edgePositions, 3));
+      this.edgeColorAttr = new THREE.BufferAttribute(new Float32Array(drawn.length * 2 * 4).fill(1), 4);
+      geo.setAttribute("color", this.edgeColorAttr);
+      this.coreGroup.add(new THREE.LineSegments(geo, this.makeLineMaterial("vizEdge")));
+    }
+
+    // Labelled edges: a transparent line set for the hover raycast only (their label shows in the tooltip).
+    const labelled = drawn.filter((e) => typeof e.label === "string" && e.label !== "");
+    this.labelledEdges = labelled;
+    if (labelled.length > 0) {
+      const pos = new Float32Array(labelled.length * 6);
+      labelled.forEach((edge, k) => {
+        const pa = layout.core.get(edge.source)!;
+        const pb = layout.core.get(edge.target)!;
+        pos.set([pa.x, pa.y, pa.z, pb.x, pb.y, pb.z], k * 6);
+      });
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+      this.labelEdgeObj = new THREE.LineSegments(geo, mat);
+      this.coreGroup.add(this.labelEdgeObj);
+    }
+
+    this.buildVizLabels(nodes, layout);
+    this.ringGroup.visible = false;
+    this.recomputeRadius();
+    this.applyZoomLimits();
+    this.setHover(null);
+    this.applySelection();
+    // A new graph always frames its own content; the caller restores a remembered pose afterwards.
+    this.framedCoreCount = n;
+    this.fitCamera();
+    this.updateLabels();
+    this.requestRender();
+  }
+
+  /** The camera as plain numbers (what a level remembers), or null without WebGL. */
+  getCamera(): CameraPose | null {
+    if (!this.renderer || this.disposed) return null;
+    const p = this.camera.position;
+    const t = this.controls.target;
+    return { position: [p.x, p.y, p.z], target: [t.x, t.y, t.z] };
+  }
+
+  /** Puts the camera at a remembered pose. Finite values only; anything else is ignored. */
+  setCamera(pose: CameraPose): void {
+    if (!this.renderer || this.disposed) return;
+    const vals = [...pose.position, ...pose.target];
+    if (vals.length !== 6 || !vals.every((v) => Number.isFinite(v))) return;
+    this.cancelTween();
+    const c = this.controls;
+    // Flush the damping residue first, as resetView does, so a leftover move does not land on the pose.
+    c.enableDamping = false;
+    c.update(0);
+    c.enableDamping = true;
+    this.camera.position.set(pose.position[0], pose.position[1], pose.position[2]);
+    c.target.set(pose.target[0], pose.target[1], pose.target[2]);
+    this.userMoved = true;
+    c.update(0);
+    this.updateLabels();
+    this.requestRender();
+  }
+
+  /** Switches the core between the code graph and the OS graph: the ring shows only in the code graph. */
+  private enterMode(mode: "code" | "viz"): void {
+    // A switch of graph kind frames the camera again: the code graph's framing count starts over.
+    if (this.mode !== mode) this.framedCoreCount = null;
+    this.mode = mode;
+    this.ringGroup.visible = mode === "code";
+  }
+
+  /** The radius framing and zoom use: the core, and in the code graph also the ring. */
+  private recomputeRadius(): void {
+    this.radius = Math.max(this.coreRadius, this.mode === "code" ? this.ringRadius : 0, 1);
+  }
+
+  /** The OS graph's labels: one HTML element per labelled node, positioned every frame by updateLabels(). */
+  private buildVizLabels(nodes: VizNode[], layout: OrbitLayout): void {
+    const layer = this.labelLayer;
+    if (!layer) return;
+    const style = LABEL_STYLE[this.theme];
+    for (const node of vizLabelled(nodes)) {
+      const el = document.createElement("div");
+      el.className = "orbit-label";
+      el.textContent = node.label || node.id;
+      Object.assign(el.style, {
+        position: "absolute",
+        left: "0",
+        top: "0",
+        whiteSpace: "nowrap",
+        fontSize: "12px",
+        lineHeight: "1.2",
+        color: style.color,
+        textShadow: style.shadow,
+        pointerEvents: "none",
+      });
+      layer.appendChild(el);
+      const p = layout.core.get(node.id) ?? { x: 0, y: 0, z: 0 };
+      this.labels.push({ el, pos: new THREE.Vector3(p.x, p.y, p.z) });
+    }
+  }
+
+  private removeVizLabels(): void {
+    for (const label of this.labels) label.el.remove();
+    this.labels = [];
+  }
+
+  /**
+   * Places each label over its node: projected with the current camera, hidden when the node is
+   * behind the camera or off the stage. Only the labelled nodes (a few dozen) are touched.
+   */
+  private updateLabels(): void {
+    if (this.labels.length === 0 || !this.renderer || this.disposed) return;
+    const w = Math.max(1, this.container.clientWidth);
+    const h = Math.max(1, this.container.clientHeight);
+    this.camera.updateMatrixWorld();
+    for (const label of this.labels) {
+      const s = this.labelScratch.copy(label.pos);
+      const inFront = s.applyMatrix4(this.camera.matrixWorldInverse).z < 0;
+      if (!inFront) {
+        label.el.style.display = "none";
+        continue;
+      }
+      this.labelScratch.copy(label.pos).project(this.camera);
+      const x = ((this.labelScratch.x + 1) / 2) * w;
+      const y = ((1 - this.labelScratch.y) / 2) * h;
+      const onStage = x >= -w && x <= 2 * w && y >= -h && y <= 2 * h;
+      label.el.style.display = onStage ? "" : "none";
+      label.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -140%)`;
+    }
   }
 
   /**
@@ -599,10 +880,11 @@ export class OrbitView {
     }
 
     this.ringRadius = ringRadius;
-    this.radius = Math.max(this.coreRadius, this.ringRadius, 1);
+    this.recomputeRadius();
     this.applyZoomLimits();
     this.applySelection();
     this.frameCore();
+    this.updateLabels();
     this.requestRender();
   }
 
@@ -723,6 +1005,11 @@ export class OrbitView {
     if (!this.renderer || this.disposed) return;
     for (const mat of this.pointMaterials) this.stylePointMaterial(mat);
     for (const mat of this.lineMaterials) this.styleLineMaterial(mat);
+    const labelStyle = LABEL_STYLE[next];
+    for (const label of this.labels) {
+      label.el.style.color = labelStyle.color;
+      label.el.style.textShadow = labelStyle.shadow;
+    }
     if (this.ringColorAttr) {
       const [r, g, b] = RING_RGB[next];
       const arr = this.ringColorAttr.array as Float32Array;
@@ -748,6 +1035,7 @@ export class OrbitView {
     this.scaleUniform.value = ((h * pr) / (2 * Math.tan(THREE.MathUtils.degToRad(FOV_DEG) / 2))) * POINT_SCALE;
     if (this.userMoved) this.camera.updateProjectionMatrix();
     else this.fitCamera();
+    this.updateLabels();
     this.requestRender();
   }
 
@@ -779,6 +1067,8 @@ export class OrbitView {
     this.tween = null;
     this.clearCore();
     this.clearRing();
+    this.labelLayer?.remove();
+    this.labelLayer = null;
     if (this.renderer) {
       this.renderer.dispose();
       this.renderer.forceContextLoss();
@@ -822,8 +1112,8 @@ export class OrbitView {
     mat.needsUpdate = true;
   }
 
-  private makeLineMaterial(kind: "edge" | "ring"): THREE.LineBasicMaterial {
-    const mat = new THREE.LineBasicMaterial({ transparent: true, depthWrite: false, vertexColors: kind === "edge" });
+  private makeLineMaterial(kind: "edge" | "vizEdge" | "ring"): THREE.LineBasicMaterial {
+    const mat = new THREE.LineBasicMaterial({ transparent: true, depthWrite: false, vertexColors: kind !== "ring" });
     mat.userData.lineKind = kind;
     this.lineMaterials.add(mat);
     this.styleLineMaterial(mat);
@@ -831,7 +1121,7 @@ export class OrbitView {
   }
 
   private styleLineMaterial(mat: THREE.LineBasicMaterial): void {
-    const kind = mat.userData.lineKind as "edge" | "ring";
+    const kind = mat.userData.lineKind as "edge" | "vizEdge" | "ring";
     const style = LINE_STYLE[kind][this.theme];
     mat.color.setHex(style.color);
     mat.opacity = style.opacity;
@@ -902,6 +1192,15 @@ export class OrbitView {
 
   private clearCore(): void {
     this.clearGroup(this.coreGroup);
+    this.removeVizLabels();
+    this.labelEdgeObj = null;
+    this.labelledEdges = [];
+    this.vizGraph = null;
+    this.vizNodes = null;
+    this.pulsing = [];
+    this.baseAlpha = new Float32Array(0);
+    this.selAlpha = new Float32Array(0);
+    this.edgeBase = new Float32Array(0);
     this.corePoints = null;
     this.coreColorAttr = null;
     this.coreSizeAttr = null;
@@ -950,7 +1249,16 @@ export class OrbitView {
     if (!this.fixedCategoryColors) this.categoryColors = readCategoryColors();
     this.clusterPalette = readClusterPalette();
     if (this.coreItems.length === 0) return;
-    this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
+    if (this.mode === "viz" && this.vizNodes) {
+      this.kindRgb = buildVizKindColors(this.vizNodes, this.theme);
+      const style = LABEL_STYLE[this.theme];
+      for (const label of this.labels) {
+        label.el.style.color = style.color;
+        label.el.style.textShadow = style.shadow;
+      }
+    } else {
+      this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
+    }
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
     this.writeCoreColors();
   }
@@ -975,9 +1283,9 @@ export class OrbitView {
       mark[sel.index] = 2;
       for (const nb of this.adjacency[sel.index] ?? []) if (mark[nb] === 0) mark[nb] = 1;
     }
+    if (this.selAlpha.length !== n) this.selAlpha = new Float32Array(n).fill(1);
 
     if (this.coreAlphaAttr && this.coreSizeAttr) {
-      const alpha = this.coreAlphaAttr.array as Float32Array;
       const size = this.coreSizeAttr.array as Float32Array;
       for (let i = 0; i < n; i++) {
         let a = 1;
@@ -988,11 +1296,11 @@ export class OrbitView {
           else a = DIM_ALPHA;
         }
         // A ring selection highlights its ring point only: the core keeps full alpha.
-        alpha[i] = a;
+        this.selAlpha[i] = a;
         size[i] = s;
       }
-      this.coreAlphaAttr.needsUpdate = true;
       this.coreSizeAttr.needsUpdate = true;
+      this.writeCoreAlpha(this.lastNow);
     }
 
     if (this.edgeColorAttr) {
@@ -1004,8 +1312,9 @@ export class OrbitView {
           const touching = ends[k * 2] === sel.index || ends[k * 2 + 1] === sel.index;
           a = touching ? EDGE_HOT : EDGE_DIM;
         }
-        rgba[(k * 2) * 4 + 3] = a;
-        rgba[(k * 2 + 1) * 4 + 3] = a;
+        const base = this.edgeBase[k] ?? 1;
+        rgba[(k * 2) * 4 + 3] = a * base;
+        rgba[(k * 2 + 1) * 4 + 3] = a * base;
       }
       this.edgeColorAttr.needsUpdate = true;
     }
@@ -1021,6 +1330,27 @@ export class OrbitView {
       this.ringAlphaAttr.needsUpdate = true;
       this.ringSizeAttr.needsUpdate = true;
     }
+  }
+
+  /** Whether the running nodes pulse: the OS graph has running nodes and the motion setting allows it. */
+  private pulseOn(): boolean {
+    return this.pulsing.length > 0 && !this.reducedMotion;
+  }
+
+  /**
+   * Writes every core node's alpha: its base (off nodes are quiet) times its selection factor,
+   * and for a running node the pulse at time `now`. Done in place on the existing attribute.
+   */
+  private writeCoreAlpha(now: number): void {
+    const attr = this.coreAlphaAttr;
+    if (!attr) return;
+    const alpha = attr.array as Float32Array;
+    const pulse = this.pulseOn() ? VIZ_PULSE_MIN + (1 - VIZ_PULSE_MIN) * (0.5 + 0.5 * Math.sin((2 * Math.PI * now) / VIZ_PULSE_MS)) : 1;
+    for (let i = 0; i < alpha.length; i++) {
+      alpha[i] = (this.selAlpha[i] ?? 1) * (this.baseAlpha[i] ?? 1);
+    }
+    if (this.pulseOn()) for (const i of this.pulsing) if (i < alpha.length) alpha[i] = (alpha[i] ?? 1) * pulse;
+    attr.needsUpdate = true;
   }
 
   private autoRotateWanted(): boolean {
@@ -1055,6 +1385,7 @@ export class OrbitView {
     if (this.disposed || !this.renderer) return;
     const dt = this.lastTime === null ? 0 : Math.min((now - this.lastTime) / 1000, MAX_FRAME_DT);
     this.lastTime = now;
+    this.lastNow = now;
     this.inFrame = true;
     try {
       // One rotation only: the camera orbits (controls.autoRotate); the scene groups stay put.
@@ -1062,6 +1393,8 @@ export class OrbitView {
       this.controls.autoRotate = spinning;
       const tweening = this.stepTween(now);
       const moved = this.controls.update(dt);
+      const pulsing = this.pulseOn();
+      if (pulsing) this.writeCoreAlpha(now);
       if (
         this.hovering &&
         !this.dragging &&
@@ -1074,7 +1407,8 @@ export class OrbitView {
       const d = this.distance();
       this.depthUniform.value.set(Math.max(1e-3, d - this.radius), d + this.radius);
       this.renderer.render(this.scene, this.camera);
-      if (spinning || tweening || moved) this.schedule();
+      this.updateLabels();
+      if (spinning || tweening || moved || pulsing) this.schedule();
     } finally {
       this.inFrame = false;
     }
@@ -1222,19 +1556,42 @@ export class OrbitView {
     const targets = this.pickTargets;
     targets.length = 0;
     if (this.corePoints) targets.push(this.corePoints);
-    if (this.ringPoints) targets.push(this.ringPoints);
+    // The ring is drawn in the code graph only; in the OS graph its points are not pickable.
+    if (this.ringPoints && this.ringGroup.visible) targets.push(this.ringPoints);
+    if (this.labelEdgeObj) {
+      this.raycaster.params.Line.threshold = worldPerPx * PICK_RADIUS_PX;
+      targets.push(this.labelEdgeObj);
+    }
     if (targets.length === 0) return null;
     const hits = this.raycaster.intersectObjects(targets, false);
+    const points = hits.filter((h) => h.object !== this.labelEdgeObj);
     // Prefer the nearest node that is not dimmed by the selection; fall back to the nearest one.
-    const hit = hits.find((h) => this.pickAlpha(h) >= 0.5) ?? hits[0];
-    if (!hit || hit.index === undefined) return null;
+    const hit = points.find((h) => this.pickAlpha(h) >= 0.5) ?? points[0];
+    if (!hit) {
+      const edge = hits.find((h) => h.object === this.labelEdgeObj);
+      return edge && edge.index !== undefined ? this.edgePick(Math.floor(edge.index / 2)) : null;
+    }
+    if (hit.index === undefined) return null;
 
     if (hit.object === this.ringPoints) {
       const item = this.ringItems[hit.index];
       return item ? { type: "ring", id: item.id, label: item.label, detail: item.kind } : null;
     }
+    if (this.mode === "viz" && this.vizNodes) {
+      const node = this.vizNodes[hit.index];
+      return node
+        ? { type: "viz", id: node.id, label: node.label || node.id, detail: node.kind, drill: node.drill }
+        : null;
+    }
     const item = this.coreItems[hit.index];
     return item ? { type: "core", id: item.id, label: item.label, detail: item.category } : null;
+  }
+
+  /** The hover pick of a labelled OS-graph edge (index into the labelled edges). */
+  private edgePick(k: number): OrbitPick | null {
+    const edge = this.labelledEdges[k];
+    if (!edge) return null;
+    return { type: "edge", id: `${edge.source}>${edge.target}`, label: edge.label ?? edge.kind, detail: edge.kind };
   }
 
   /** Resolve the item under the remembered pointer position (used while the view moves). */
@@ -1284,7 +1641,8 @@ export class OrbitView {
     if (this.canvas) this.canvas.style.cursor = "grab";
     if (!this.dragMoved && e.type === "pointerup" && this.dragButton === 0) {
       const pick = this.pickAt(e.clientX, e.clientY);
-      if (pick) this.onSelect?.(pick);
+      // An edge is a hover-only pick: clicks select nodes and ring items.
+      if (pick && pick.type !== "edge") this.onSelect?.(pick);
     }
   };
 
@@ -1295,7 +1653,7 @@ export class OrbitView {
 
   private readonly onDblClick = (e: MouseEvent): void => {
     const pick = this.pickAt(e.clientX, e.clientY);
-    if (!pick) return;
+    if (!pick || pick.type === "edge") return;
     this.focusNode(pick.id);
     this.onSelect?.(pick);
   };

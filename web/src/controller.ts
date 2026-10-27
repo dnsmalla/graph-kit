@@ -4,6 +4,7 @@
 import type { CGData } from '../../typescript/src/models';
 import { OsAuthError, type OsHost, type OsOpenTarget, type OsRange } from './host';
 import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
+import { HUB_TITLES, isHubKey, levelKey, type CameraPose, type ViewLevel } from './viz';
 
 export const REFRESH_DEBOUNCE_MS = 300;
 
@@ -13,8 +14,11 @@ const DEFAULT_SIGNED_OUT_NOTICE = 'Your session has ended. Sign in again.';
 /** Load state of one optional host data set. 'none' = the host cannot supply it (or sent an unusable value). */
 export type ExtraStatus = 'idle' | 'loading' | 'ready' | 'none' | 'error';
 
-/** The item the user picked in the brain or the recent list. Same shape as the orbit's pick. */
-export type OsSelection = { type: 'core' | 'ring'; id: string; label: string; detail: string };
+/**
+ * The item the user picked: a project node (core), an activity item (ring) or a node of the OS
+ * graph (viz). `detail` is the category, the activity kind or the node kind.
+ */
+export type OsSelection = { type: 'core' | 'ring' | 'viz'; id: string; label: string; detail: string };
 
 export type ViewState = {
   projectName: string | null;
@@ -38,6 +42,10 @@ export type ViewState = {
   routines: OsRoutine[] | null;
   routinesStatus: ExtraStatus;
   selected: OsSelection | null;
+  /** Where the brain is: the whole OS, or one part. Starts at the OS. */
+  view: ViewLevel;
+  /** Bumped when a side panel asks the brain to fly to the selected node (see openNode). */
+  focusSeq: number;
 };
 
 export type ControllerDeps = {
@@ -146,7 +154,17 @@ function sanitizeSnapshot(raw: OsSnapshot): OsSnapshot {
 }
 
 function isSelectionType(value: unknown): value is OsSelection['type'] {
-  return value === 'core' || value === 'ring';
+  return value === 'core' || value === 'ring' || value === 'viz';
+}
+
+/** A camera pose with six finite numbers, or null for anything else. */
+function sanitizeCamera(value: unknown): CameraPose | null {
+  if (!isObject(value)) return null;
+  const { position, target } = value;
+  if (!Array.isArray(position) || !Array.isArray(target) || position.length !== 3 || target.length !== 3) return null;
+  const nums = [...position, ...target];
+  if (!nums.every((v) => typeof v === 'number' && Number.isFinite(v))) return null;
+  return { position: [position[0], position[1], position[2]], target: [target[0], target[1], target[2]] } as CameraPose;
 }
 
 export class OsController {
@@ -167,6 +185,10 @@ export class OsController {
   private graphSeq = 0;
   private skillsSeq = 0;
   private routinesSeq = 0;
+  /** The camera each level was left at, by levelKey: returning to a level puts the camera back. */
+  private readonly cameras = new Map<string, CameraPose>();
+  /** Reads the mounted brain's camera. Navigation uses it when the caller gives no pose. */
+  private cameraSource: (() => CameraPose | null) | null = null;
 
   /** The notice the page shows when the host refuses the session. Read-only. */
   readonly signedOutNotice: string;
@@ -191,6 +213,8 @@ export class OsController {
       routines: null,
       routinesStatus: 'idle',
       selected: null,
+      view: { level: 'os' },
+      focusSeq: 0,
     };
   }
 
@@ -239,7 +263,10 @@ export class OsController {
     const projectChanged = projectName !== this.state.projectName;
     this.set({ projectName, error: null });
     if (!projectChanged) return;
+    // A new project has its own graph and remembered views: the brain starts again at the OS.
+    this.cameras.clear();
     this.set({
+      view: { level: 'os' },
       selected: null,
       projectGraph: null,
       projectGraphStatus: 'idle',
@@ -252,6 +279,72 @@ export class OsController {
       void this.refresh();
       this.loadExtras();
     }
+  }
+
+  /**
+   * Opens one part of the OS in the brain. `code` opens the project's own graph; any other hub
+   * opens its graph. The selection clears. `camera` is the pose the level being left had: it is
+   * remembered, so going back returns to it. An unknown hub is ignored.
+   */
+  drill(hub: string, camera?: CameraPose | null): void {
+    if (this.disposed || !isHubKey(hub)) return;
+    if (this.state.view.level === 'hub' && this.state.view.hub === hub) return;
+    this.leaving(camera);
+    this.set({ view: { level: 'hub', hub }, selected: null });
+  }
+
+  /**
+   * Back to the OS view from a part. The part's node is selected there, so the OS shows where
+   * the user came from. A no-op on the OS itself.
+   */
+  back(camera?: CameraPose | null): void {
+    if (this.disposed) return;
+    const view = this.state.view;
+    if (view.level !== 'hub') return;
+    this.leaving(camera);
+    const hub = view.hub;
+    this.set({
+      view: { level: 'os' },
+      selected: { type: 'viz', id: `hub:${hub}`, label: HUB_TITLES[hub], detail: 'hub' },
+    });
+  }
+
+  /** Remembers the camera for the level the brain is on now (a null pose is ignored). */
+  rememberCamera(camera: CameraPose | null): void {
+    const pose = sanitizeCamera(camera);
+    if (pose) this.cameras.set(levelKey(this.state.view), pose);
+  }
+
+  /**
+   * The mounted brain registers how to read its camera (null to unregister). Navigation calls it
+   * for the level it leaves, so a caller that has no brain at hand still remembers the view.
+   */
+  setCameraSource(source: (() => CameraPose | null) | null): void {
+    this.cameraSource = source;
+  }
+
+  /** Remembers the camera of the level being left: the given pose, or the brain's when none is given. */
+  private leaving(camera: CameraPose | null | undefined): void {
+    this.rememberCamera(camera !== undefined ? camera : (this.cameraSource?.() ?? null));
+  }
+
+  /** The camera remembered for a level, or null when the level has none yet (it is then framed). */
+  cameraFor(view: ViewLevel): CameraPose | null {
+    return this.cameras.get(levelKey(view)) ?? null;
+  }
+
+  /**
+   * A side panel's click: opens the hub that holds `node` and selects the node there (the brain
+   * flies to it). `label` is the name the panel shows for it.
+   */
+  openNode(hub: string, node: { id: string; label: string; detail: string }, camera?: CameraPose | null): void {
+    if (this.disposed || !isHubKey(hub)) return;
+    this.leaving(camera);
+    this.set({
+      view: { level: 'hub', hub },
+      selected: { type: 'viz', id: node.id, label: node.label, detail: node.detail },
+      focusSeq: this.state.focusSeq + 1,
+    });
   }
 
   /** Selects a brain or ring item, or clears the selection with null. */

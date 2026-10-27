@@ -4,7 +4,7 @@ import type { OsController, ViewState } from './controller';
 import type { OsRange } from './host';
 import type { OsLiveStatus, OsSnapshot } from './types';
 import { fmtTime } from './format';
-import { drawViews, osGraphStatus, whenOsGraphReady, type OsGraphStatus } from './systemGraph';
+import { drawOs, drawViews, osGraphStatus, vizForLevel, whenOsGraphReady, type OsGraphStatus, type VizView } from './systemGraph';
 import { Brain } from './components/Brain';
 import { Knowledge } from './components/Knowledge';
 import { Routines } from './components/Routines';
@@ -82,6 +82,21 @@ export function App({ controller }: { controller: OsController }) {
     () => drawViews(state.projectGraph, data),
     [state.projectGraph, data, graphStatus],
   );
+  // The OS view (every part's graph) and the graph of the level the brain is on. The code level
+  // draws the project's core instead, so it needs no OS graph of its own.
+  const osDrawn = useMemo(
+    () => drawOs(data, state.skills, state.routines, drawn.core, { loading: drawn.loading }),
+    [data, state.skills, state.routines, drawn.core, drawn.loading],
+  );
+  const level = state.view.level === 'os' ? 'os' : state.view.hub;
+  const vizDrawn = useMemo((): { viz: VizView | null; failed: boolean } => {
+    if (!osDrawn.view || level === 'code') return { viz: null, failed: false };
+    try {
+      return { viz: vizForLevel(osDrawn.view, level), failed: false };
+    } catch {
+      return { viz: null, failed: true };
+    }
+  }, [osDrawn.view, level]);
 
   return (
     <div className="os">
@@ -109,7 +124,7 @@ export function App({ controller }: { controller: OsController }) {
               stopping={state.stopping}
               onStop={(cancel, key) => void controller.stopItem(cancel, key)}
             />
-            <SkillsDeck skills={state.skills} status={state.skillsStatus} />
+            <SkillsDeck skills={state.skills} status={state.skillsStatus} controller={controller} />
           </div>
 
           <Brain
@@ -120,6 +135,9 @@ export function App({ controller }: { controller: OsController }) {
             drawFailed={drawn.drawFailed}
             coreLoading={drawn.loading}
             activity={data.activity.items}
+            viz={vizDrawn.viz}
+            osFailed={osDrawn.failed || vizDrawn.failed}
+            running={data.running}
           />
 
           <div className="os-col os-col-right">

@@ -9,6 +9,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
+import * as THREE from 'three';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // The layout runs in the page as WASM (src/wasm); the TS layout no longer exists.
@@ -1230,3 +1231,256 @@ function sampleGraphForSearch() {
     truncated: { totalNodes: 1, keptNodes: 1, keptCommunities: 1 },
   };
 }
+
+// ---- OrbitView: the OS graph (setViz) with the same fake renderer ------------
+// The OS graph is a VizGraph laid out by the core. Picks are resolved by projecting the node
+// with the view's own camera, so a click lands where the node is drawn.
+
+/** A small OS-graph sample: a hub, two models, a provider; one labelled edge, one self-loop, one duplicate id. */
+function vizSample() {
+  const node = (id, kind, extra = {}) => ({
+    id,
+    label: extra.label ?? id,
+    kind,
+    group: extra.group ?? 0,
+    size: extra.size ?? 1,
+    labelled: !!extra.labelled,
+    drill: extra.drill ?? null,
+    status: extra.status ?? null,
+    meta: {},
+  });
+  return {
+    level: 'models',
+    title: 'Models',
+    nodes: [
+      node('hub:models', 'hub', { label: 'Models', size: 4, labelled: true, drill: 'models', status: 'ok', group: 4 }),
+      node('model:a/one', 'model', { label: 'one', status: 'running', labelled: true, group: 4 }),
+      node('model:a/two', 'model', { label: 'two', status: 'off', group: 4 }),
+      node('provider:a', 'provider', { label: 'a', status: 'warn', labelled: true, group: 4 }),
+      node('model:a/one', 'model', { label: 'duplicate' }),
+    ],
+    edges: [
+      { source: 'hub:models', target: 'model:a/one', kind: 'member', weight: 1 },
+      { source: 'provider:a', target: 'model:a/one', kind: 'provides', weight: 3, label: 'serves one' },
+      { source: 'hub:models', target: 'model:a/two', kind: 'member', weight: 0.5 },
+      { source: 'model:a/two', target: 'model:a/two', kind: 'member', weight: 1 },
+    ],
+  };
+}
+
+describe('OrbitView: the OS graph (fake renderer)', () => {
+  let container;
+  let frames;
+  let nextFrameId;
+  let savedGlobals;
+  const globalsToStub = ['document', 'ResizeObserver', 'getComputedStyle'];
+  const live = [];
+
+  beforeEach(() => {
+    savedGlobals = Object.fromEntries(globalsToStub.map((k) => [k, globalThis[k]]));
+    const doc = fakeElement('document');
+    doc.hidden = false;
+    doc.documentElement = fakeElement('html');
+    doc.createElement = (tag) => fakeElement(tag, tag === 'canvas' ? { width: 400, height: 300 } : {});
+    globalThis.document = doc;
+    globalThis.ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+    delete globalThis.getComputedStyle;
+    container = fakeElement('div', { width: 400, height: 300 });
+    frames = new Map();
+    nextFrameId = 1;
+  });
+
+  afterEach(() => {
+    while (live.length) live.pop().dispose();
+    for (const [k, v] of Object.entries(savedGlobals)) {
+      if (v === undefined) delete globalThis[k];
+      else globalThis[k] = v;
+    }
+  });
+
+  function make(extra = {}) {
+    const v = new view.OrbitView(container, {
+      rotationSpeed: 0.05,
+      createRenderer: (canvas) => fakeRenderer(canvas),
+      requestFrame: (cb) => {
+        const id = nextFrameId++;
+        frames.set(id, cb);
+        return id;
+      },
+      cancelFrame: (id) => frames.delete(id),
+      ...extra,
+    });
+    live.push(v);
+    return v;
+  }
+
+  function runFrames(t) {
+    const pending = [...frames.values()];
+    frames.clear();
+    for (const cb of pending) cb(t);
+  }
+
+  const labelLayer = () => container.children.find((c) => c.className === 'orbit-labels');
+  const labelsIn = () => (labelLayer()?.children ?? []).filter((c) => c.className === 'orbit-label');
+  const edgeLines = (v) => v.coreGroup.children.find((o) => o.isLineSegments && o.material.vertexColors);
+  const labelEdgeLines = (v) => v.coreGroup.children.find((o) => o.isLineSegments && !o.material.vertexColors);
+
+  /** Where a layout point is drawn on the canvas (client pixels), with the view's own camera. */
+  function screenOf(v, p) {
+    v.camera.updateMatrixWorld();
+    const ndc = new THREE.Vector3(p.x, p.y, p.z).project(v.camera);
+    return { clientX: ((ndc.x + 1) / 2) * 400, clientY: ((1 - ndc.y) / 2) * 300 };
+  }
+
+  it('builds one point per distinct node, sized by its size, and labels only the labelled nodes', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    const geo = v.corePoints.geometry;
+    assert.equal(geo.attributes.position.count, 4, 'four distinct nodes (the duplicate id is dropped)');
+    assert.equal(geo.attributes.aSize.count, 4);
+    assert.equal(geo.attributes.aAlpha.count, 4);
+    assert.ok(Math.abs(geo.attributes.aSize.array[0] - scene.vizNodeSize(viz.nodes[0])) < 1e-4, 'the hub is the largest point');
+    assert.ok(geo.attributes.aSize.array[0] > geo.attributes.aSize.array[1] * 1.5, 'the hub is well above a member');
+    const labels = labelsIn();
+    assert.equal(labels.length, 3, 'hub, one and a are labelled; two is not');
+    assert.deepEqual(labels.map((l) => l.textContent), ['Models', 'one', 'a']);
+    assert.equal(v.ringGroup.visible, false, 'the ring is hidden in the OS graph');
+  });
+
+  it('colours by kind and status, and quiets an off node', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+    const geo = v.corePoints.geometry;
+    const colors = geo.attributes.aColor.array;
+    const expected = scene.vizNodeRgb(viz.nodes[1], 'dark');
+    for (let c = 0; c < 3; c++) assert.ok(Math.abs(colors[3 + c] - expected[c]) < 1e-6, 'a running model takes its kind colour with the status tint');
+    const alpha = geo.attributes.aAlpha.array;
+    assert.equal(alpha[0], 1);
+    assert.ok(Math.abs(alpha[2] - scene.VIZ_OFF_ALPHA) < 1e-6, 'an off node is drawn quiet');
+  });
+
+  it('draws the drawn edges by weight, drops self-loops, and keeps the labelled edge for hover', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+    const edges = edgeLines(v);
+    assert.equal(edges.geometry.attributes.position.count, 6, 'three edges, two vertices each (the self-loop is dropped)');
+    const rgba = edges.geometry.attributes.color.array;
+    const heaviest = rgba[(1 * 2) * 4 + 3];
+    const lightest = rgba[(2 * 2) * 4 + 3];
+    assert.equal(heaviest, 1);
+    assert.ok(Math.abs(lightest - (0.33 + 0.67 * (0.5 / 3))) < 1e-6, 'the lightest edge keeps a third');
+    assert.equal(labelEdgeLines(v).geometry.attributes.position.count, 2, 'one labelled edge is hit-tested');
+  });
+
+  it('hovering a labelled edge reports it as an edge pick with its label', () => {
+    const picks = [];
+    const v = make({ reducedMotion: true, onHover: (item) => picks.push(item) });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    const provider = layout.core.get('provider:a');
+    const target = layout.core.get('model:a/one');
+    const mid = { x: provider.x + (target.x - provider.x) * 0.5, y: provider.y + (target.y - provider.y) * 0.5, z: provider.z + (target.z - provider.z) * 0.5 };
+    const at = screenOf(v, mid);
+    v.renderer.domElement.dispatch('pointermove', at);
+    const last = picks[picks.length - 1];
+    assert.ok(last, 'a hover pick was reported');
+    assert.equal(last.type, 'edge');
+    assert.equal(last.label, 'serves one');
+    assert.equal(last.detail, 'provides');
+  });
+
+  it('a click on a node reports a viz pick with its id, kind and drill hub', () => {
+    const selects = [];
+    const v = make({ reducedMotion: true, onSelect: (item) => selects.push(item) });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    const at = screenOf(v, layout.core.get('hub:models'));
+    const canvas = v.renderer.domElement;
+    canvas.dispatch('pointerdown', { ...at, button: 0 });
+    canvas.dispatch('pointerup', { ...at, type: 'pointerup', button: 0 });
+    assert.equal(selects.length, 1);
+    assert.deepEqual(selects[0], { type: 'viz', id: 'hub:models', label: 'Models', detail: 'hub', drill: 'models' });
+  });
+
+  it('a running node pulses on frames; with reduced motion it holds still', () => {
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    const moving = make({});
+    moving.setViz(viz, layout);
+    runFrames(0);
+    const a0 = moving.corePoints.geometry.attributes.aAlpha.array[1];
+    runFrames(350);
+    const a1 = moving.corePoints.geometry.attributes.aAlpha.array[1];
+    assert.notEqual(a0, a1, 'the running node changes alpha over time');
+    assert.equal(moving.corePoints.geometry.attributes.aAlpha.array[0], 1, 'a node that is not running does not pulse');
+    moving.dispose();
+
+    const still = make({ reducedMotion: true });
+    still.setViz(viz, layout);
+    runFrames(0);
+    const s0 = still.corePoints.geometry.attributes.aAlpha.array[1];
+    runFrames(350);
+    assert.equal(still.corePoints.geometry.attributes.aAlpha.array[1], s0, 'reduced motion: no pulse');
+  });
+
+  it('switching between the OS graph and the code brain disposes the old buffers and clears the labels', () => {
+    const v = make({ reducedMotion: true });
+    const graph = sampleGraph();
+    v.setGraph(graph, orbit.orbitLayout(graph));
+    v.setRing(graph.ring, orbit.orbitLayout(graph).ring);
+    const oldGeo = v.corePoints.geometry;
+    let disposed = 0;
+    const realDispose = oldGeo.dispose.bind(oldGeo);
+    oldGeo.dispose = () => {
+      disposed++;
+      realDispose();
+    };
+    const viz = vizSample();
+    v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+    assert.ok(disposed >= 1, 'the code brain points are disposed on the switch');
+    assert.equal(v.ringGroup.visible, false);
+    assert.equal(labelsIn().length, 3);
+    v.setGraph(graph, orbit.orbitLayout(graph));
+    assert.equal(labelsIn().length, 0, 'the OS labels are removed on the way back');
+    assert.equal(v.ringGroup.visible, true, 'the ring comes back in the code brain');
+    assert.equal(v.vizGraph, null);
+    assert.ok(v.corePoints.geometry !== oldGeo);
+  });
+
+  it('setViz with the same objects is a no-op; a theme change restyles the labels', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    const first = v.corePoints;
+    v.setViz(viz, layout);
+    assert.equal(v.corePoints, first);
+    v.setTheme('light');
+    assert.equal(labelsIn()[0].style.color, '#1c2230');
+    v.setTheme('dark');
+    assert.equal(labelsIn()[0].style.color, '#f2f4f8');
+  });
+
+  it('getCamera and setCamera round-trip a pose, and a non-finite pose is ignored', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+    const home = v.getCamera();
+    assert.equal(home.position.length, 3);
+    const pose = { position: [home.position[0] + 2, home.position[1], home.position[2]], target: home.target };
+    v.setCamera(pose);
+    const back = v.getCamera();
+    for (let i = 0; i < 3; i++) assert.ok(Math.abs(back.position[i] - pose.position[i]) < 1e-6);
+    v.setCamera({ position: [NaN, 0, 0], target: [0, 0, 0] });
+    assert.deepEqual(v.getCamera().position, back.position, 'a non-finite pose changes nothing');
+  });
+});

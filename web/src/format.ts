@@ -37,3 +37,76 @@ export function words(value: string): string {
 export function shortSha(sha: string | null | undefined): string {
   return sha ? sha.slice(0, 7) : '—';
 }
+
+const relative = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
+
+/** A server timestamp as parsed milliseconds, or NaN. Handles the SQLite form (UTC, no zone) too. */
+function parseServerTime(value: string): number {
+  const hasZone = /(?:[zZ]|[+-]\d{2}:?\d{2})$/.test(value);
+  return Date.parse(hasZone ? value : `${value.replace(' ', 'T')}Z`);
+}
+
+/** How long ago (or until) a server timestamp is, as words: "3 minutes ago", "in 2 hours". */
+export function fmtRelative(value: string | null | undefined, now: number = Date.now()): string {
+  if (!value) return '—';
+  const ms = parseServerTime(value);
+  if (Number.isNaN(ms)) return value;
+  const seconds = Math.round((ms - now) / 1000);
+  const abs = Math.abs(seconds);
+  if (abs < 45) return 'just now';
+  if (abs < 3300) return relative.format(Math.round(seconds / 60), 'minute');
+  if (abs < 79200) return relative.format(Math.round(seconds / 3600), 'hour');
+  if (abs < 5 * 86400) return relative.format(Math.round(seconds / 86400), 'day');
+  return fmtTime(value);
+}
+
+/** Whether a string is a server timestamp (ISO 8601 or the SQLite form). */
+export function isTimestamp(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value);
+}
+
+/** A camelCase or snake_case key as a sentence start: "lastRunAt" becomes "Last run at". */
+export function humanKey(key: string): string {
+  const spaced = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** One row of a meta table: a formatted value, plus the key: value lines of a nested object. */
+export type MetaRow = { key: string; value: string; lines?: MetaRow[] };
+
+/** A scalar meta value as text. Numbers get separators, timestamps read as time and how long ago. */
+function scalar(key: string, value: unknown, now: number): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'number') {
+    if (/share$/i.test(key) && value >= 0 && value <= 1) return `${pct(value, 1)}%`;
+    return fmtInt(value);
+  }
+  if (isTimestamp(value)) return `${fmtTime(value)} · ${fmtRelative(value, now)}`;
+  return String(value);
+}
+
+/**
+ * The rows of a details card's meta table. Scalars read as text, arrays as counts ("3 items"),
+ * nested objects as a row with key: value lines beneath it. Null-ish values read as an em dash.
+ */
+export function metaRows(meta: Record<string, unknown>, now: number = Date.now()): MetaRow[] {
+  return Object.entries(meta).map(([key, value]) => {
+    const label = humanKey(key);
+    if (Array.isArray(value)) {
+      return { key: label, value: value.length === 0 ? 'none' : `${fmtInt(value.length)} ${value.length === 1 ? 'item' : 'items'}` };
+    }
+    if (value !== null && typeof value === 'object') {
+      const lines = Object.entries(value as Record<string, unknown>).map(([k, v]) => ({
+        key: humanKey(k),
+        value: scalar(k, v, now),
+      }));
+      return { key: label, value: lines.length === 0 ? 'none' : '', lines };
+    }
+    return { key: label, value: scalar(key, value, now) };
+  });
+}

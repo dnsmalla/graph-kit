@@ -17,11 +17,24 @@ import type {
   Vec3,
 } from "../../../typescript/src/system/index.js";
 import { OrbitView, type OrbitColorMode, type OrbitPick, type OrbitTheme } from "./OrbitView";
+import type { CameraPose, VizGraph } from "../viz";
 
-/** Imperative handle: the search box and a future file tree fly the camera through it. */
+/** Imperative handle: the search box, the breadcrumb and the camera memory fly the camera through it. */
 export interface OrbitPanelHandle {
-  /** Flies to a core node or ring item. False when the id is not drawn or there is no WebGL. */
+  /** Flies to a core node or ring item (or an OS-graph node). False when the id is not drawn or there is no WebGL. */
   focusNode(id: string): boolean;
+  /** The camera as plain numbers, or null without WebGL. */
+  getCamera(): CameraPose | null;
+  /** Puts the camera at a remembered pose. */
+  setCamera(pose: CameraPose): void;
+  /** Frames the camera on the current scene again. */
+  refit(): void;
+}
+
+/** The OS graph (or a hub's graph) and its layout. When given, the brain draws it instead of `core`. */
+export interface OrbitVizInput {
+  graph: VizGraph;
+  layout: OrbitLayout;
 }
 
 export interface OrbitPanelProps {
@@ -29,6 +42,8 @@ export interface OrbitPanelProps {
   core: { graph: SystemGraph; layout: OrbitLayout } | null;
   /** The recent-activity ring. Compared by identity: pass a new object only when the ring changes. */
   ring: { items: SystemRingItem[]; positions: Map<string, Vec3> } | null;
+  /** The OS graph or a hub's graph. Compared by identity. When set, it is drawn and `core` is ignored. */
+  viz?: OrbitVizInput | null;
   onSelect?: (item: OrbitPick) => void;
   /** Called once when WebGL is unavailable (the view then shows only its text fallback). */
   onFallback?: () => void;
@@ -56,6 +71,8 @@ const EMPTY_LAYOUT: OrbitLayout = {
   bounds: { radius: 0 },
 };
 const EMPTY_POSITIONS: Map<string, Vec3> = new Map();
+const EMPTY_VIZ_TEXT = "Nothing in this part yet.";
+const NO_GRAPH_TEXT = "No project graph yet";
 const NO_RING: SystemRingItem[] = [];
 
 const TOOLTIP_OFFSET_PX = 14;
@@ -228,6 +245,7 @@ export function OrbitToolbar({
 export function OrbitPanel({
   core,
   ring,
+  viz = null,
   onSelect,
   onFallback,
   showEmpty = true,
@@ -246,12 +264,15 @@ export function OrbitPanel({
   const [reduced, setReduced] = useState(false);
   const [noWebgl, setNoWebgl] = useState(false);
 
-  const hasCore = !!core && core.graph.core.length > 0;
+  const hasCore = viz ? viz.graph.nodes.length > 0 : !!core && core.graph.core.length > 0;
 
   useImperativeHandle(
     ref,
     () => ({
       focusNode: (id: string) => viewRef.current?.focusNode(id) ?? false,
+      getCamera: () => viewRef.current?.getCamera() ?? null,
+      setCamera: (pose: CameraPose) => viewRef.current?.setCamera(pose),
+      refit: () => viewRef.current?.refit(),
     }),
     [],
   );
@@ -305,14 +326,16 @@ export function OrbitPanel({
     };
   }, []);
 
-  // Core: a new project clears the hover (the picked node may be gone) and rebuilds the core.
+  // Core: a new project (or a new OS level) clears the hover and rebuilds the drawn graph. The OS
+  // graph wins while it is given; otherwise the project's core is drawn.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
     setPick(null);
-    if (core && core.graph.core.length > 0) view.setGraph(core.graph, core.layout);
+    if (viz) view.setViz(viz.graph, viz.layout);
+    else if (core && core.graph.core.length > 0) view.setGraph(core.graph, core.layout);
     else view.setGraph(EMPTY_GRAPH, EMPTY_LAYOUT);
-  }, [core]);
+  }, [core, viz]);
 
   // Ring: only the ring points change; the hover and the camera stay as they are.
   useEffect(() => {
@@ -365,7 +388,7 @@ export function OrbitPanel({
             opacity: 0.7,
           }}
         >
-          No project graph yet
+          {viz ? EMPTY_VIZ_TEXT : NO_GRAPH_TEXT}
         </div>
       )}
       {!noWebgl && (
@@ -403,6 +426,7 @@ export function OrbitPanel({
       >
         <strong style={{ fontWeight: 600 }}>{pick?.label}</strong>
         <span style={{ opacity: 0.7 }}>{pick?.detail}</span>
+        {pick?.type === "viz" && pick.drill ? <span style={{ opacity: 0.7 }}>Click to open</span> : null}
       </div>
     </div>
   );

@@ -797,3 +797,161 @@ select:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- OS levels: breadcrumb, status chips, meta tables, clickable cards ---- */
+
+.os-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tok-space-xs);
+  font-size: var(--tok-type-caption-size);
+}
+
+.os-crumb {
+  color: var(--tok-color-text);
+}
+
+.os-crumb-current {
+  font-weight: var(--tok-type-caption-strong-weight);
+}
+
+.os-crumb-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--tok-color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.os-crumb-sep {
+  color: var(--os-muted);
+}
+
+.os-back {
+  margin-left: auto;
+  padding: 2px var(--tok-space-sm);
+}
+
+/* A card or row that opens a node: a button with the card's own look, not a button's. */
+.os-open-btn {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.os-open-btn .skill-head,
+.os-open-btn .skill-desc,
+.os-open-btn .meta.block,
+.os-open-btn .row-main {
+  display: block;
+}
+
+.os-open-btn .skill-head {
+  display: flex;
+}
+
+.os-open-btn .row-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.routine-list .os-open-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kit .os-open-btn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-xs);
+}
+
+.meta.block {
+  display: block;
+}
+
+.os-chip {
+  display: inline-block;
+  padding: 0 var(--tok-space-xs);
+  border-radius: var(--tok-radius-sm);
+  border: 1px solid currentColor;
+  font-size: var(--tok-type-caption-strong-size);
+  font-weight: var(--tok-type-caption-strong-weight);
+  white-space: nowrap;
+}
+
+.os-chip-ok {
+  color: var(--tok-color-accent3);
+}
+
+.os-chip-warn {
+  color: var(--tok-color-accent4);
+}
+
+.os-chip-off {
+  color: var(--os-muted);
+}
+
+.os-chip-running {
+  color: var(--tok-color-accent);
+}
+
+.os-chip-unknown {
+  color: var(--os-muted);
+}
+
+.os-legend-status {
+  align-items: center;
+}
+
+.os-meta {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tok-type-caption-size);
+}
+
+.os-meta th,
+.os-meta td {
+  padding: 2px 0;
+  vertical-align: top;
+  text-align: left;
+}
+
+.os-meta th {
+  width: 40%;
+  padding-right: var(--tok-space-sm);
+  font-weight: var(--tok-type-caption-strong-weight);
+  color: var(--os-muted);
+}
+
+.os-meta td {
+  overflow-wrap: anywhere;
+}
+
+.os-meta-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.os-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tok-space-sm);
+}
+
+.os-actions .meta {
+  margin: 0;
+  flex-basis: 100%;
+}

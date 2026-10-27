@@ -32,10 +32,17 @@ export function SystemMap({ system, controller }: { system: OsSnapshot['system']
       <ul className="kits">
         {system.kits.map((kit) => (
           <li key={kit.id} className={kit.enabled ? 'kit kit-on' : 'kit kit-off'}>
-            <div className="kit-name">{kit.id}</div>
-            <div className="meta">
-              {kit.enabled ? 'On' : 'Off'} · {kit.requires.length ? `needs ${kit.requires.join(', ')}` : 'always on'}
-            </div>
+            <button
+              type="button"
+              className="os-open-btn"
+              aria-label={`Show ${kit.id} in the brain`}
+              onClick={() => controller.openNode('kits', { id: `kit:${kit.id}`, label: kit.id, detail: 'kit' })}
+            >
+              <span className="kit-name">{kit.id}</span>
+              <span className="meta block">
+                {kit.enabled ? 'On' : 'Off'} · {kit.requires.length ? `needs ${kit.requires.join(', ')}` : 'always on'}
+              </span>
+            </button>
             {!kit.enabled ? (
               <button type="button" className="btn" onClick={() => controller.open('settings')}>
                 Turn on in Settings
