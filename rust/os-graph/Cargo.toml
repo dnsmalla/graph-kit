@@ -1,0 +1,20 @@
+[package]
+name = "graph-kit-os"
+version = "0.1.0"
+edition = "2021"
+description = "Canonical Rust implementation of the graph-kit OS view graph core: system builder + orbit layout"
+publish = false
+
+[lib]
+name = "graph_kit_os"
+path = "src/lib.rs"
+
+[features]
+default = []
+# Exposes the JSON-in/JSON-out API as wasm-bindgen exports (for web/ via WASM).
+wasm = ["dep:wasm-bindgen"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+wasm-bindgen = { version = "0.2", optional = true }

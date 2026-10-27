@@ -1,0 +1,305 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": {
+   "nodes": [
+    {
+     "id": "c1",
+     "title": "c1",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "c2",
+     "title": "c2",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "c3",
+     "title": "c3",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "c4",
+     "title": "c4",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "c5",
+     "title": "c5",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "s1",
+     "title": "s1",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "s2",
+     "title": "s2",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "lone",
+     "title": "lone",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "c1",
+     "toId": "c2",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c1",
+     "toId": "c3",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c1",
+     "toId": "c4",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c1",
+     "toId": "c5",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c2",
+     "toId": "c3",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c2",
+     "toId": "c4",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c2",
+     "toId": "c5",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c3",
+     "toId": "c4",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c3",
+     "toId": "c5",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "c4",
+     "toId": "c5",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "s1",
+     "toId": "s2",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {
+   "maxCoreNodes": 6
+  },
+  "orbitOptions": {
+   "seed": 3
+  }
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "c1",
+    "label": "c1",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "c2",
+    "label": "c2",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "c3",
+    "label": "c3",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "c4",
+    "label": "c4",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "c5",
+    "label": "c5",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "lone",
+    "label": "lone",
+    "category": "code",
+    "community": 2,
+    "degree": 0
+   }
+  ],
+  "edges": [
+   {
+    "source": "c1",
+    "target": "c2",
+    "weight": 1
+   },
+   {
+    "source": "c1",
+    "target": "c3",
+    "weight": 1
+   },
+   {
+    "source": "c1",
+    "target": "c4",
+    "weight": 1
+   },
+   {
+    "source": "c1",
+    "target": "c5",
+    "weight": 1
+   },
+   {
+    "source": "c2",
+    "target": "c3",
+    "weight": 1
+   },
+   {
+    "source": "c2",
+    "target": "c4",
+    "weight": 1
+   },
+   {
+    "source": "c2",
+    "target": "c5",
+    "weight": 1
+   },
+   {
+    "source": "c3",
+    "target": "c4",
+    "weight": 1
+   },
+   {
+    "source": "c3",
+    "target": "c5",
+    "weight": 1
+   },
+   {
+    "source": "c4",
+    "target": "c5",
+    "weight": 1
+   }
+  ],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 8,
+   "keptNodes": 6,
+   "keptCommunities": 2
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "c1",
+    {
+     "x": -12.796828030053655,
+     "y": 73.48091053433465,
+     "z": -30.586403765157073
+    }
+   ],
+   [
+    "c2",
+    {
+     "x": -13.695105041528121,
+     "y": 71.50122226972168,
+     "z": 9.622822784080268
+    }
+   ],
+   [
+    "c3",
+    {
+     "x": -1.8932222118362223,
+     "y": 92.01427490774299,
+     "z": -19.2769087635207
+    }
+   ],
+   [
+    "c4",
+    {
+     "x": 21.52016821551929,
+     "y": 82.37738552273773,
+     "z": -18.074871129688844
+    }
+   ],
+   [
+    "c5",
+    {
+     "x": 9.241022166575938,
+     "y": 36.9385273715713,
+     "z": -0.4734758939266932
+    }
+   ],
+   [
+    "lone",
+    {
+     "x": -5.1185927750696845,
+     "y": -83.06735378111323,
+     "z": -5.290665190025113
+    }
+   ]
+  ],
+  "ring": [],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 70,
+    "z": 0
+   },
+   {
+    "x": 0,
+    "y": -70,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 94.0309007115118
+  }
+ }
+}

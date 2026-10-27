@@ -1,0 +1,137 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": {
+   "nodes": [
+    {
+     "id": "hub",
+     "title": "hub",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "a",
+     "title": "a",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "b",
+     "title": "b",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "c",
+     "title": "c",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "d",
+     "title": "d",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "hub",
+     "toId": "a",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "hub",
+     "toId": "b",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "hub",
+     "toId": "c",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "hub",
+     "toId": "d",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {
+   "maxCoreNodes": 2
+  },
+  "orbitOptions": {
+   "coreRadius": 120,
+   "ringRadius": 200,
+   "iterations": 30
+  }
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "a",
+    "label": "a",
+    "category": "code",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "hub",
+    "label": "hub",
+    "category": "code",
+    "community": 0,
+    "degree": 1
+   }
+  ],
+  "edges": [
+   {
+    "source": "a",
+    "target": "hub",
+    "weight": 1
+   }
+  ],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 5,
+   "keptNodes": 2,
+   "keptCommunities": 1
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "a",
+    {
+     "x": -3.6359985657929865,
+     "y": 0.46060143602600156,
+     "z": -30.228412721410486
+    }
+   ],
+   [
+    "hub",
+    {
+     "x": -2.900005239530711,
+     "y": 13.222806557799412,
+     "z": 33.56958438079859
+    }
+   ]
+  ],
+  "ring": [],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 0,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 36.19626554154234
+  }
+ }
+}

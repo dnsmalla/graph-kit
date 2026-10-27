@@ -1,0 +1,26 @@
+{
+ "input": {
+  "snapshot": null,
+  "project": null,
+  "buildOptions": {},
+  "orbitOptions": {}
+ },
+ "systemGraph": {
+  "core": [],
+  "edges": [],
+  "ring": [],
+  "truncated": {
+   "totalNodes": 0,
+   "keptNodes": 0,
+   "keptCommunities": 0
+  }
+ },
+ "orbit": {
+  "core": [],
+  "ring": [],
+  "communityCenters": [],
+  "bounds": {
+   "radius": 0
+  }
+ }
+}

@@ -1,0 +1,800 @@
+{
+ "input": {
+  "snapshot": {
+   "generatedAt": "2026-10-27T00:00:00Z",
+   "apiVersion": 75,
+   "system": {
+    "features": null,
+    "kits": [
+     {
+      "id": "chat",
+      "requires": [],
+      "enabled": true
+     }
+    ],
+    "status": "ok",
+    "checks": {
+     "db": true,
+     "claude": true,
+     "skills": true
+    }
+   },
+   "running": {
+    "chatTurns": [],
+    "meetingAgentRuns": [],
+    "liveSessions": []
+   },
+   "activity": {
+    "unread": 0,
+    "items": [
+     {
+      "id": 3,
+      "kind": "chat",
+      "title": "Third",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 09:03:00"
+     },
+     {
+      "id": 2,
+      "kind": "loop",
+      "title": "Second",
+      "detail": {
+       "ok": true
+      },
+      "link": "/x",
+      "createdAt": "2026-10-27 09:02:00"
+     },
+     {
+      "id": 1,
+      "kind": "ingest",
+      "title": "First",
+      "detail": null,
+      "link": null,
+      "createdAt": "2026-10-27 09:01:00"
+     }
+    ]
+   },
+   "tokens": {
+    "window": "day",
+    "windowDays": 1,
+    "since": "2026-10-27 00:00:00",
+    "totals": {
+     "calls": 0,
+     "runs": 0,
+     "input": 0,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0,
+     "billable": 0
+    },
+    "byModel": [],
+    "bySource": [],
+    "byEndpoint": [],
+    "turnComposition": {
+     "turns": 0,
+     "avgFirstCallPromptTokens": null,
+     "avgPrefixTokens": null,
+     "avgFenceTokens": null,
+     "avgToolResultTokens": null
+    }
+   },
+   "knowledge": {
+    "sources": {
+     "total": 0,
+     "byKind": []
+    },
+    "meetings": {
+     "count": 0
+    },
+    "pendingReviews": 0,
+    "outcomes": {
+     "total": 0,
+     "terminal": 0,
+     "byState": {}
+    },
+    "codeGraph": [],
+    "projectMemory": []
+   },
+   "macOnly": {
+    "loop": "on this Mac",
+    "autoTasks": "on this Mac"
+   }
+  },
+  "project": {
+   "nodes": [
+    {
+     "id": "src/core/engine.ts",
+     "title": "engine.ts",
+     "kind": "function",
+     "metadata": {
+      "source_file": "src/core/engine.ts"
+     }
+    },
+    {
+     "id": "src/core/util.ts",
+     "title": "util.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "src/ui/view.ts",
+     "title": "view.ts",
+     "kind": "symbol",
+     "metadata": {
+      "path": "src/ui/view.ts"
+     }
+    },
+    {
+     "id": "tests/engine.test.ts",
+     "title": "engine.test.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "src/x.spec.ts",
+     "title": "x.spec.ts",
+     "kind": "file",
+     "metadata": {
+      "source_path": "tests/x.ts"
+     }
+    },
+    {
+     "id": "docs/guide.md",
+     "title": "guide.md",
+     "kind": "docPage",
+     "metadata": {}
+    },
+    {
+     "id": "docs/spec/arch.md",
+     "title": "arch.md",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "notes/n1",
+     "title": "unit-test plan",
+     "kind": "noteDecision",
+     "metadata": {}
+    },
+    {
+     "id": "claim:1",
+     "title": "claim:1",
+     "kind": "claim",
+     "metadata": {}
+    },
+    {
+     "id": "skills/s",
+     "title": "s",
+     "kind": "skill",
+     "metadata": {}
+    },
+    {
+     "id": "misc",
+     "title": "misc",
+     "kind": "other",
+     "metadata": {}
+    },
+    {
+     "id": "src/plan.ts",
+     "title": "unit-test plan",
+     "kind": "function",
+     "metadata": {}
+    },
+    {
+     "id": "src/core/util.ts",
+     "title": "Duplicate title (dropped)",
+     "kind": "function",
+     "metadata": {}
+    },
+    {
+     "id": "cfg/app.yaml",
+     "title": "app.yaml",
+     "kind": "config",
+     "metadata": {
+      "file": "src/app.yaml"
+     }
+    },
+    {
+     "id": "src/app/latest.ts",
+     "title": "latest.ts",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "lib/__tests__/a.ts",
+     "title": "a.ts",
+     "kind": "function",
+     "metadata": {}
+    },
+    {
+     "id": "docs/readme.txt",
+     "title": "readme.txt",
+     "kind": "file",
+     "metadata": {}
+    },
+    {
+     "id": "api/handler.ts",
+     "title": "handler.ts",
+     "kind": "endpoint",
+     "metadata": {
+      "path": "api/handler.ts",
+      "file": ""
+     }
+    },
+    {
+     "id": "Tests/Helper.ts",
+     "title": "Helper.ts",
+     "kind": "file",
+     "metadata": {}
+    }
+   ],
+   "edges": [
+    {
+     "fromId": "src/core/engine.ts",
+     "toId": "src/core/util.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "src/core/util.ts",
+     "toId": "src/core/engine.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "src/core/engine.ts",
+     "toId": "src/core/util.ts",
+     "kind": "calls",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "src/ui/view.ts",
+     "toId": "src/core/engine.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "tests/engine.test.ts",
+     "toId": "src/core/engine.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "src/x.spec.ts",
+     "toId": "src/ui/view.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "docs/guide.md",
+     "toId": "src/core/engine.ts",
+     "kind": "documents",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "docs/spec/arch.md",
+     "toId": "docs/guide.md",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "notes/n1",
+     "toId": "claim:1",
+     "kind": "cites",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "claim:1",
+     "toId": "docs/guide.md",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "skills/s",
+     "toId": "misc",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "src/plan.ts",
+     "toId": "src/app/latest.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "src/app/latest.ts",
+     "toId": "src/plan.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "lib/__tests__/a.ts",
+     "toId": "src/app/latest.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "api/handler.ts",
+     "toId": "api/handler.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "api/handler.ts",
+     "toId": "ghost.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "ghost2",
+     "toId": "api/handler.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "cfg/app.yaml",
+     "toId": "src/core/util.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "Tests/Helper.ts",
+     "toId": "src/ui/view.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "docs/readme.txt",
+     "toId": "misc",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    },
+    {
+     "fromId": "src/core/util.ts",
+     "toId": "src/ui/view.ts",
+     "kind": "imports",
+     "confidence": "EXTRACTED"
+    }
+   ],
+   "layers": [],
+   "tour": []
+  },
+  "buildOptions": {},
+  "orbitOptions": {}
+ },
+ "systemGraph": {
+  "core": [
+   {
+    "id": "Tests/Helper.ts",
+    "label": "Helper.ts",
+    "category": "tests",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "api/handler.ts",
+    "label": "handler.ts",
+    "category": "code",
+    "community": 3,
+    "degree": 0
+   },
+   {
+    "id": "cfg/app.yaml",
+    "label": "app.yaml",
+    "category": "code",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "claim:1",
+    "label": "claim:1",
+    "category": "knowledge",
+    "community": 0,
+    "degree": 2
+   },
+   {
+    "id": "docs/guide.md",
+    "label": "guide.md",
+    "category": "docs",
+    "community": 0,
+    "degree": 3
+   },
+   {
+    "id": "docs/readme.txt",
+    "label": "readme.txt",
+    "category": "docs",
+    "community": 1,
+    "degree": 1
+   },
+   {
+    "id": "docs/spec/arch.md",
+    "label": "arch.md",
+    "category": "docs",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "lib/__tests__/a.ts",
+    "label": "a.ts",
+    "category": "tests",
+    "community": 2,
+    "degree": 1
+   },
+   {
+    "id": "misc",
+    "label": "misc",
+    "category": "other",
+    "community": 1,
+    "degree": 2
+   },
+   {
+    "id": "notes/n1",
+    "label": "unit-test plan",
+    "category": "knowledge",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "skills/s",
+    "label": "s",
+    "category": "other",
+    "community": 1,
+    "degree": 1
+   },
+   {
+    "id": "src/app/latest.ts",
+    "label": "latest.ts",
+    "category": "code",
+    "community": 2,
+    "degree": 3
+   },
+   {
+    "id": "src/core/engine.ts",
+    "label": "engine.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 6
+   },
+   {
+    "id": "src/core/util.ts",
+    "label": "util.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 5
+   },
+   {
+    "id": "src/plan.ts",
+    "label": "unit-test plan",
+    "category": "code",
+    "community": 2,
+    "degree": 2
+   },
+   {
+    "id": "src/ui/view.ts",
+    "label": "view.ts",
+    "category": "code",
+    "community": 0,
+    "degree": 4
+   },
+   {
+    "id": "src/x.spec.ts",
+    "label": "x.spec.ts",
+    "category": "tests",
+    "community": 0,
+    "degree": 1
+   },
+   {
+    "id": "tests/engine.test.ts",
+    "label": "engine.test.ts",
+    "category": "tests",
+    "community": 0,
+    "degree": 1
+   }
+  ],
+  "edges": [
+   {
+    "source": "Tests/Helper.ts",
+    "target": "src/ui/view.ts",
+    "weight": 1
+   },
+   {
+    "source": "cfg/app.yaml",
+    "target": "src/core/util.ts",
+    "weight": 1
+   },
+   {
+    "source": "claim:1",
+    "target": "docs/guide.md",
+    "weight": 1
+   },
+   {
+    "source": "claim:1",
+    "target": "notes/n1",
+    "weight": 1
+   },
+   {
+    "source": "docs/guide.md",
+    "target": "docs/spec/arch.md",
+    "weight": 1
+   },
+   {
+    "source": "docs/guide.md",
+    "target": "src/core/engine.ts",
+    "weight": 1
+   },
+   {
+    "source": "docs/readme.txt",
+    "target": "misc",
+    "weight": 1
+   },
+   {
+    "source": "lib/__tests__/a.ts",
+    "target": "src/app/latest.ts",
+    "weight": 1
+   },
+   {
+    "source": "misc",
+    "target": "skills/s",
+    "weight": 1
+   },
+   {
+    "source": "src/app/latest.ts",
+    "target": "src/plan.ts",
+    "weight": 2
+   },
+   {
+    "source": "src/core/engine.ts",
+    "target": "src/core/util.ts",
+    "weight": 3
+   },
+   {
+    "source": "src/core/engine.ts",
+    "target": "src/ui/view.ts",
+    "weight": 1
+   },
+   {
+    "source": "src/core/engine.ts",
+    "target": "tests/engine.test.ts",
+    "weight": 1
+   },
+   {
+    "source": "src/core/util.ts",
+    "target": "src/ui/view.ts",
+    "weight": 1
+   },
+   {
+    "source": "src/ui/view.ts",
+    "target": "src/x.spec.ts",
+    "weight": 1
+   }
+  ],
+  "ring": [
+   {
+    "id": "activity:3",
+    "label": "Third",
+    "kind": "chat",
+    "at": "2026-10-27 09:03:00",
+    "link": null
+   },
+   {
+    "id": "activity:2",
+    "label": "Second",
+    "kind": "loop",
+    "at": "2026-10-27 09:02:00",
+    "link": "/x"
+   },
+   {
+    "id": "activity:1",
+    "label": "First",
+    "kind": "ingest",
+    "at": "2026-10-27 09:01:00",
+    "link": null
+   }
+  ],
+  "truncated": {
+   "totalNodes": 18,
+   "keptNodes": 18,
+   "keptCommunities": 4
+  }
+ },
+ "orbit": {
+  "core": [
+   [
+    "Tests/Helper.ts",
+    {
+     "x": 6.8998122204339944,
+     "y": 66.30461141719901,
+     "z": -35.97603617328536
+    }
+   ],
+   [
+    "api/handler.ts",
+    {
+     "x": -0.7126416452903911,
+     "y": -66.39999349457105,
+     "z": 9.822648750455107
+    }
+   ],
+   [
+    "cfg/app.yaml",
+    {
+     "x": -20.71234711305796,
+     "y": 87.05444033476438,
+     "z": 11.727978831919438
+    }
+   ],
+   [
+    "claim:1",
+    {
+     "x": -39.95154903553411,
+     "y": 68.98667202279668,
+     "z": -3.690472769079352
+    }
+   ],
+   [
+    "docs/guide.md",
+    {
+     "x": -0.9672943686049429,
+     "y": 88.75865972007455,
+     "z": -2.0424587288463885
+    }
+   ],
+   [
+    "docs/readme.txt",
+    {
+     "x": -39.72300747051146,
+     "y": 31.55646671714362,
+     "z": 47.60855283093724
+    }
+   ],
+   [
+    "docs/spec/arch.md",
+    {
+     "x": -2.9943965044099095,
+     "y": 94.144834815359,
+     "z": 12.588731635578009
+    }
+   ],
+   [
+    "lib/__tests__/a.ts",
+    {
+     "x": 5.165273157519527,
+     "y": -19.735921273625642,
+     "z": -78.04221891527015
+    }
+   ],
+   [
+    "misc",
+    {
+     "x": -52.00556492924866,
+     "y": 34.952061318199775,
+     "z": 53.569315886267155
+    }
+   ],
+   [
+    "notes/n1",
+    {
+     "x": -32.28028537104471,
+     "y": 58.79384897059397,
+     "z": 4.52164868574028
+    }
+   ],
+   [
+    "skills/s",
+    {
+     "x": -53.18884833155797,
+     "y": 11.393263803745107,
+     "z": 35.687544111260195
+    }
+   ],
+   [
+    "src/app/latest.ts",
+    {
+     "x": 19.577956153583056,
+     "y": -24.25494406095597,
+     "z": -55.30819533889545
+    }
+   ],
+   [
+    "src/core/engine.ts",
+    {
+     "x": 14.387182626961092,
+     "y": 88.51877611241103,
+     "z": 10.637529091560612
+    }
+   ],
+   [
+    "src/core/util.ts",
+    {
+     "x": 5.587473442192144,
+     "y": 95.43791707296955,
+     "z": -2.6874477964658245
+    }
+   ],
+   [
+    "src/plan.ts",
+    {
+     "x": -0.9792626317247022,
+     "y": -29.02148082487442,
+     "z": -55.91895043893031
+    }
+   ],
+   [
+    "src/ui/view.ts",
+    {
+     "x": 21.165778361207234,
+     "y": 75.33785677739293,
+     "z": -10.429579256498215
+    }
+   ],
+   [
+    "src/x.spec.ts",
+    {
+     "x": 11.66505623637331,
+     "y": 88.12517231465438,
+     "z": 18.065382908335298
+    }
+   ],
+   [
+    "tests/engine.test.ts",
+    {
+     "x": -19.153905319071125,
+     "y": 90.71367014830355,
+     "z": 19.113952349352072
+    }
+   ]
+  ],
+  "ring": [
+   [
+    "activity:3",
+    {
+     "x": 170,
+     "y": 0,
+     "z": 0
+    }
+   ],
+   [
+    "activity:2",
+    {
+     "x": -84.99999999999996,
+     "y": 0,
+     "z": 147.2243186433546
+    }
+   ],
+   [
+    "activity:1",
+    {
+     "x": -85.00000000000007,
+     "y": 0,
+     "z": -147.22431864335454
+    }
+   ]
+  ],
+  "communityCenters": [
+   {
+    "x": 0,
+    "y": 70,
+    "z": 0
+   },
+   {
+    "x": -48.66386316634234,
+    "y": 23.333333333333336,
+    "z": 44.58008498514853
+   },
+   {
+    "x": 5.769803461100997,
+    "y": -23.33333333333333,
+    "z": -65.74393450027023
+   },
+   {
+    "x": 0,
+    "y": -70,
+    "z": 0
+   }
+  ],
+  "bounds": {
+   "radius": 170
+  }
+ }
+}
