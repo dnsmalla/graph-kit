@@ -7,6 +7,19 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 ## [Unreleased]
 
 ### Added
+- **OS view package `web/` (`@dnsmalla/graph-kit-web`, private, consumed from source).** A
+  React page behind an `OsHost` data interface: the whole OS as an interactive 3D graph (8 hubs —
+  code, knowledge, memory, skills, models, agents, routines, kits) with drill-down into each part's
+  own graph, the project's code as a point-cloud "brain", orbit/zoom/pan/pinch controls, focus,
+  selection highlight, kind/cluster colours, search, a code-node drawer (code preview, open in the
+  host's editor, depends-on / used-by) and a file Structure tree. Host contract additions:
+  `openFile`, `loadFile`, `copyText`; open targets `explorer` and `codeGraph`.
+- **Rust crate `rust/os-graph` (`graph-kit-os`)**, the canonical OS graph core, embedded in `web/`
+  as WASM (`scripts/build-os-wasm.sh`, `--check --strict`): the system graph builder and orbit
+  layout, `VizGraph` builders for the OS view and each part, a hub layout, and `SystemCoreNode`
+  `path` / `kind`. Golden fixtures under `rust/os-graph/tests/golden/` are frozen and regenerated
+  only by the `#[ignore]` writer tests.
+- `typescript/src/system/types.ts`: optional `path` and `kind` on `SystemCoreNode`.
 - **Committed single-file CLI bundle** at `bin/graph-kit.js` (esbuild, minified,
   dependencies included — the TypeScript compiler API accounts for most of its
   size). `graph-engine.json` points at it, so the repository is installable as a

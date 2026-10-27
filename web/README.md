@@ -12,7 +12,10 @@ app bridge, an HTTP client, or the demo. LLM-IDE is the first host.
 | `loadState(range)` | The `OsSnapshot` for `'day'` or `'week'`. Reject with `OsAuthError` when the session is refused. |
 | `cancel(request)` | Stops a running item with the cancel request the server declared for it. |
 | `watch(onChange, onStatus)` | Starts the change feed. `onChange` = state changed (the page re-fetches, debounced); `onStatus` = feed state. Returns unwatch. |
-| `open(target)` | Navigates the host to `loop`, `autoTasks`, `settings` or `library`. `false` = nowhere to go. |
+| `open(target)` | Navigates the host to `loop`, `autoTasks`, `settings`, `library`, `explorer` or `codeGraph`. `false` = nowhere to go. |
+| `openFile?(path, line?)` | Optional. Opens a repo-relative file in the host's editor. `false` = not opened. The page never sends absolute paths or paths containing `..`. |
+| `loadFile?(path)` | Optional. The file for the code preview as `OsFileContent` (`{ path, text?, truncated?, bytes?, language?, binary? }`), or `null` when it is missing or refused. |
+| `copyText?(text)` | Optional. Copies text through the host, tried before `navigator.clipboard` and a hidden-textarea fallback. |
 | `loadProjectGraph?()` | Optional. The project's code graph as a `CGData` object (`{ nodes, edges, layers, tour }`). Resolve `null`, or anything without `nodes` and `edges` arrays, when there is no graph. Feeds the brain. |
 | `loadSkills?()` | Optional. The skills for the Skills panel (`OsSkill[]`). |
 | `loadRoutines?()` | Optional. The scheduled routines for the Routines panel (`OsRoutine[]`). |
@@ -121,6 +124,22 @@ reads, so an activity-only refresh keeps it) and each graph's layout (`computeVi
 
 The code brain is unchanged: `computeCore` and `computeRing` draw it. The OS graph's types are
 in `src/viz.ts` (not in `typescript/src/system/types.ts`).
+
+### Code node details
+
+In the code level, selecting a node opens a drawer on the right of the stage:
+
+- kind, category, cluster, degree and the file path (with Copy);
+- **Depends on** / **Used by** from the project graph's dependency edges (imports, calls,
+  inherits, implements, references, dependsOn), and **Contains** for contains/defines edges;
+  each item selects and flies to that node;
+- **Open in Explorer** (`openFile`) and **Preview code** (`loadFile`): numbered lines, 2,000 at a
+  time with "Show more", truncated and binary notices, Retry on a failed load (no automatic retry);
+- paths outside the repo (absolute, `~`, drive letters, `..`) are marked and get no Open or Preview.
+
+A **3D | Structure** switch shows the code as a file tree built from node paths: folders first,
+counts and category dots per row, a filter, keyboard navigation (tree pattern), and selection kept
+in sync with the 3D view.
 
 ## Mounting
 
