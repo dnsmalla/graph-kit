@@ -1,7 +1,7 @@
 {
   "name": "@dnsmalla/graph-kit-web",
   "version": "0.1.0",
-  "private": false,
+  "private": true,
   "description": "The Agentic OS (System) view as a React page, backed by a host through the OsHost interface",
   "type": "module",
   "exports": {
