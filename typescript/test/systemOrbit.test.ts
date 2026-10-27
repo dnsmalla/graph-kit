@@ -166,6 +166,121 @@ test("orbitLayout: nodes sit closer to their own community center than to the ot
   assert.ok(own / count < other / count, `own ${own / count} vs other ${other / count}`);
 });
 
+/** Five communities (400/300/200/150/100), ~deg 3 ring+chords, 5% cross edges. */
+function fiveCommunities(): SystemGraph {
+  const sizes = [400, 300, 200, 150, 100];
+  const rng = mulberry32(7);
+  const core: SystemCoreNode[] = [];
+  const edges: SystemCoreEdge[] = [];
+  sizes.forEach((s, c) => {
+    for (let i = 0; i < s; i++) core.push(coreNode(`c${c}:${i}`, c));
+    for (let i = 0; i < s; i++) edges.push({ source: `c${c}:${i}`, target: `c${c}:${(i + 1) % s}`, weight: 1 });
+    for (let i = 0; i < s / 2; i++) {
+      const a = Math.floor(rng() * s);
+      const b = Math.floor(rng() * s);
+      if (a !== b) edges.push({ source: `c${c}:${a}`, target: `c${c}:${b}`, weight: 1 });
+    }
+  });
+  const communityOf = new Map(core.map((n) => [n.id, n.community]));
+  const cross = Math.round((edges.length * 0.05) / 0.95);
+  for (let i = 0; i < cross; i++) {
+    const a = core[Math.floor(rng() * core.length)]!;
+    const b = core[Math.floor(rng() * core.length)]!;
+    if (communityOf.get(a.id) !== communityOf.get(b.id)) edges.push({ source: a.id, target: b.id, weight: 1 });
+  }
+  return makeGraph(core, edges);
+}
+
+test("orbitLayout: clusters keep volume (mean spread >= 10 for communities >= 100 nodes)", () => {
+  const g = fiveCommunities();
+  const layout = orbitLayout(g, { coreRadius: 100 });
+  const byComm = new Map<number, Vec3[]>();
+  for (const node of g.core) {
+    const list = byComm.get(node.community) ?? [];
+    list.push(layout.core.get(node.id)!);
+    byComm.set(node.community, list);
+  }
+  for (const [c, pts] of byComm) {
+    if (pts.length < 100) continue;
+    const centroid = {
+      x: pts.reduce((s, p) => s + p.x, 0) / pts.length,
+      y: pts.reduce((s, p) => s + p.y, 0) / pts.length,
+      z: pts.reduce((s, p) => s + p.z, 0) / pts.length,
+    };
+    const spread = pts.reduce((s, p) => s + dist(p, centroid), 0) / pts.length;
+    assert.ok(spread >= 10, `community ${c} spread ${spread}`);
+  }
+});
+
+test("orbitLayout: mean inter-community distance >= 3x mean intra-community distance", () => {
+  const g = fiveCommunities();
+  const layout = orbitLayout(g, { coreRadius: 100 });
+  const pos = g.core.map((n) => layout.core.get(n.id)!);
+  let intra = 0;
+  let intraCount = 0;
+  let inter = 0;
+  let interCount = 0;
+  for (let i = 0; i < g.core.length; i++) {
+    for (let j = i + 1; j < g.core.length; j++) {
+      const d = dist(pos[i]!, pos[j]!);
+      if (g.core[i]!.community === g.core[j]!.community) {
+        intra += d;
+        intraCount++;
+      } else {
+        inter += d;
+        interCount++;
+      }
+    }
+  }
+  const meanIntra = intra / intraCount;
+  const meanInter = inter / interCount;
+  assert.ok(meanInter >= 3 * meanIntra, `inter ${meanInter} vs intra ${meanIntra}`);
+});
+
+test("orbitLayout: core reaches at least 70% of coreRadius from the origin", () => {
+  const layout = orbitLayout(fiveCommunities(), { coreRadius: 100 });
+  assert.ok(layout.bounds.radius >= 0.7 * 100, `radius ${layout.bounds.radius}`);
+});
+
+test("orbitLayout: a sparse community id (1e9) lays out without throwing and fast", () => {
+  const core = [coreNode("a", 0), coreNode("b", 1_000_000_000), coreNode("c", 1_000_000_000)];
+  const edges: SystemCoreEdge[] = [{ source: "b", target: "c", weight: 1 }];
+  const start = performance.now();
+  const layout = orbitLayout(makeGraph(core, edges));
+  const ms = performance.now() - start;
+  assert.equal(layout.core.size, 3);
+  assert.equal(layout.communityCenters.length, 2);
+  assert.ok(ms < 2000, `took ${ms} ms`);
+  for (const p of layout.core.values()) {
+    assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z));
+  }
+});
+
+test("orbitLayout: non-finite edge weights are treated as 0 (finite output)", () => {
+  const core = [coreNode("a", 0), coreNode("b", 0)];
+  const edges: SystemCoreEdge[] = [
+    { source: "a", target: "b", weight: Number.NaN },
+    { source: "a", target: "b", weight: Number.POSITIVE_INFINITY },
+  ];
+  const layout = orbitLayout(makeGraph(core, edges));
+  for (const p of layout.core.values()) {
+    assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z));
+  }
+});
+
+test("orbitLayout: duplicate ring ids leave no gap (unique items evenly spaced)", () => {
+  const ring = ["a", "b", "a", "c"].map(ringItem);
+  const layout = orbitLayout(makeGraph([], [], ring), { ringRadius: 170 });
+  assert.equal(layout.ring.size, 3);
+  const a = layout.ring.get("a")!;
+  const b = layout.ring.get("b")!;
+  const c = layout.ring.get("c")!;
+  const step = (2 * Math.PI) / 3;
+  assert.ok(Math.abs(a.x - 170) < 1e-9 && Math.abs(a.z) < 1e-9);
+  assert.ok(Math.abs(b.x - 170 * Math.cos(step)) < 1e-9 && Math.abs(b.z - 170 * Math.sin(step)) < 1e-9);
+  assert.ok(Math.abs(c.x - 170 * Math.cos(2 * step)) < 1e-9 && Math.abs(c.z - 170 * Math.sin(2 * step)) < 1e-9);
+});
+
 test("orbitLayout: 20k nodes / 60k edges runs under 2 s", () => {
   const rng = mulberry32(99);
   const nodes = 20_000;

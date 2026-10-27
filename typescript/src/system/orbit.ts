@@ -19,11 +19,15 @@ export interface OrbitOptions {
 }
 
 export interface OrbitLayout {
-  /** Every core node id -> position. */
+  /** Every core node id -> position (keyed by the original node ids). */
   core: Map<string, Vec3>;
   /** Every ring item id -> position. */
   ring: Map<string, Vec3>;
-  /** Index = community number. */
+  /**
+   * Index = COMPACTED community index, not the raw `SystemCoreNode.community`
+   * value. The distinct community values present in the core are mapped to
+   * 0..k-1 in ascending order, so a sparse value such as 1e9 costs nothing.
+   */
   communityCenters: Vec3[];
   /** Max distance from the origin of any core or ring point (0 when empty). */
   bounds: { radius: number };
@@ -31,6 +35,13 @@ export interface OrbitLayout {
 
 const TAU = Math.PI * 2;
 const ORIGIN: Vec3 = { x: 0, y: 0, z: 0 };
+
+/** Per-step pull of each node toward its weighted neighbour mean. Kept small so edges only bias neighbours locally. */
+const EDGE_PULL = 0.02;
+/** Per-step spring pulling each node back toward its initial scattered position. */
+const ANCHOR_PULL = 0.05;
+/** Max per-step expansion factor applied to a community whose RMS radius is below its target. */
+const MAX_VOLUME_GAIN = 1.2;
 
 /** Deterministic PRNG (mulberry32). Returns floats in [0, 1). */
 export function mulberry32(seed: number): () => number {
@@ -77,12 +88,15 @@ function norm(p: Vec3): number {
 }
 
 /**
- * Lay out a SystemGraph in 3D. Core nodes start scattered around their community
- * center, then relax: edges pull endpoints together (weight capped at 4), nodes
- * drift gently toward their community center, and anything outside the core
- * sphere is projected back onto its surface. Ring items sit evenly on a circle
- * in the XZ plane; item 0 (newest) is at angle 0 and the rest follow at 2π/n.
- * Output is deterministic for a given graph and options.
+ * Lay out a SystemGraph in 3D. Core nodes start scattered in a ball around their
+ * community center (ball radius grows with community size). Each relaxation step:
+ * edges pull endpoints gently toward their weighted neighbour mean (weight capped
+ * at 4), every node is spring-anchored to its initial scattered position so the
+ * clusters keep their volume, a community whose RMS radius falls below its target
+ * ball radius is expanded back toward that target, and anything outside the core
+ * sphere is projected back onto its surface. Ring items sit evenly on a circle in
+ * the XZ plane; item 0 (newest) is at angle 0 and the rest follow at 2π/n over the
+ * unique ids. Output is deterministic for a given graph and options.
  */
 export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitLayout {
   const coreRadius = positive(opts.coreRadius, 100);
@@ -93,24 +107,31 @@ export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitL
   // ---- Core: index nodes (first occurrence wins on duplicate ids).
   const index = new Map<string, number>();
   const ids: string[] = [];
-  const community: number[] = [];
+  const rawCommunity: number[] = [];
   for (const node of graph.core) {
     if (index.has(node.id)) continue;
     index.set(node.id, ids.length);
     ids.push(node.id);
-    community.push(nonNegInt(node.community, 0));
+    rawCommunity.push(nonNegInt(node.community, 0));
   }
   const n = ids.length;
 
-  let k = 0;
-  for (const c of community) if (c + 1 > k) k = c + 1;
+  // Compact community ids: distinct values present, ascending -> 0..k-1.
+  const distinct = Array.from(new Set(rawCommunity)).sort((a, b) => a - b);
+  const compact = new Map<number, number>();
+  distinct.forEach((v, i) => compact.set(v, i));
+  const k = distinct.length;
+  const community = rawCommunity.map((v) => compact.get(v)!);
+
   const sizes = new Array<number>(k).fill(0);
   for (const c of community) sizes[c] = (sizes[c] ?? 0) + 1;
   const largest = sizes.reduce((m, s) => Math.max(m, s), 0);
 
   // Community centers: a single community sits at the origin.
   const communityCenters: Vec3[] =
-    k === 1 ? [ORIGIN] : fibonacciSphere(k, coreRadius * 0.55);
+    k === 1 ? [ORIGIN] : fibonacciSphere(k, coreRadius * 0.7);
+  // 0.7 (not 0.55): with the uniform-ball scatter, 0.55 left mean inter-community
+  // distance only ~2.7x the mean intra distance; 0.7 keeps clusters clearly apart.
   const cx = new Float64Array(n);
   const cy = new Float64Array(n);
   const cz = new Float64Array(n);
@@ -121,7 +142,8 @@ export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitL
     cz[i] = center.z;
   }
 
-  // Edges as index pairs (self-loops and dangling endpoints dropped).
+  // Edges as index pairs (self-loops, dangling endpoints and non-finite or
+  // non-positive weights are dropped; a non-finite weight counts as 0).
   const ea: number[] = [];
   const eb: number[] = [];
   const ew: number[] = [];
@@ -129,34 +151,52 @@ export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitL
     const a = index.get(e.source);
     const b = index.get(e.target);
     if (a === undefined || b === undefined || a === b) continue;
+    const w = Number.isFinite(e.weight) ? Math.min(Math.max(e.weight, 0), 4) : 0;
+    if (w <= 0) continue;
     ea.push(a);
     eb.push(b);
-    ew.push(Math.min(Math.max(e.weight, 0), 4));
+    ew.push(w);
   }
   const edgeCount = ea.length;
 
   // Initial scatter: uniform in a ball whose radius grows with community size.
+  const ballRadius = new Float64Array(k);
+  for (let c = 0; c < k; c++) {
+    ballRadius[c] = Math.sqrt((sizes[c] ?? 1) / Math.max(largest, 1)) * coreRadius * 0.35;
+  }
+  // RMS radius of a uniform ball of radius R is R * sqrt(3/5): that is the volume target.
+  const targetRms = new Float64Array(k);
+  for (let c = 0; c < k; c++) targetRms[c] = ballRadius[c]! * Math.sqrt(3 / 5);
   const px = new Float64Array(n);
   const py = new Float64Array(n);
   const pz = new Float64Array(n);
   for (let i = 0; i < n; i++) {
-    const c = community[i] ?? 0;
-    const ballRadius = Math.sqrt((sizes[c] ?? 1) / Math.max(largest, 1)) * coreRadius * 0.35;
+    const r0 = ballRadius[community[i] ?? 0] ?? 0;
     const u = rng();
     const dz = 2 * rng() - 1;
     const phi = TAU * rng();
     const rxy = Math.sqrt(Math.max(0, 1 - dz * dz));
-    const r = ballRadius * Math.cbrt(u);
+    const r = r0 * Math.cbrt(u);
     px[i] = cx[i]! + r * rxy * Math.cos(phi);
     py[i] = cy[i]! + r * rxy * Math.sin(phi);
     pz[i] = cz[i]! + r * dz;
   }
+  // Anchor positions: the scatter, held by a spring each step.
+  const ax = Float64Array.from(px);
+  const ay = Float64Array.from(py);
+  const az = Float64Array.from(pz);
 
   // Relaxation (Jacobi-style: accumulate per step, then apply).
   const sx = new Float64Array(n);
   const sy = new Float64Array(n);
   const sz = new Float64Array(n);
   const sw = new Float64Array(n);
+  // Per-community scratch: mean position and RMS radius, reused every step.
+  const mx = new Float64Array(k);
+  const my = new Float64Array(k);
+  const mz = new Float64Array(k);
+  const rms = new Float64Array(k);
+  const gain = new Float64Array(k);
   for (let iter = 0; iter < iterations; iter++) {
     sx.fill(0); sy.fill(0); sz.fill(0); sw.fill(0);
     for (let e = 0; e < edgeCount; e++) {
@@ -171,13 +211,52 @@ export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitL
     for (let i = 0; i < n; i++) {
       if (sw[i]! > 0) {
         // Normalise by total edge weight so hubs do not overshoot.
-        px[i]! += (0.15 * sx[i]!) / sw[i]!;
-        py[i]! += (0.15 * sy[i]!) / sw[i]!;
-        pz[i]! += (0.15 * sz[i]!) / sw[i]!;
+        px[i]! += (EDGE_PULL * sx[i]!) / sw[i]!;
+        py[i]! += (EDGE_PULL * sy[i]!) / sw[i]!;
+        pz[i]! += (EDGE_PULL * sz[i]!) / sw[i]!;
       }
-      px[i]! += 0.02 * (cx[i]! - px[i]!);
-      py[i]! += 0.02 * (cy[i]! - py[i]!);
-      pz[i]! += 0.02 * (cz[i]! - pz[i]!);
+      px[i]! += ANCHOR_PULL * (ax[i]! - px[i]!);
+      py[i]! += ANCHOR_PULL * (ay[i]! - py[i]!);
+      pz[i]! += ANCHOR_PULL * (az[i]! - pz[i]!);
+    }
+
+    // Volume term: a community whose RMS radius is below its target ball radius
+    // has its offsets from the centroid scaled back out (centroid is preserved).
+    if (k > 0) {
+      mx.fill(0); my.fill(0); mz.fill(0); rms.fill(0);
+      for (let i = 0; i < n; i++) {
+        const c = community[i]!;
+        mx[c]! += px[i]!; my[c]! += py[i]!; mz[c]! += pz[i]!;
+      }
+      for (let c = 0; c < k; c++) {
+        const s = sizes[c]!;
+        if (s > 0) { mx[c]! /= s; my[c]! /= s; mz[c]! /= s; }
+      }
+      for (let i = 0; i < n; i++) {
+        const c = community[i]!;
+        const dx = px[i]! - mx[c]!;
+        const dy = py[i]! - my[c]!;
+        const dz = pz[i]! - mz[c]!;
+        rms[c]! += dx * dx + dy * dy + dz * dz;
+      }
+      for (let c = 0; c < k; c++) {
+        const s = sizes[c]!;
+        const r = s > 0 ? Math.sqrt(rms[c]! / s) : 0;
+        gain[c] = r > 0 && r < targetRms[c]! ? Math.min(targetRms[c]! / r, MAX_VOLUME_GAIN) : 1;
+      }
+      for (let i = 0; i < n; i++) {
+        const c = community[i]!;
+        const g = gain[c]!;
+        if (g !== 1) {
+          px[i] = mx[c]! + (px[i]! - mx[c]!) * g;
+          py[i] = my[c]! + (py[i]! - my[c]!) * g;
+          pz[i] = mz[c]! + (pz[i]! - mz[c]!) * g;
+        }
+      }
+    }
+
+    // Keep every node inside the core sphere.
+    for (let i = 0; i < n; i++) {
       const d = Math.sqrt(px[i]! * px[i]! + py[i]! * py[i]! + pz[i]! * pz[i]!);
       if (d > coreRadius) {
         const s = coreRadius / d;
@@ -194,15 +273,20 @@ export function orbitLayout(graph: SystemGraph, opts: OrbitOptions = {}): OrbitL
     radius = Math.max(radius, norm(p));
   }
 
-  // ---- Ring: evenly spaced in the XZ plane, newest at angle 0.
+  // ---- Ring: unique ids evenly spaced in the XZ plane, newest at angle 0.
   const ring = new Map<string, Vec3>();
-  const ringItems = graph.ring;
-  const m = ringItems.length;
+  const uniqueRing: string[] = [];
+  const seenRing = new Set<string>();
+  for (const item of graph.ring) {
+    if (seenRing.has(item.id)) continue;
+    seenRing.add(item.id);
+    uniqueRing.push(item.id);
+  }
+  const m = uniqueRing.length;
   for (let i = 0; i < m; i++) {
-    const item = ringItems[i]!;
     const angle = (TAU * i) / m;
     const p = { x: ringRadius * Math.cos(angle), y: 0, z: ringRadius * Math.sin(angle) };
-    if (!ring.has(item.id)) ring.set(item.id, p);
+    ring.set(uniqueRing[i]!, p);
     radius = Math.max(radius, norm(p));
   }
 
