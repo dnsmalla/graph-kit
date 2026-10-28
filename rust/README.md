@@ -118,6 +118,10 @@ Known limits of the JSON boundary:
   shows the newest 60, grouped under one `group` node per kind (`group:activity:<kind>`, labelled,
   `meta.count`); items hang off their group and groups off the hub. The eight newest items are
   labelled. An empty feed is the centre alone, status `off`.
+- The **agents** hub lists `agents.recentRuns` (not running now) after the running items, each
+  with a status ring (ok, warn for error or aborted, off for cancelled). Its status is `running`
+  while anything runs, `warn` when the newest three finished runs all failed, `ok` with any run,
+  else `off`.
 - Cross-hub edges are only the ones the data states: kit to feature, Knowledge to Code when a
   code graph exists, Routines to Models when auto-task usage exists, and Code to the
   `code_graph_3d` feature. Model usage is not cross-tabulated by caller in the snapshot, so models

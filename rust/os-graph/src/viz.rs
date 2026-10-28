@@ -1036,8 +1036,18 @@ fn agents_part(input: &OsVizInput) -> Part {
     );
     part.meta
         .insert("liveSessions".into(), json!(s.running.live_sessions.len()));
+    // Degraded (warn) when the newest finished runs all failed: the newest three, or fewer.
+    let newest_failed = s
+        .agents
+        .recent_runs
+        .iter()
+        .filter(|r| !r.id.is_empty() && r.status != "running")
+        .take(3)
+        .all(|r| r.status == "error" || r.status == "aborted");
     part.status = if running > 0 {
         "running"
+    } else if recent_count > 0 && newest_failed {
+        "warn"
     } else if recent_count > 0 {
         "ok"
     } else {
@@ -2864,6 +2874,28 @@ mod storage_and_agents_tests {
         // The newest run is labelled in its own hub's drill.
         let drill = build_hub_graph("agents", &input(json!({"snapshot": {"agents": {"recentRuns": runs}}}))).unwrap();
         assert!(drill.nodes.iter().find(|n| n.id == "run:r1").unwrap().labelled);
+    }
+
+    #[test]
+    fn the_agents_hub_warns_when_the_newest_runs_all_failed() {
+        let failing = input(json!({"snapshot": {"agents": {"recentRuns": [
+            {"id": "a", "source": "loop", "status": "error"},
+            {"id": "b", "source": "chat", "status": "aborted"},
+            {"id": "c", "source": "chat", "status": "error"},
+            {"id": "d", "source": "chat", "status": "ok"}]}}}));
+        let g = build_os_graph(&failing);
+        assert_eq!(hub(&g, "agents").status.as_deref(), Some("warn"));
+        // One success among the newest three is enough to stay ok.
+        let mixed = input(json!({"snapshot": {"agents": {"recentRuns": [
+            {"id": "a", "source": "loop", "status": "error"},
+            {"id": "b", "source": "chat", "status": "ok"},
+            {"id": "c", "source": "chat", "status": "error"}]}}}));
+        assert_eq!(hub(&build_os_graph(&mixed), "agents").status.as_deref(), Some("ok"));
+        // A running run is not a failure, and it wins over a failed history.
+        let running = input(json!({"snapshot": {"agents": {"recentRuns": [
+            {"id": "a", "source": "loop", "status": "error"}]},
+            "running": {"chatTurns": [{"chatSessionId": "s1", "startedAt": "t", "cancel": null}]}}}));
+        assert_eq!(hub(&build_os_graph(&running), "agents").status.as_deref(), Some("running"));
     }
 
     #[test]
