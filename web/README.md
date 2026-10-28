@@ -19,6 +19,10 @@ app bridge, an HTTP client, or the demo. LLM-IDE is the first host.
 | `loadProjectGraph?()` | Optional. The project's code graph as a `CGData` object (`{ nodes, edges, layers, tour }`). Resolve `null`, or anything without `nodes` and `edges` arrays, when there is no graph. Feeds the brain. |
 | `loadSkills?()` | Optional. The skills for the Skills panel (`OsSkill[]`). |
 | `loadRoutines?()` | Optional. The scheduled routines for the Routines panel (`OsRoutine[]`). |
+| `storageClear?(req)` | Optional. `req` is `{ scope: 'raw' \| 'all', beforeDays?, dryRun, previewId? }`. A dry run (`dryRun: true`) resolves `{ dryRun: true, wouldDelete, total, previewId, expiresAt }`; a real clear (`dryRun: false`, with the preview's `previewId`) resolves `{ dryRun: false, deleted, total }`. Rejects with `OsStorageError`, whose `code` is `PREVIEW_EXPIRED`, `PREVIEW_INVALID` or `preview_stale` (the page re-previews once and never clears on its own), or another code (shown as a message). Without it the Storage hub offers no Clear. |
+| `storageCompact?()` | Optional. Resolves `{ ok, mode, pagesFreed, bytesBefore, bytesAfter, ms }`. Rejects with `OsStorageError` `busy`, `disk_space` or `store_down`, each with its own message. Without it, no Compact button. |
+| `storageSettings?()` | Optional. Resolves `{ retentionDays }` for the retention editor. |
+| `setStorageRetention?(days)` | Optional. Saves the raw-row retention (7 to 365 days; the page refuses other values before calling) and resolves `{ retentionDays }`. Without it, no retention editor. |
 
 The three optional loads run on start, on a project change and on `retry()`.
 They do not run on change-feed refreshes, because the graph is expensive to
@@ -79,7 +83,8 @@ data sets the controller already holds. Nothing in it fetches.
 | Memory | Project memory: per repo, facts, active, superseded, last confirmed | `snapshot.knowledge.projectMemory` |
 | Skills | Searchable skill list with source chip and description (click selects the node) | `loadSkills` |
 | Routines | Table (enabled, title, schedule, next and last run); Open Loop, Open Auto Tasks | `loadRoutines` |
-| Agents | Running now: chat turns, meeting agents, live captures; Stop wired to `controller.stopItem` | `snapshot.running` |
+| Agents | Running now: chat turns, meeting agents, live captures (Stop wired to `controller.stopItem`); recent runs with a status chip, duration and tokens | `snapshot.running`, `snapshot.agents.recentRuns` |
+| Storage | Per data group rows and size (agent history approximate), store health, last cleaned, retention (7 to 365 days), Clear (dry-run preview, then explicit confirm) and Compact for the agent history; read-only for the other groups | `snapshot.storage`, `storageClear`, `storageCompact`, `setStorageRetention` |
 | Activity | Timeline: kind, title, time ago; a row selects its ring item | `snapshot.activity` |
 | Code | Node, community and repo counts, largest clusters, how to explore | the project graph |
 

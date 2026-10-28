@@ -11,6 +11,14 @@ is also accepted by `release.yml`, but prefer the plain form. The tag must equal
 ## [Unreleased]
 
 ### Added
+- **OS view: Storage hub (10th) and agent runs.** Rust `rust/os-graph`: `storage` joins `HUB_KEYS`
+  (one member per data group, sized by rows, status from the agent store health; a null report is
+  the hub alone, off) and the Agents hub lists the newest runs that are not running now (status ring,
+  newest labelled). Web: `OsHost` gains optional `storageClear`, `storageCompact`, `storageSettings`
+  and `setStorageRetention`; `OsStorageError` carries the server's code. The Clear flow only confirms
+  a shown dry run and re-previews once on a stale preview; Compact reports busy, disk_space and
+  store_down; retention is 7 to 365 days. Controls are hidden when the host lacks the method.
+  `typescript/src/system/types.ts` gains `storage`, `agents.recentRuns` and the clear and compact result types.
 - **OS view package `web/` (`@dnsmalla/graph-kit-web`, private, consumed from source).** A
   React page behind an `OsHost` data interface: the whole OS as an interactive 3D graph (8 hubs —
   code, knowledge, memory, skills, models, agents, routines, kits) with drill-down into each part's
