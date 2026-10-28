@@ -20,8 +20,8 @@ import type {
   Vec3,
 } from "../../../typescript/src/system/index.js";
 import {
-  buildCategoryColors,
   buildClusterColors,
+  buildCoreKindColors,
   buildEdgeData,
   buildEdgeShades,
   buildPointBuffers,
@@ -71,6 +71,8 @@ export interface OrbitPick {
   detail: string;
   /** The hub a viz node opens (null when it opens none). */
   drill?: string | null;
+  /** The status of a viz node (ok, warn, off, running, unknown), or null. The tooltip shows its word. */
+  status?: string | null;
 }
 
 export type OrbitTheme = "dark" | "light";
@@ -156,6 +158,14 @@ const DEPTH_FADE_MIN = 0.7;
 const HALO = 1.8;
 /** Pick radius in CSS pixels: the ray's threshold grows with the camera distance, so a node is hit at any zoom. */
 const PICK_RADIUS_PX = 8;
+/** The widest screen distance a point is a candidate at (the largest hub radius and a margin). */
+const MAX_PICK_RADIUS_PX = 24;
+/** The glide of the drawer inset (ms). */
+const INSET_MS = 200;
+/** The pulse of the running nodes renders about 20 times a second (ms between renders). */
+const PULSE_FRAME_MS = 50;
+/** A selected node within this many px of an overlay's edge counts as visible. */
+const INSET_KEEP_MARGIN_PX = 24;
 /** The code brain's core fills this fraction of the stage's shorter side on framing; the ring may extend past the edges. */
 const CORE_FRAME_FRACTION = 0.7;
 /**
@@ -290,6 +300,8 @@ interface CoreItem {
   label: string;
   category: CoreCategory;
   community: number;
+  /** The code-graph node kind (file, symbol, ...): the Kind colouring uses the native palette for it. */
+  kind?: string;
 }
 
 interface SelectionRef {
@@ -384,6 +396,44 @@ function easeInOutCubic(p: number): number {
   return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
 }
 
+/** A candidate node for a pointer pick: its screen distance and drawn radius (CSS px). */
+export interface PickCandidate {
+  /** A ring item (code graph) rather than a core or viz point. */
+  ring: boolean;
+  index: number;
+  /** Screen distance from the pointer to the point's centre (px). */
+  dist: number;
+  /** Drawn radius (px): half the drawn diameter; 0 when the size is not known. */
+  radius: number;
+  hub: boolean;
+}
+
+/** The pick rule. (a) A hub whose drawn disc is under the pointer wins; (b) else the nearest point whose
+ * disc, or PICK_RADIUS_PX around it, is under the pointer (ties: the larger, then a hub); else null. */
+export function choosePick<T extends PickCandidate>(cands: readonly T[]): T | null {
+  const nearest = (list: T[]): T =>
+    list.reduce((best, c) => {
+      if (c.dist !== best.dist) return c.dist < best.dist ? c : best;
+      if (c.radius !== best.radius) return c.radius > best.radius ? c : best;
+      return c.hub && !best.hub ? c : best;
+    });
+  const hubs = cands.filter((c) => c.hub && c.dist <= c.radius);
+  if (hubs.length > 0) return nearest(hubs);
+  const near = cands.filter((c) => c.dist <= Math.max(c.radius, PICK_RADIUS_PX));
+  return near.length > 0 ? nearest(near) : null;
+}
+
+/** The part of the stage the overlays cover, in px from the right and from the bottom. */
+export interface ViewInset {
+  right: number;
+  bottom: number;
+}
+
+function clampInset(value: number, size: number): number {
+  const v = Number.isFinite(value) ? Math.round(value) : 0;
+  return Math.max(0, Math.min(v, Math.max(0, size - 1)));
+}
+
 export class OrbitView {
   private readonly container: HTMLElement;
   private readonly speed: number;
@@ -412,6 +462,14 @@ export class OrbitView {
   private tween: Tween | null = null;
   /** True once the user has moved the camera; a resize then keeps the pose instead of re-framing. */
   private userMoved = false;
+  /** The drawer inset (px): the part of the stage the overlays cover. The view centres on the rest. */
+  private inset: ViewInset = { right: 0, bottom: 0 };
+  /** The applied view offset (px, half the inset): it glides toward inset / 2. */
+  private insetNow = { x: 0, y: 0 };
+  private insetTween: { start: number | null; from: { x: number; y: number }; to: { x: number; y: number } } | null = null;
+  /** The time of the last pulse render (ms), and whether the pulse wrote the ring (so it can restore it). */
+  private lastPulseAt = Number.NEGATIVE_INFINITY;
+  private pulseWritten = false;
   private readonly scratch = new THREE.Vector3();
   private readonly coreGroup = new THREE.Group();
   private readonly ringGroup = new THREE.Group();
@@ -658,6 +716,7 @@ export class OrbitView {
       label: n.label ?? n.id,
       category: n.category,
       community: n.community,
+      kind: n.kind,
     }));
     this.coreIndex = new Map(this.coreItems.map((c, i) => [c.id, i]));
     this.adjacency = this.coreItems.map(() => []);
@@ -678,7 +737,7 @@ export class OrbitView {
       nodes.map((n) => n.id),
       layout,
     );
-    this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
+    this.kindRgb = buildCoreKindColors(this.coreItems, this.theme, this.categoryColors);
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
     if (pts.ids.length > 0) this.addCorePoints(pts.positions);
 
@@ -1121,6 +1180,7 @@ export class OrbitView {
     this.selectedId = id;
     if (!this.renderer || this.disposed) return;
     this.applySelection();
+    if (id !== null) this.keepInView(id);
     this.requestRender();
   }
 
@@ -1129,7 +1189,7 @@ export class OrbitView {
    * orbit centre at it. Returns false when the id is not drawn or there is no WebGL.
    * Selecting the node is the caller's job (see setSelection and onSelect).
    */
-  focusNode(id: string): boolean {
+  focusNode(id: string, opts: { keepDistance?: boolean } = {}): boolean {
     if (!this.renderer || this.disposed) return false;
     this.scene.updateMatrixWorld(true);
     const world = this.worldPosition(id);
@@ -1138,7 +1198,9 @@ export class OrbitView {
     const dir = this.scratch.subVectors(this.camera.position, c.target);
     if (dir.lengthSq() === 0) dir.set(0, 0, 1);
     dir.normalize();
-    const dist = THREE.MathUtils.clamp(this.radius * FOCUS_DISTANCE_RATIO, c.minDistance, c.maxDistance);
+    const dist = opts.keepDistance
+      ? this.distance()
+      : THREE.MathUtils.clamp(this.radius * FOCUS_DISTANCE_RATIO, c.minDistance, c.maxDistance);
     this.userMoved = true;
     this.tween = {
       start: null,
@@ -1253,6 +1315,7 @@ export class OrbitView {
     this.pixelRatioUniform.value = pr;
     this.camera.aspect = w / h;
     if (this.mode === "viz") this.applyVizSizes();
+    this.applyInset();
     if (this.userMoved) this.camera.updateProjectionMatrix();
     else this.fitCamera();
     this.updateLabels();
@@ -1357,8 +1420,13 @@ export class OrbitView {
    * side of the stage (the ring may run past the edges), the orbit centre is the origin.
    */
   private fitCamera(): void {
-    const vHalf = THREE.MathUtils.degToRad(FOV_DEG) / 2;
-    const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
+    // The scene is framed in the visible area: the stage less the overlays' inset (the projection keeps the full stage).
+    const fullHalf = THREE.MathUtils.degToRad(FOV_DEG) / 2;
+    const vis = this.visibleSize();
+    const tanV = Math.tan(fullHalf) * (vis.h / Math.max(1, this.stageH));
+    const aspect = vis.w / vis.h;
+    const vHalf = Math.atan(tanV);
+    const hHalf = Math.atan(tanV * aspect);
     const half = Math.min(vHalf, hHalf);
     const framed = this.coreItems.length > 0 ? Math.max(this.coreRadius, 1) : Math.max(this.ringRadius, 1);
     const viz = this.mode === "viz";
@@ -1368,7 +1436,7 @@ export class OrbitView {
     let dist = framed / (CORE_FRAME_FRACTION * Math.tan(half));
     // The OS graph is framed on what it draws: its parts, measured on screen, fill VIZ_FILL of the stage.
     if (viz && this.fitPoints.length > 0) {
-      dist = fitDistance(this.fitPoints, dir, { x: 0, y: 0, z: 0 }, Math.tan(vHalf), this.camera.aspect, VIZ_FILL, dist);
+      dist = fitDistance(this.fitPoints, dir, { x: 0, y: 0, z: 0 }, tanV, aspect, VIZ_FILL, dist);
     }
     this.home = {
       position: new THREE.Vector3(0, dir.y * dist, dir.z * dist),
@@ -1499,7 +1567,7 @@ export class OrbitView {
       this.ringRgb = this.buildRingRgb();
       for (const label of this.labels) this.styleLabel(label.el, label.kind === "hub");
     } else {
-      this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
+      this.kindRgb = buildCoreKindColors(this.coreItems, this.theme, this.categoryColors);
     }
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
     this.writeCoreColors();
@@ -1680,6 +1748,90 @@ export class OrbitView {
     }
   }
 
+  /**
+   * Tells the view which part of the stage the overlays cover (px from the right and the bottom: the
+   * drawer, or the bottom sheet on a narrow stage). The camera does not move; the projection's centre
+   * glides (about 200 ms) to the middle of the visible area, so the graph never jumps.
+   */
+  setViewInset(inset: ViewInset): void {
+    const right = clampInset(inset.right, this.stageW);
+    const bottom = clampInset(inset.bottom, this.stageH);
+    if (right === this.inset.right && bottom === this.inset.bottom) return;
+    this.inset = { right, bottom };
+    const to = { x: right / 2, y: bottom / 2 };
+    if (!this.renderer || this.disposed) {
+      this.insetNow = to;
+      return;
+    }
+    this.insetTween = { start: null, from: { ...this.insetNow }, to };
+    this.requestRender();
+  }
+
+  /** The part of the stage the overlays do not cover (px). */
+  private visibleSize(): { w: number; h: number } {
+    return { w: Math.max(1, this.stageW - this.inset.right), h: Math.max(1, this.stageH - this.inset.bottom) };
+  }
+
+  /** Advances the inset glide; returns true while it runs (the frame then draws). */
+  private stepInset(now: number): boolean {
+    const t = this.insetTween;
+    if (!t) return false;
+    if (t.start === null) t.start = now;
+    const p = Math.min(1, Math.max(0, (now - t.start) / INSET_MS));
+    const e = easeInOutCubic(p);
+    this.insetNow = { x: t.from.x + (t.to.x - t.from.x) * e, y: t.from.y + (t.to.y - t.from.y) * e };
+    if (p >= 1) this.insetTween = null;
+    this.applyInset();
+    return true;
+  }
+
+  /** Puts the applied view offset on the camera: the full stage is still the projection, shifted to the visible centre. */
+  private applyInset(): void {
+    const w = this.stageW;
+    const h = this.stageH;
+    if (w < 1 || h < 1) return;
+    if (this.insetNow.x === 0 && this.insetNow.y === 0) this.camera.clearViewOffset();
+    else this.camera.setViewOffset(w, h, this.insetNow.x, this.insetNow.y, w, h);
+    this.camera.updateProjectionMatrix();
+  }
+
+  /** A selected node under an overlay is brought into the visible area: the camera flies to it, keeping its distance. */
+  private keepInView(id: string): void {
+    if (!this.renderer || this.disposed) return;
+    this.scene.updateMatrixWorld(true);
+    const world = this.worldPosition(id);
+    if (!world) return;
+    this.camera.updateMatrixWorld();
+    const ndc = new THREE.Vector3().copy(world).project(this.camera);
+    const x = ((ndc.x + 1) / 2) * this.stageW;
+    const y = ((1 - ndc.y) / 2) * this.stageH;
+    const m = INSET_KEEP_MARGIN_PX;
+    const vis = this.visibleSize();
+    const inside = x >= m && x <= vis.w - m && y >= m && y <= vis.h - m && ndc.z >= -1 && ndc.z <= 1;
+    if (!inside) this.focusNode(id, { keepDistance: true });
+  }
+
+  /**
+   * Writes the ring alpha of the running nodes only: the pulse, or their base alpha when it is off.
+   * Only those entries are flagged for upload.
+   */
+  private writePulse(now: number): void {
+    const attr = this.coreRingAttr;
+    if (!attr) return;
+    const ring = attr.array as Float32Array;
+    const on = this.pulseOn();
+    const pulse = on ? VIZ_PULSE_MIN + (1 - VIZ_PULSE_MIN) * (0.5 + 0.5 * Math.sin((2 * Math.PI * now) / VIZ_PULSE_MS)) : 1;
+    attr.clearUpdateRanges();
+    for (const i of this.pulsing) {
+      const k = i * 4 + 3;
+      if (k >= ring.length) continue;
+      ring[k] = (this.baseRing[i] ?? 0) * pulse;
+      attr.addUpdateRange(k, 1);
+    }
+    if (this.pulsing.length > 0) attr.needsUpdate = true;
+    this.pulseWritten = on;
+  }
+
   /** Whether the running nodes pulse: the OS graph has running nodes and the motion setting allows it. */
   private pulseOn(): boolean {
     return this.pulsing.length > 0 && !this.reducedMotion;
@@ -1746,15 +1898,21 @@ export class OrbitView {
       const spinning = this.autoRotateWanted();
       this.controls.autoRotate = spinning;
       const tweening = this.stepTween(now);
+      const insetting = this.stepInset(now);
       const moved = this.controls.update(dt);
       const pulsing = this.pulseOn();
-      if (pulsing) this.writeCoreAlpha(now);
-      if (
-        this.hovering &&
-        !this.dragging &&
-        (moved || spinning || tweening) &&
-        now - this.lastPickAt >= REPICK_INTERVAL_MS
-      ) {
+      const moving = spinning || tweening || insetting || moved;
+      // A pulse alone renders about every PULSE_FRAME_MS; the frames between are not drawn (the loop stays armed).
+      const pulseDue = pulsing && now - this.lastPulseAt >= PULSE_FRAME_MS - 2;
+      if (!moving && pulsing && !pulseDue) {
+        this.schedule();
+        return;
+      }
+      if (pulseDue || this.pulseWritten) {
+        this.writePulse(now);
+        this.lastPulseAt = now;
+      }
+      if (this.hovering && !this.dragging && moving && now - this.lastPickAt >= REPICK_INTERVAL_MS) {
         this.lastPickAt = now;
         this.repickHover();
       }
@@ -1762,7 +1920,7 @@ export class OrbitView {
       this.depthUniform.value.set(Math.max(1e-3, d - this.radius), d + this.radius);
       this.renderer.render(this.scene, this.camera);
       this.updateLabels();
-      if (spinning || tweening || moved || pulsing) this.schedule();
+      if (moving || pulsing) this.schedule();
     } finally {
       this.inFrame = false;
     }
@@ -1895,12 +2053,6 @@ export class OrbitView {
     return new THREE.Vector3().fromBufferAttribute(attr, index).applyMatrix4(group.matrixWorld);
   }
 
-  private pickAlpha(hit: THREE.Intersection): number {
-    const attr = hit.object === this.ringPoints ? this.ringAlphaAttr : this.coreAlphaAttr;
-    if (!attr || hit.index === undefined) return 1;
-    return (attr.array as Float32Array)[hit.index] ?? 1;
-  }
-
   private pickAt(clientX: number, clientY: number): OrbitPick | null {
     const canvas = this.canvas;
     if (!canvas || !this.renderer) return null;
@@ -1908,45 +2060,70 @@ export class OrbitView {
     if (rect.width === 0 || rect.height === 0) return null;
     this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-    // PICK_RADIUS_PX on screen, as a world distance at the current camera distance.
-    const worldPerPx = (this.distance() * 2 * Math.tan(THREE.MathUtils.degToRad(FOV_DEG) / 2)) / rect.height;
-    this.raycaster.params.Points.threshold = worldPerPx * PICK_RADIUS_PX;
-    // The controls move the camera between renders, so the ray is built from its current matrices.
+    // The controls move the camera between renders, so the projection is taken from its current matrices.
     this.camera.updateMatrixWorld();
-    this.raycaster.setFromCamera(this.pointer, this.camera);
     this.scene.updateMatrixWorld();
 
-    const targets = this.pickTargets;
-    targets.length = 0;
-    if (this.corePoints) targets.push(this.corePoints);
-    // The ring is drawn in the code graph only; in the OS graph its points are not pickable.
-    if (this.ringPoints && this.ringGroup.visible) targets.push(this.ringPoints);
-    if (this.labelEdgeObj) {
-      this.raycaster.params.Line.threshold = worldPerPx * PICK_RADIUS_PX;
-      targets.push(this.labelEdgeObj);
-    }
-    if (targets.length === 0) return null;
-    const hits = this.raycaster.intersectObjects(targets, false);
-    const points = hits.filter((h) => h.object !== this.labelEdgeObj);
-    // Prefer the nearest node that is not dimmed by the selection; fall back to the nearest one.
-    const hit = points.find((h) => this.pickAlpha(h) >= 0.5) ?? points[0];
-    if (!hit) {
-      const edge = hits.find((h) => h.object === this.labelEdgeObj);
-      return edge && edge.index !== undefined ? this.edgePick(Math.floor(edge.index / 2)) : null;
-    }
-    if (hit.index === undefined) return null;
+    // Nodes are chosen on the screen (see choosePick): every drawn point is projected, so a hub's whole
+    // disc counts and a member nearer the pointer does not steal a hub the pointer is over.
+    const cands: PickCandidate[] = [];
+    if (this.corePoints) this.collectScreenCandidates(this.corePoints, rect, clientX, clientY, false, cands);
+    if (this.ringPoints && this.ringGroup.visible) this.collectScreenCandidates(this.ringPoints, rect, clientX, clientY, true, cands);
+    const chosen = choosePick(cands);
+    if (chosen) return this.pickFor(chosen);
 
-    if (hit.object === this.ringPoints) {
-      const item = this.ringItems[hit.index];
+    // Fallback: a labelled OS-graph edge under the ray, within PICK_RADIUS_PX.
+    if (this.labelEdgeObj) {
+      const worldPerPx = (this.distance() * 2 * Math.tan(THREE.MathUtils.degToRad(FOV_DEG) / 2)) / rect.height;
+      this.raycaster.params.Line.threshold = worldPerPx * PICK_RADIUS_PX;
+      this.raycaster.setFromCamera(this.pointer, this.camera);
+      const edge = this.raycaster.intersectObject(this.labelEdgeObj, false)[0];
+      if (edge && edge.index !== undefined) return this.edgePick(Math.floor(edge.index / 2));
+    }
+    return null;
+  }
+
+  /**
+   * Adds the points of `obj` that lie within MAX_PICK_RADIUS_PX of the pointer, measured on the
+   * screen. The projection is the camera's own, so the view offset of the drawer inset is in it.
+   */
+  private collectScreenCandidates(
+    obj: THREE.Points,
+    rect: DOMRect,
+    x: number,
+    y: number,
+    ring: boolean,
+    out: PickCandidate[],
+  ): void {
+    const pos = obj.geometry.getAttribute("position");
+    if (!pos) return;
+    const v = this.scratch;
+    const viz = !ring && this.mode === "viz" && this.vizNodes !== null;
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos as THREE.BufferAttribute, i).applyMatrix4(obj.matrixWorld).project(this.camera);
+      if (v.z < -1 || v.z > 1) continue;
+      const sx = rect.left + ((v.x + 1) / 2) * rect.width;
+      const sy = rect.top + ((1 - v.y) / 2) * rect.height;
+      const dist = Math.hypot(sx - x, sy - y);
+      if (dist > MAX_PICK_RADIUS_PX) continue;
+      const size = viz ? (this.baseSizes[i] ?? 0) : 0;
+      out.push({ ring, index: i, dist, radius: size / 2, hub: viz && this.hubMask[i] === 1 });
+    }
+  }
+
+  /** The pick of a chosen candidate: a ring item, a viz node or a core node. */
+  private pickFor(c: PickCandidate): OrbitPick | null {
+    if (c.ring) {
+      const item = this.ringItems[c.index];
       return item ? { type: "ring", id: item.id, label: item.label, detail: item.kind } : null;
     }
     if (this.mode === "viz" && this.vizNodes) {
-      const node = this.vizNodes[hit.index];
+      const node = this.vizNodes[c.index];
       return node
-        ? { type: "viz", id: node.id, label: node.label || node.id, detail: node.kind, drill: node.drill }
+        ? { type: "viz", id: node.id, label: node.label || node.id, detail: node.kind, drill: node.drill, status: node.status }
         : null;
     }
-    const item = this.coreItems[hit.index];
+    const item = this.coreItems[c.index];
     return item ? { type: "core", id: item.id, label: item.label, detail: item.category } : null;
   }
 

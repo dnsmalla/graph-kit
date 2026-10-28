@@ -42,7 +42,8 @@ its overlays:
 - **Top right:** the brain toolbar (zoom, reset, pause, colour by Kind or Cluster).
 - **Bottom left:** a "Legend" chip (collapsed by default), the node and link counts, and on the OS
   level an "Activity" chip that opens the recent-activity timeline in the drawer.
-- **Right:** the details drawer (380 px). Under 760 px wide it is a bottom sheet over the lower 46%.
+- **Right:** the details drawer (380 px), an overlay on the stage. Under 760 px wide it is a bottom sheet
+  over the lower part of the stage. The stage keeps its full size while the drawer is open.
 
 The drawer shows what is selected, or the level's overview when nothing is:
 
@@ -56,8 +57,14 @@ The drawer shows what is selected, or the level's overview when nothing is:
 Each drawer can be hidden with Hide; the state is remembered per level, and a selection re-opens
 it. Escape hides the drawer first, then goes back a level.
 
-The canvas makes room for the drawer (its right inset, or its bottom inset on a narrow stage), so
-nothing the brain draws sits under it and the selected node stays in view.
+The canvas does not shrink or move when the drawer opens. The brain reports the part the drawer covers
+(`OrbitView.setViewInset({ right, bottom })`, measured from the drawer's box: its right edge on a wide
+stage, its top edge as a bottom sheet). The camera stays where it is; the projection's centre glides
+(about 200 ms) to the middle of the visible area, so the graph slides instead of jumping. Framing
+(`fitCamera`, `fitDistance`) uses the visible area too. A selected node that lands under the drawer
+(a click, a search, or a call to `setSelection`) is brought into view: the camera flies to it, keeping
+its distance. Picking and the label positions use the same projection, so they follow the glide.
+Escape hides the drawer and puts the focus on the breadcrumb (`escapeAction`, `Brain.tsx`).
 
 ### Hub overviews
 
@@ -90,7 +97,16 @@ The brain (`OrbitView`, a three.js view) uses three's own `OrbitControls`:
 - **Auto-rotate:** one turn in about 40 s. It pauses while the user interacts and resumes 4 s after. It is off under reduced motion. The core and the recent ring turn together, the ring slightly faster.
 - **Toolbar** (top right of the brain): Zoom in, Zoom out, Reset view, Pause or Play rotation, and Colour by Kind or Cluster.
 - **Keyboard** (the canvas has focus, with a visible focus ring): `+` and `-` zoom, `0` resets the view, Space pauses or plays.
+- **Picking** is measured on the screen. A hub is picked when the pointer is inside its drawn disc
+  (its diameter is 28 to 44 px) and beats any member nearer the pointer; otherwise the nearest point
+  whose disc, or 8 px around it, the pointer is inside wins (ties: the larger, then the hub); a labelled
+  OS-graph edge is the fallback. The same rule (`choosePick`) serves hover, click and double-click.
 - **Click** selects a node. **Double-click** flies the camera to it (about 400 ms) and selects it. `OrbitView.focusNode(id)` flies to any core node or ring item (the search box uses it), and `OrbitView.setSelection(id | null)` highlights the selected node and its direct neighbours: the rest dims to alpha 0.15, the touching edges draw brighter. The highlight writes the existing buffers in place; no geometry is rebuilt.
+- **Colour by Kind on the code level** (the default) colours each node by its code-graph kind with the
+  native Code graph's palette (`NATIVE_KIND_COLOURS` in `src/orbit/scene.ts`, the same table as
+  `CGPalette.swift` `color(for:)`; a test parses the Swift file and fails on any difference). A node
+  without a kind keeps its category colour; an unknown kind is grey. The Legend lists the kinds
+  present, most frequent first (top 8, with counts).
 - **Colour by Cluster** colours each node by its community (largest first) from the ten `--os-cluster-1..10` tokens (`src/os-tokens.css`, darker in the light theme). Switching is in place too.
 - **Search:** a type-ahead box above the brain matches core node labels and ids (case-insensitive, the top 8). Up and Down move, Enter chooses (it flies to the node and selects it), Escape clears.
 
@@ -155,8 +171,12 @@ reads, so an activity-only refresh keeps it) and each graph's layout (`computeVi
   checks), Open Library (source kinds), and Stop for a running chat turn or meeting agent.
 - **Overview rows** open their node: a kit, routine, skill, knowledge row or memory repo opens its
   part and selects the node there.
-- **Colour**: a point takes its kind's colour; a status tints it (ok green, warn amber, running
-  blue with a pulse, off greyed, unknown neutral); hubs are larger and brighter. Labels are HTML
+- **Colour**: a point takes its kind's colour; a status tints its ring (ok green, warn amber, running
+  blue with a pulse, unknown and off have no ring, and an off node is dimmed). The status is never
+  colour alone: the tooltip, the drawer's status chip and the Legend's status row say the word (OK,
+  Warning, Off, Running, Unknown). Hubs are larger and brighter.
+- **Pulse**: running nodes pulse at about 20 frames a second; only their ring alpha is written, and
+  only their range is uploaded. With nothing running or moving the loop is idle (no frames are queued). Labels are HTML
   over the canvas for the labelled nodes only. A labelled edge shows its label on hover.
 
 The code brain is unchanged: `computeCore` and `computeRing` draw it. The OS graph's types are

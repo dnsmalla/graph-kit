@@ -807,3 +807,98 @@ export const VIZ_KIND_COLORS: Record<string, string> = Object.fromEntries(
 );
 /** The colour of a kind the table does not know (the neutral grey, dark theme). */
 export const VIZ_KIND_FALLBACK = systemHue(OFF_GREY, "dark");
+
+// ---- The native Code graph's palette, per kind ------------------------------------------
+
+/**
+ * The native Code graph's colour per CGNodeKind (`CGPalette.swift`, `color(for:)`). A system
+ * name is the Apple hue of the theme (blue, purple, ... gray); a `#hex` is the literal sRGB
+ * colour of the Swift `Color(red:green:blue:)`. Parity with the Swift file is a test.
+ */
+export const NATIVE_KIND_COLOURS: Record<string, SystemHue | string> = {
+  file: "blue",
+  symbol: "purple",
+  module: "orange",
+  docPage: "green",
+  memoryDoc: "indigo",
+  memoryChunk: "mint",
+  noteDecision: "red",
+  noteTask: "orange",
+  noteQuestion: "yellow",
+  noteFact: "green",
+  noteConcept: "cyan",
+  notePlaybook: "blue",
+  noteHypothesis: "purple",
+  noteEvent: "pink",
+  noteSource: "brown",
+  function: "#3399e6",
+  classType: "#9933cc",
+  config: "#808080",
+  service: "#00b380",
+  table: "#cc801a",
+  endpoint: "#e64d4d",
+  pipeline: "#4d80e6",
+  schemaNode: "#b3661a",
+  resource: "#1a804d",
+  domain: "#e6991a",
+  flow: "#66cccc",
+  step: "#99cc66",
+  article: "#669933",
+  entity: "#cc3399",
+  topic: "#3366cc",
+  claim: "#e66633",
+  skill: "#59bfa6",
+  agent: "#d973bf",
+  other: "gray",
+};
+
+/** The colour of a code-graph node kind (the native per-kind palette). An unknown kind is grey. */
+export function nodeKindColour(kind: string, theme: PaletteTheme = "dark"): string {
+  const entry = Object.prototype.hasOwnProperty.call(NATIVE_KIND_COLOURS, kind) ? NATIVE_KIND_COLOURS[kind] : undefined;
+  if (!entry) return systemHue("gray", theme);
+  return entry.startsWith("#") ? entry : systemHue(entry as SystemHue, theme);
+}
+
+/**
+ * Per-node rgb (0..1) for the code brain's Kind colouring: the native kind colour when the node
+ * has a kind, else its category colour (a node without a kind keeps its category).
+ */
+export function buildCoreKindColors(
+  nodes: Array<{ category: CoreCategory; kind?: string }>,
+  theme: PaletteTheme,
+  colors: Record<CoreCategory, string>,
+): Float32Array {
+  const out = new Float32Array(nodes.length * 3);
+  nodes.forEach((node, i) => {
+    const rgb = node.kind ? hexToRgb01(nodeKindColour(node.kind, theme)) : rgbFor(node.category, colors);
+    out.set(rgb, i * 3);
+  });
+  return out;
+}
+
+/** The kinds present among the nodes, most frequent first (nodes without a kind are not counted). */
+export function coreKindSummary(nodes: Array<{ kind?: string }>): Array<{ kind: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const node of nodes) if (node.kind) counts.set(node.kind, (counts.get(node.kind) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([kind, count]) => ({ kind, count }))
+    .sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind));
+}
+
+/** The word a status shows in a tooltip, a chip or a legend (never colour alone). Null for no status. */
+export function statusWord(status: string | null | undefined): string | null {
+  switch (statusName(status)) {
+    case "ok":
+      return "OK";
+    case "warn":
+      return "Warning";
+    case "off":
+      return "Off";
+    case "running":
+      return "Running";
+    case "unknown":
+      return "Unknown";
+    default:
+      return null;
+  }
+}

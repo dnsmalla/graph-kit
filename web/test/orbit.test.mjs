@@ -982,21 +982,6 @@ describe('OrbitView (fake renderer)', () => {
     assert.equal(v.coreGroup.rotation.y, 0);
   });
 
-  it('pick threshold scales with the camera distance (about 8 px in world units)', () => {
-    const v = make({ reducedMotion: true });
-    const g = sampleGraph();
-    v.setGraph(g, orbit.orbitLayout(g));
-    const d0 = dist(v);
-    v.pickAt(200, 150);
-    const t0 = v.raycaster.params.Points.threshold;
-    const vHalf = Math.PI / 8;
-    assert.ok(Math.abs(t0 - (d0 * Math.tan(vHalf) * 2 * 8) / 300) < 1e-9, 'distance * tan(fov/2) * 2 * 8 / height');
-    v.zoomIn();
-    v.pickAt(200, 150);
-    const t1 = v.raycaster.params.Points.threshold;
-    assert.ok(Math.abs(t1 / t0 - dist(v) / d0) < 1e-9, 'scales with the distance');
-  });
-
   it('a plain click does not count as a camera move; a drag past the slop does', () => {
     const v = make({ reducedMotion: true });
     const g = sampleGraph();
@@ -1422,7 +1407,7 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     canvas.dispatch('pointerdown', { ...at, button: 0 });
     canvas.dispatch('pointerup', { ...at, type: 'pointerup', button: 0 });
     assert.equal(selects.length, 1);
-    assert.deepEqual(selects[0], { type: 'viz', id: 'hub:models', label: 'Models', detail: 'hub', drill: 'models' });
+    assert.deepEqual(selects[0], { type: 'viz', id: 'hub:models', label: 'Models', detail: 'hub', drill: 'models', status: 'ok' });
   });
 
   it('a running node pulses on frames; with reduced motion it holds still', () => {
@@ -1887,3 +1872,323 @@ function vizSampleWide() {
     ],
   };
 }
+
+// ---- Picking, the drawer inset, the pulse, the native kind colours and the Escape order --------
+
+describe('the OS graph: picking, the inset, the pulse and the kind colours', () => {
+  let container;
+  let frames;
+  let nextFrameId;
+  let savedGlobals;
+  const globalsToStub = ['document', 'ResizeObserver', 'getComputedStyle'];
+  const live = [];
+  const renderersSeen = [];
+
+  beforeEach(() => {
+    savedGlobals = Object.fromEntries(globalsToStub.map((k) => [k, globalThis[k]]));
+    const doc = fakeElement('document');
+    doc.hidden = false;
+    doc.documentElement = fakeElement('html');
+    doc.createElement = (tag) => fakeElement(tag, tag === 'canvas' ? { width: 400, height: 300 } : {});
+    globalThis.document = doc;
+    globalThis.ResizeObserver = class {
+      observe() {}
+      disconnect() {}
+    };
+    delete globalThis.getComputedStyle;
+    container = fakeElement('div', { width: 400, height: 300 });
+    frames = new Map();
+    nextFrameId = 1;
+    renderersSeen.length = 0;
+  });
+
+  afterEach(() => {
+    while (live.length) live.pop().dispose();
+    for (const [k, v] of Object.entries(savedGlobals)) {
+      if (v === undefined) delete globalThis[k];
+      else globalThis[k] = v;
+    }
+  });
+
+  function make(extra = {}) {
+    const v = new view.OrbitView(container, {
+      rotationSpeed: 0,
+      createRenderer: (canvas) => {
+        const r = fakeRenderer(canvas);
+        renderersSeen.push(r);
+        return r;
+      },
+      requestFrame: (cb) => {
+        const id = nextFrameId++;
+        frames.set(id, cb);
+        return id;
+      },
+      cancelFrame: (id) => frames.delete(id),
+      ...extra,
+    });
+    live.push(v);
+    return v;
+  }
+
+  /** Runs the frames queued now, at time t. */
+  function runFrames(t) {
+    const pending = [...frames.values()];
+    frames.clear();
+    for (const cb of pending) cb(t);
+  }
+
+  /** Runs frames every 16 ms from t0 for `ms` milliseconds; returns the end time. */
+  function runFor(t0, ms) {
+    let t = t0;
+    for (let i = 0; i < Math.ceil(ms / 16); i++) {
+      t += 16;
+      runFrames(t);
+    }
+    return t;
+  }
+
+  function screenOf(v, p) {
+    v.camera.updateMatrixWorld();
+    const ndc = new THREE.Vector3(p.x, p.y, p.z).project(v.camera);
+    return { clientX: ((ndc.x + 1) / 2) * 400, clientY: ((1 - ndc.y) / 2) * 300 };
+  }
+
+  const pt = (v, x, y) => ({ clientX: x, clientY: y });
+
+  describe('choosePick (the pure rule)', () => {
+    const c = (dist, radius, hub = false, index = 0) => ({ ring: false, index, dist, radius, hub });
+
+    it('a hub whose disc is under the pointer wins over a nearer member', () => {
+      const member = c(2, 5, false, 1);
+      const hub = c(10, 14, true, 0);
+      assert.equal(view.choosePick([member, hub]), hub);
+    });
+
+    it('a click on a hub rim (more than 8 px from its centre, inside its disc) hits the hub', () => {
+      assert.equal(view.choosePick([c(12, 14, true, 0)])?.index, 0);
+    });
+
+    it('a far click misses; a member counts within 8 px (or its own radius) only', () => {
+      assert.equal(view.choosePick([c(30, 14, true), c(30, 5)]), null);
+      assert.equal(view.choosePick([c(9, 5)]), null);
+      assert.equal(view.choosePick([c(7, 2)])?.index, 0);
+    });
+
+    it('with no hub under the pointer, the nearest on screen wins; ties go to the larger, then the hub', () => {
+      assert.equal(view.choosePick([c(6, 3, false, 1), c(4, 2, false, 2)])?.index, 2);
+      assert.equal(view.choosePick([c(4, 2, false, 1), c(4, 5, false, 2)])?.index, 2);
+      assert.equal(view.choosePick([c(4, 3, false, 1), c(4, 3, true, 2)])?.index, 2);
+    });
+  });
+
+  it('a hub disc overlapped by a member: the hub wins (hover, click and double-click all use this pick)', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    // The member sits exactly on the hub's centre: both are 3 px from the pointer, and the hub's disc covers it.
+    layout.core.set('model:a/one', { ...layout.core.get('hub:models') });
+    v.setViz(viz, layout);
+    runFrames(0);
+    const hubAt = screenOf(v, layout.core.get('hub:models'));
+    const hit = v.pickAt(hubAt.clientX + 3, hubAt.clientY);
+    assert.equal(hit?.id, 'hub:models');
+  });
+
+  it('a click on a hub rim hits the hub; a point far from every node picks nothing', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    runFrames(0);
+    const hubIndex = v.vizNodes.findIndex((n) => n.id === 'hub:models');
+    const radius = v.baseSizes[hubIndex] / 2;
+    const hubAt = screenOf(v, layout.core.get('hub:models'));
+    assert.equal(v.pickAt(hubAt.clientX + radius - 1, hubAt.clientY)?.id, 'hub:models', 'the rim is inside the disc');
+    assert.equal(v.pickAt(hubAt.clientX + radius + 6, hubAt.clientY)?.id ?? null, null, 'just outside the disc (and past 8 px of every member) misses');
+  });
+
+  it('the picked viz node carries its status (the tooltip shows its word)', () => {
+    const v = make({ reducedMotion: true });
+    const viz = vizSample();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    runFrames(0);
+    const at = screenOf(v, layout.core.get('model:a/one'));
+    assert.equal(v.pickAt(at.clientX, at.clientY)?.status, 'running');
+  });
+
+  describe('the drawer inset', () => {
+    const RIGHT = 120;
+    const BOTTOM = 60;
+
+    it('opening and closing the inset keeps the camera position and target unchanged', () => {
+      const v = make({ reducedMotion: true });
+      const viz = vizSample();
+      v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+      runFrames(0);
+      const p0 = v.camera.position.clone();
+      const t0 = v.controls.target.clone();
+      let t = runFor(0, 100);
+      v.setViewInset({ right: RIGHT, bottom: 0 });
+      t = runFor(t, 400);
+      assert.ok(v.camera.position.distanceTo(p0) < 1e-9, 'position after opening');
+      assert.ok(v.controls.target.distanceTo(t0) < 1e-9, 'target after opening');
+      v.setViewInset({ right: 0, bottom: 0 });
+      runFor(t, 400);
+      assert.ok(v.camera.position.distanceTo(p0) < 1e-9, 'position after closing');
+      assert.ok(v.controls.target.distanceTo(t0) < 1e-9, 'target after closing');
+    });
+
+    it('the projection centre moves to the middle of the visible area (the old centre shifted by inset / 2)', () => {
+      const v = make({ reducedMotion: true });
+      const viz = vizSample();
+      v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+      runFrames(0);
+      const before = screenOf(v, { x: 0, y: 0, z: 0 });
+      assert.ok(Math.abs(before.clientX - 200) < 1e-6 && Math.abs(before.clientY - 150) < 1e-6);
+      v.setViewInset({ right: RIGHT, bottom: BOTTOM });
+      runFor(0, 400);
+      const after = screenOf(v, { x: 0, y: 0, z: 0 });
+      assert.ok(Math.abs(after.clientX - (200 - RIGHT / 2)) < 1e-6, `x ${after.clientX}`);
+      assert.ok(Math.abs(after.clientY - (150 - BOTTOM / 2)) < 1e-6, `y ${after.clientY}`);
+    });
+
+    it('the inset glides: the offset is mid-way part of the way through the 200 ms', () => {
+      const v = make({ reducedMotion: true });
+      const viz = vizSample();
+      v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+      runFrames(0);
+      v.setViewInset({ right: RIGHT, bottom: 0 });
+      runFrames(1000);
+      runFrames(1100);
+      const mid = v.insetNow.x;
+      assert.ok(mid > 0 && mid < RIGHT / 2, `mid-glide offset ${mid}`);
+      runFrames(1400);
+      assert.equal(v.insetNow.x, RIGHT / 2);
+    });
+
+    it('a node under the drawer is brought into the visible area when it is selected', () => {
+      const v = make({ reducedMotion: true });
+      const viz = vizSample();
+      const layout = orbit.vizLayout(viz, { seed: 1 });
+      v.setViz(viz, layout);
+      runFrames(0);
+      const WIDE = 300;
+      v.setViewInset({ right: WIDE, bottom: 0 });
+      let t = runFor(0, 400);
+      const visibleRight = 400 - WIDE;
+      const id = viz.nodes.map((n) => n.id).find((nid) => screenOf(v, layout.core.get(nid)).clientX > visibleRight);
+      assert.ok(id, 'a node lies under the drawer');
+      v.setSelection(id);
+      t = runFor(t, 600);
+      const at = screenOf(v, layout.core.get(id));
+      assert.ok(at.clientX <= visibleRight && at.clientX >= 0, `visible after the fly: ${at.clientX}`);
+    });
+
+    it('picking uses the visible-area projection: a node is picked where it is drawn under the inset', () => {
+      const v = make({ reducedMotion: true });
+      const viz = vizSample();
+      const layout = orbit.vizLayout(viz, { seed: 1 });
+      v.setViz(viz, layout);
+      runFrames(0);
+      v.setViewInset({ right: RIGHT, bottom: 0 });
+      runFor(0, 400);
+      const at = screenOf(v, layout.core.get('hub:models'));
+      assert.equal(v.pickAt(at.clientX, at.clientY)?.id, 'hub:models');
+    });
+  });
+
+  describe('the pulse of running nodes', () => {
+    it('a running node renders about 20 times a second, and only its ring range is flagged', () => {
+      const v = make({});
+      const viz = vizSample();
+      v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+      runFrames(0);
+      const renders0 = renderersSeen[0].calls.render;
+      let t = 0;
+      for (let i = 0; i < 60; i++) {
+        t += 1000 / 60;
+        runFrames(t);
+      }
+      const renders = renderersSeen[0].calls.render - renders0;
+      assert.ok(renders >= 14 && renders <= 22, `renders in one second: ${renders}`);
+      assert.equal(v.coreRingAttr.updateRanges.length, 1, 'one running node: one ring range');
+      assert.equal(v.coreRingAttr.updateRanges[0].start, 1 * 4 + 3);
+    });
+
+    it('with nothing running the loop is idle: no frame is scheduled and nothing renders', () => {
+      const v = make({});
+      const viz = vizSample();
+      viz.nodes = viz.nodes.map((n) => ({ ...n, status: n.status === 'running' ? 'ok' : n.status }));
+      v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
+      runFrames(0);
+      runFor(0, 500);
+      const renders = renderersSeen[0].calls.render;
+      runFor(500, 1000);
+      assert.equal(frames.size, 0, 'nothing is queued');
+      assert.equal(renderersSeen[0].calls.render, renders, 'no renders while idle');
+    });
+  });
+});
+
+describe('native per-kind colours (the code brain) and the status word', () => {
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const SWIFT = path.resolve(ROOT, '../../../Sources/LlmIdeMac/Features/CodeGraph/Views/CGPalette.swift');
+  const hex = (r, g, b) => '#' + [r, g, b].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+
+  it('the JS table matches CGPalette.swift color(for:) kind by kind (skipped without the Swift file)', { skip: !existsSync(SWIFT) }, () => {
+    const src = readFileSync(SWIFT, 'utf8');
+    const re = /case \.(\w+):\s+return\s+(?:\.(\w+)|Color\(red:\s*([\d.]+),\s*green:\s*([\d.]+),\s*blue:\s*([\d.]+)\))/g;
+    const seen = new Map();
+    for (const m of src.matchAll(re)) {
+      seen.set(m[1], m[2] ? m[2] : hex(Number(m[3]), Number(m[4]), Number(m[5])));
+    }
+    assert.equal(seen.size, Object.keys(scene.NATIVE_KIND_COLOURS).length, `parsed ${seen.size} kinds`);
+    for (const [kind, swift] of seen) {
+      const want = swift.startsWith('#') ? swift : scene.systemHue(swift, 'dark');
+      assert.equal(scene.nodeKindColour(kind, 'dark').toLowerCase(), want.toLowerCase(), `kind ${kind}`);
+    }
+    for (const kind of Object.keys(scene.NATIVE_KIND_COLOURS)) assert.ok(seen.has(kind), `${kind} is in the Swift table`);
+  });
+
+  it('an unknown kind is grey, and a node without a kind keeps its category colour', () => {
+    assert.equal(scene.nodeKindColour('no-such-kind', 'dark'), scene.systemHue('gray', 'dark'));
+    const colors = { code: '#111111', docs: '#222222', tests: '#333333', knowledge: '#444444', other: '#555555' };
+    const out = scene.buildCoreKindColors(
+      [{ category: 'docs', kind: 'function' }, { category: 'docs' }],
+      'dark',
+      colors,
+    );
+    assert.deepEqual([...out.slice(0, 3)].map((x) => Math.round(x * 255)), [0x33, 0x99, 0xe6]);
+    assert.deepEqual([...out.slice(3, 6)].map((x) => Math.round(x * 255)), [0x22, 0x22, 0x22]);
+  });
+
+  it('the kind summary lists the kinds present, most frequent first', () => {
+    const summary = scene.coreKindSummary([{ kind: 'symbol' }, { kind: 'file' }, { kind: 'symbol' }, {}]);
+    assert.deepEqual(summary, [{ kind: 'symbol', count: 2 }, { kind: 'file', count: 1 }]);
+  });
+
+  it('a status has a word for the tooltip, the chip and the legend', () => {
+    assert.equal(scene.statusWord('ok'), 'OK');
+    assert.equal(scene.statusWord('warn'), 'Warning');
+    assert.equal(scene.statusWord('off'), 'Off');
+    assert.equal(scene.statusWord('running'), 'Running');
+    assert.equal(scene.statusWord('unknown'), 'Unknown');
+    assert.equal(scene.statusWord(null), null);
+  });
+});
+
+describe('Escape ordering (the Brain keydown rule)', () => {
+  it('hides the drawer first, then returns from a hub; typing in a field keeps its Escape', async () => {
+    const brain = await server.ssrLoadModule('/src/components/Brain.tsx');
+    const esc = (extra) => ({ key: 'Escape', defaultPrevented: false, tagName: 'DIV', isContentEditable: false, drawerOpen: false, level: 'os', ...extra });
+    assert.equal(brain.escapeAction(esc({ drawerOpen: true, level: 'hub' })), 'hideDrawer');
+    assert.equal(brain.escapeAction(esc({ drawerOpen: false, level: 'hub' })), 'back');
+    assert.equal(brain.escapeAction(esc({ drawerOpen: false, level: 'os' })), null);
+    assert.equal(brain.escapeAction(esc({ drawerOpen: true, tagName: 'INPUT' })), null);
+    assert.equal(brain.escapeAction(esc({ drawerOpen: true, tagName: 'TEXTAREA' })), null);
+    assert.equal(brain.escapeAction(esc({ drawerOpen: true, isContentEditable: true })), null);
+    assert.equal(brain.escapeAction(esc({ drawerOpen: true, defaultPrevented: true })), null);
+    assert.equal(brain.escapeAction(esc({ drawerOpen: true, key: 'Enter' })), null);
+  });
+});

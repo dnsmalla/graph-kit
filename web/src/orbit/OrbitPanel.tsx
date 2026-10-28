@@ -17,6 +17,7 @@ import type {
   Vec3,
 } from "../../../typescript/src/system/index.js";
 import { OrbitView, type OrbitColorMode, type OrbitPick, type OrbitTheme } from "./OrbitView";
+import { statusWord } from "./scene";
 import type { CameraPose, VizGraph } from "../viz";
 
 /** Imperative handle: the search box, the breadcrumb and the camera memory fly the camera through it. */
@@ -56,6 +57,9 @@ export interface OrbitPanelProps {
   /** What the core is coloured by. Default "kind". Controlled: pair with onColorByChange. */
   colorBy?: OrbitColorMode;
   onColorByChange?: (mode: OrbitColorMode) => void;
+  /** The part of the stage the overlays cover (px from the right / bottom): the view centres on the rest. Default 0. */
+  insetRight?: number;
+  insetBottom?: number;
   /** Imperative handle (React 19 passes `ref` as a prop). */
   ref?: Ref<OrbitPanelHandle>;
 }
@@ -97,7 +101,7 @@ function prefersReducedMotion(): boolean {
 }
 
 /** Light only for data-theme="light"; "dark", "midnight" and unset are dark. */
-function readTheme(): OrbitTheme {
+export function readTheme(): OrbitTheme {
   if (typeof document === "undefined") return "dark";
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
@@ -255,6 +259,8 @@ export function OrbitPanel({
   selectedId = null,
   colorBy = "kind",
   onColorByChange,
+  insetRight = 0,
+  insetBottom = 0,
   ref,
 }: OrbitPanelProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -362,6 +368,11 @@ export function OrbitPanel({
     viewRef.current?.setColorMode(colorBy);
   }, [colorBy]);
 
+  // The overlays' inset: the view glides its centre to the visible area (the camera does not move).
+  useEffect(() => {
+    viewRef.current?.setViewInset({ right: insetRight, bottom: insetBottom });
+  }, [insetRight, insetBottom]);
+
   const onMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const tip = tipRef.current;
     if (!tip) return;
@@ -435,6 +446,7 @@ export function OrbitPanel({
       >
         <strong style={{ fontWeight: 600 }}>{pick?.label}</strong>
         <span style={{ opacity: 0.7 }}>{pick?.detail}</span>
+        {pick?.status && statusWord(pick.status) ? <span style={{ opacity: 0.7 }}>{statusWord(pick.status)}</span> : null}
         {pick?.type === "viz" && pick.drill ? <span style={{ opacity: 0.7 }}>Click to select · double-click to open</span> : null}
       </div>
     </div>

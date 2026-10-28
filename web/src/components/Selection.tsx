@@ -66,7 +66,7 @@ export function isCodeCluster(node: VizNode): boolean {
 
 const STATUS_TEXT: Record<VizStatus, string> = {
   ok: 'OK',
-  warn: 'Needs attention',
+  warn: 'Warning',
   off: 'Off',
   running: 'Running',
   unknown: 'Unknown',

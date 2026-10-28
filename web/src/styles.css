@@ -215,19 +215,13 @@ h1 {
   background: var(--tok-color-body);
 }
 
-.os-centre-drawer {
-  --os-inset-right: 396px;
-  --os-inset-bottom: 0px;
-}
-
 .os-brain-stage,
 .os-tree-host {
   position: absolute;
   top: 0;
   left: 0;
-  right: var(--os-inset-right, 0px);
-  bottom: var(--os-inset-bottom, 0px);
-  transition: right 180ms ease, bottom 180ms ease;
+  right: 0;
+  bottom: 0;
 }
 
 .os-brain-stage .orbit-host {
@@ -279,12 +273,16 @@ h1 {
   max-width: calc(100% - 300px);
 }
 
+.os-centre-drawer {
+  --os-top-inset-right: 396px;
+}
+
 /* Search: a compact field at the top centre that widens when it has focus. */
 .os-top-centre {
   position: absolute;
   top: var(--tok-space-sm);
-  /* Centred on the graph area: the drawer's inset is taken off the stage's width. */
-  left: calc((100% - var(--os-inset-right, 0px)) / 2);
+  /* Centred on the visible area: the drawer (an overlay) takes its width off the stage's centre. */
+  left: calc((100% - var(--os-top-inset-right, 0px)) / 2);
   transform: translateX(-50%);
   z-index: 4;
   transition: left 180ms ease;
@@ -1252,8 +1250,7 @@ select:focus-visible {
 /* ---- narrow stage: the drawer becomes a bottom sheet over the lower 46%; the search takes a row ---- */
 @media (max-width: 760px) {
   .os-centre-drawer {
-    --os-inset-right: 0px;
-    --os-inset-bottom: 46%;
+    --os-top-inset-right: 0px;
   }
 
   .os-drawer {

@@ -3,9 +3,9 @@ import type { OsSelection, ViewState, OsController } from '../controller';
 import type { CoreView, RingView, VizView } from '../systemGraph';
 import { SYSTEM_VIEW_LIMITS } from '../systemGraph';
 import type { OsActivityItem, OsSnapshot } from '../types';
-import { OrbitPanel, type OrbitPanelHandle } from '../orbit/OrbitPanel';
+import { OrbitPanel, readTheme, type OrbitPanelHandle } from '../orbit/OrbitPanel';
 import type { OrbitColorMode, OrbitPick } from '../orbit/OrbitView';
-import { clusterSummary, CLUSTER_PALETTE_SIZE, uniqueCoreNodes, VIZ_KIND_COLORS, VIZ_KIND_FALLBACK, vizKindSummary } from '../orbit/scene';
+import { clusterSummary, CLUSTER_PALETTE_SIZE, coreKindSummary, nodeKindColour, uniqueCoreNodes, VIZ_KIND_COLORS, VIZ_KIND_FALLBACK, vizKindSummary } from '../orbit/scene';
 import { fmtInt, humanKey, words } from '../format';
 import { DRILL_GUARD_MS, HUB_TITLES, isHubKey, levelKey, swallowsPick, type DrillGuard, type HubKey, type VizGraph } from '../viz';
 import { NodeSearch } from './NodeSearch';
@@ -25,13 +25,37 @@ const LEGEND: Array<{ key: 'code' | 'docs' | 'tests' | 'knowledge' | 'other'; la
 /** Status tints in the OS graph's legend. */
 const STATUS_LEGEND: Array<{ key: string; label: string }> = [
   { key: 'ok', label: 'OK' },
-  { key: 'warn', label: 'Needs attention' },
+  { key: 'warn', label: 'Warning' },
   { key: 'off', label: 'Off' },
   { key: 'running', label: 'Running' },
 ];
 
+/** Kinds listed in the code brain's Kind legend before the "and N more" line. */
+const KIND_LEGEND_LIMIT = 8;
+
 /** Clusters listed in the legend before the "and N more" line. */
 const CLUSTER_LEGEND_LIMIT = 10;
+
+/**
+ * What Escape does at the brain's level (the keydown is on the window): it hides the drawer first;
+ * with the drawer hidden it returns from a hub to the OS. Null when the key is not Escape, is already
+ * handled, or is typed in a field (the field keeps its own Escape, the search clears).
+ */
+export function escapeAction(input: {
+  key: string;
+  defaultPrevented: boolean;
+  tagName?: string | null;
+  isContentEditable?: boolean;
+  drawerOpen: boolean;
+  level: string;
+}): 'hideDrawer' | 'back' | null {
+  if (input.key !== 'Escape' || input.defaultPrevented) return null;
+  const tag = input.tagName ?? '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || input.isContentEditable) return null;
+  if (input.drawerOpen) return 'hideDrawer';
+  if (input.level === 'hub') return 'back';
+  return null;
+}
 
 /** A pick as a selection: edges are hover-only and never selected. */
 function toSelection(item: OrbitPick): OsSelection | null {
@@ -121,6 +145,7 @@ export function Brain({
   const settled = status !== 'loading' && status !== 'idle' && status !== 'error';
   const clusters = useMemo(() => (inCode ? clusterSummary(uniqueCoreNodes(graph)) : []), [graph, inCode]);
   const kinds = useMemo(() => (vizGraph ? vizKindSummary(vizGraph.nodes) : []), [vizGraph]);
+  const codeKinds = useMemo(() => (inCode ? coreKindSummary(graph.core) : []), [graph, inCode]);
   const viewKey = view.level === 'os' ? 'os' : `hub:${view.hub}`;
   const crumbTitle = view.level === 'os' ? 'OS' : HUB_TITLES[view.hub];
 
@@ -142,6 +167,37 @@ export function Brain({
   const drawerOpen = drawer !== null && state.drawerClosed[levelKey(view)] !== true;
   const drawerOpenRef = useRef(drawerOpen);
   drawerOpenRef.current = drawerOpen;
+
+  // The drawer is an overlay: the canvas keeps its full size and the view centres on the part it does not
+  // cover. Measured from the drawer's box (the right edge on a wide stage, the top edge as a bottom sheet).
+  const drawerRef = useRef<HTMLElement>(null);
+  const [insets, setInsets] = useState({ right: 0, bottom: 0 });
+  useEffect(() => {
+    if (!drawerOpen) {
+      setInsets({ right: 0, bottom: 0 });
+      return;
+    }
+    const el = drawerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const stage = el.closest('.os-centre')?.querySelector<HTMLElement>('.os-brain-stage')?.getBoundingClientRect();
+      if (!stage) return;
+      const box = el.getBoundingClientRect();
+      const narrow = typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 760px)').matches;
+      const next = narrow
+        ? { right: 0, bottom: Math.max(0, Math.ceil(stage.bottom - box.top)) }
+        : { right: Math.max(0, Math.ceil(stage.right - box.left)), bottom: 0 };
+      setInsets((prev) => (prev.right === next.right && prev.bottom === next.bottom ? prev : next));
+    };
+    measure();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    observer?.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [drawerOpen, drawer?.kind]);
 
   // The camera memory: the brain reports its camera so a navigation remembers the level it leaves.
   useEffect(() => {
@@ -201,18 +257,23 @@ export function Brain({
   }, [selectedHub, vizGraph, controller]);
 
   // Escape hides the drawer first; with the drawer hidden it returns from a part to the OS.
-  // Typing in a field keeps its own Escape (the search clears).
+  // Typing in a field keeps its own Escape (the search clears). Focus then goes to the breadcrumb, not the body.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      if (drawerOpenRef.current) {
+      const action = escapeAction({
+        key: event.key,
+        defaultPrevented: event.defaultPrevented,
+        tagName: target?.tagName,
+        isContentEditable: target?.isContentEditable,
+        drawerOpen: drawerOpenRef.current,
+        level: view.level,
+      });
+      if (action === 'hideDrawer') {
         event.preventDefault();
         controller.setDrawerOpen(false);
-        return;
-      }
-      if (view.level === 'hub') {
+        headingRef.current?.focus({ preventScroll: true });
+      } else if (action === 'back') {
         event.preventDefault();
         goOs();
       }
@@ -274,6 +335,8 @@ export function Brain({
             selectedId={state.selected?.id ?? null}
             colorBy={colorBy}
             onColorByChange={setColorBy}
+            insetRight={insets.right}
+            insetBottom={insets.bottom}
             onFallback={() => setWebgl(false)}
             onSelect={(item) => {
               if (swallowsPick(drillGuard.current, item.id, Date.now())) return;
@@ -419,6 +482,20 @@ export function Brain({
                 Recent activity
               </li>
             </ul>
+          ) : inCode && colorBy === 'kind' && codeKinds.length > 0 ? (
+            <ul className="os-legend" aria-label="Kind legend">
+              {codeKinds.slice(0, KIND_LEGEND_LIMIT).map(({ kind, count }) => (
+                <li key={kind}>
+                  <span className="os-swatch" aria-hidden="true" style={{ background: nodeKindColour(kind, readTheme()) }} />
+                  {humanKey(kind)} · {fmtInt(count)}
+                </li>
+              ))}
+              {codeKinds.length > KIND_LEGEND_LIMIT ? <li>and {fmtInt(codeKinds.length - KIND_LEGEND_LIMIT)} more</li> : null}
+              <li>
+                <span className="os-swatch os-swatch-ring" aria-hidden="true" />
+                Recent activity
+              </li>
+            </ul>
           ) : inCode ? (
             <ul className="os-legend" aria-label="Colour legend">
               {LEGEND.map(({ key, label }) => (
@@ -445,6 +522,9 @@ export function Brain({
                   <span className={`os-chip os-chip-${key}`}>{label}</span>
                 </li>
               ))}
+              <li className="os-legend-status" aria-label="Status rings explained">
+                Status rings: ring colour is the status (the chip names it) · dimmed = off
+              </li>
             </ul>
           ) : null
         ) : null}
@@ -473,7 +553,7 @@ export function Brain({
       ) : null}
 
       {drawer !== null && drawerOpen ? (
-        <aside className="os-drawer" aria-label="Details">
+        <aside ref={drawerRef} className="os-drawer" aria-label="Details">
           {drawer.kind === 'selection' && state.selected ? (
             <Selection
               selected={state.selected}
