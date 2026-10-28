@@ -610,3 +610,59 @@ describe('the clear flow under races', () => {
     assert.match(s.message, /may or may not have been cleared/);
   });
 });
+
+describe('the destructive flow is labelled and linked for assistive tech', () => {
+  it('the preview is a labelled group, its heading takes focus, and an empty clear cannot be deleted', async () => {
+    const empty = { ...DRY('p0'), total: 0, wouldDelete: { agent_runs: 0, agent_tool_events: 0, turn_composition: 0, agent_daily: 0, agent_daily_tools: 0 } };
+    const { host } = storageHost({ clear: (req) => (req.dryRun ? empty : REAL) });
+    const controller = await loaded(host);
+    await controller.storageClearPreview('raw', null);
+    const html = api.render.renderHub(controller, 'storage');
+    const labelled = html.match(/role="group" aria-labelledby="([^"]+)"/);
+    assert.ok(labelled, 'the preview group is labelled');
+    assert.match(html, new RegExp(`id="${labelled[1]}"[^>]*tabindex="-1"`));
+    assert.match(html, /Nothing to delete/);
+    assert.match(html, /<button[^>]*disabled[^>]*>Nothing to delete<\/button>/);
+  });
+
+  it('a non-empty preview offers the count in the Delete label and enables it', async () => {
+    const { host } = storageHost({ clear: (req) => (req.dryRun ? DRY('p1') : REAL) });
+    const controller = await loaded(host);
+    await controller.storageClearPreview('raw', null);
+    const html = api.render.renderHub(controller, 'storage');
+    assert.doesNotMatch(html, /<button[^>]*disabled[^>]*>Delete/);
+    assert.match(html, /Delete <!-- -->12<!-- --> rows|Delete 12 rows/);
+  });
+
+  it('a notice and the in-progress texts are announced politely', async () => {
+    const preview = deferred();
+    const { host } = storageHost({ clear: () => preview.promise });
+    const controller = await loaded(host);
+    const pending = controller.storageClearPreview('raw', null);
+    assert.match(api.render.renderHub(controller, 'storage'), /role="status"[^>]*>Checking/);
+    preview.resolve(DRY('p1'));
+    await pending;
+    assert.match(api.render.renderHub(controller, 'storage'), /Would delete/);
+  });
+
+  it('a retention error is tied to its input with aria-describedby', async () => {
+    const { host } = storageHost({ retention: async (d) => ({ retentionDays: d }), settings: async () => ({ retentionDays: 45 }) });
+    const controller = await loaded(host);
+    controller.loadExtras();
+    await flush();
+    await controller.setStorageRetention(3);
+    const html = api.render.renderHub(controller, 'storage');
+    const described = html.match(/aria-describedby="([^"]+)"/);
+    assert.ok(described, 'the input names its error');
+    assert.match(html, new RegExp(`id="${described[1]}"[^>]*role="alert"|role="alert"[^>]*id="${described[1]}"`));
+    assert.match(html, /aria-invalid="true"/);
+  });
+
+  it('the retention input starts from the host value', async () => {
+    const { host } = storageHost({ settings: async () => ({ retentionDays: 45 }), retention: async (d) => ({ retentionDays: d }) });
+    const controller = await loaded(host);
+    controller.loadExtras();
+    await flush();
+    assert.match(api.render.renderHub(controller, 'storage'), /value="45"/);
+  });
+});

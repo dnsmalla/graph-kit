@@ -2,13 +2,12 @@
 // to hold, now reached from the graph. Each part reads the snapshot and the optional data sets the
 // controller already holds; nothing here fetches. A click that opens a node goes through the
 // controller, so the brain flies to it and selects it.
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ExtraStatus, OsController, OsSelection, StorageView, ViewState } from '../controller';
 import type { CoreView } from '../systemGraph';
 import type { OsActivityItem, OsAgentRun, OsCancel, OsRoutine, OsSkill, OsSnapshot, OsStorageGroup, OsStorageReport, OsUsageCounts } from '../types';
 import { clusterSummary, uniqueCoreNodes } from '../orbit/scene';
-import { countRows } from '../storageFlow';
-import { RETENTION_MAX, RETENTION_MIN } from '../storageFlow';
+import { countRows, RETENTION_MAX, RETENTION_MIN } from '../storageFlow';
 import { fmtBytes, fmtDuration, fmtInt, fmtRelative, fmtTime, latestTime, pct, shortSha, words } from '../format';
 import { Bar, Empty } from './common';
 import { Recent } from './Recent';
@@ -652,49 +651,81 @@ export function AgentsOverview({
 
 const GROUP_ACTIONS_NOTE = 'Only the agent history can be cleared or compacted here.';
 
-/** The retention editor: a whole number of days, 7 to 365, saved to the host. */
+/** The retention editor: a whole number of days, 7 to 365, saved to the host. The draft follows the host's value until the user types. */
 function RetentionEditor({ storage, controller, current }: { storage: StorageView; controller: OsController; current: number | null }) {
+  const id = useId();
   const [draft, setDraft] = useState<string>(current === null ? '' : String(current));
+  const [edited, setEdited] = useState(false);
   const saving = storage.retention.status === 'saving';
+  const saved = storage.retention.status === 'saved';
+  // Resync with the host's value, unless the user is typing their own. A save hands the value back.
+  useEffect(() => {
+    if (!edited) setDraft(current === null ? '' : String(current));
+  }, [current, edited]);
+  useEffect(() => {
+    if (saved) setEdited(false);
+  }, [saved]);
   const days = Number(draft);
   const invalid = draft.trim() === '' || !Number.isInteger(days) || days < RETENTION_MIN || days > RETENTION_MAX;
+  const message = storage.retention.message;
   return (
     <div className="storage-retention">
-      <label className="field">
+      <label className="field" htmlFor={`${id}-days`}>
         <span>Keep raw history for (days)</span>
         <input
+          id={`${id}-days`}
           type="number"
           inputMode="numeric"
           min={RETENTION_MIN}
           max={RETENTION_MAX}
           step={1}
           value={draft}
-          aria-invalid={invalid}
-          onChange={(e) => setDraft(e.target.value)}
+          aria-invalid={invalid || message !== null ? true : undefined}
+          aria-describedby={message ? `${id}-error` : undefined}
+          onChange={(e) => {
+            setEdited(true);
+            setDraft(e.target.value);
+          }}
         />
       </label>
-      <button
-        type="button"
-        className="btn"
-        disabled={saving || invalid}
-        onClick={() => void controller.setStorageRetention(days)}
-      >
+      <button type="button" className="btn" disabled={saving || invalid} onClick={() => void controller.setStorageRetention(days)}>
         {saving ? 'Saving…' : 'Save retention'}
       </button>
-      {storage.retention.message ? <p className="meta storage-error">{storage.retention.message}</p> : null}
-      {storage.retention.status === 'saved' ? <p className="meta">Retention saved.</p> : null}
+      {message ? (
+        <p id={`${id}-error`} className="meta storage-error" role="alert">
+          {message}
+        </p>
+      ) : null}
+      {saved ? <p className="meta" role="status">Retention saved.</p> : null}
     </div>
   );
 }
 
-/** The Clear flow as the user sees it: scope buttons, the dry-run counts, then an explicit confirm. */
+/**
+ * The Clear flow as the user sees it: scope buttons, the dry-run counts, then an explicit confirm.
+ * Focus follows the flow: into the preview's heading when it opens, onto Done or Close when a result
+ * shows, and back to the trigger when the flow ends. Status text is announced politely.
+ */
 function ClearPanel({ storage, controller }: { storage: StorageView; controller: OsController }) {
+  const id = useId();
   const flow = storage.clear;
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const doneRef = useRef<HTMLButtonElement>(null);
+  const prevKind = useRef(flow.kind);
+  useEffect(() => {
+    const before = prevKind.current;
+    prevKind.current = flow.kind;
+    if (before === flow.kind) return;
+    if (flow.kind === 'confirm') headingRef.current?.focus();
+    else if (flow.kind === 'cleared' || flow.kind === 'failed') doneRef.current?.focus();
+    else if (flow.kind === 'idle' && before !== 'idle') triggerRef.current?.focus();
+  }, [flow.kind]);
   switch (flow.kind) {
     case 'idle':
       return (
         <div className="storage-actions">
-          <button type="button" className="btn" onClick={() => void controller.storageClearPreview('raw', null)}>
+          <button ref={triggerRef} type="button" className="btn" onClick={() => void controller.storageClearPreview('raw', null)}>
             Clear raw history…
           </button>
           <button type="button" className="btn btn-danger" onClick={() => void controller.storageClearPreview('all', null)}>
@@ -706,12 +737,23 @@ function ClearPanel({ storage, controller }: { storage: StorageView; controller:
         </div>
       );
     case 'previewing':
-      return <p className="meta">Checking what would be deleted…</p>;
-    case 'confirm':
       return (
-        <div className="storage-preview" role="group" aria-label="Clear preview">
-          {flow.notice ? <p className="meta storage-notice">{flow.notice}</p> : null}
-          <h4 className="sub-title">Would delete ({flow.scope === 'all' ? 'all history' : 'raw rows'})</h4>
+        <p className="meta" role="status">
+          Checking what would be deleted…
+        </p>
+      );
+    case 'confirm': {
+      const total = flow.preview.total;
+      return (
+        <div className="storage-preview" role="group" aria-labelledby={`${id}-title`}>
+          {flow.notice ? (
+            <p className="meta storage-notice" role="status">
+              {flow.notice}
+            </p>
+          ) : null}
+          <h4 id={`${id}-title`} className="sub-title" tabIndex={-1} ref={headingRef}>
+            Would delete ({flow.scope === 'all' ? 'all history' : 'raw rows'})
+          </h4>
           <dl className="totals">
             {countRows(flow.preview.wouldDelete).map((row) => (
               <div key={row.key}>
@@ -722,8 +764,8 @@ function ClearPanel({ storage, controller }: { storage: StorageView; controller:
           </dl>
           <p className="meta">The preview expires {fmtRelative(flow.preview.expiresAt)}. Confirm to delete these rows.</p>
           <div className="storage-actions">
-            <button type="button" className="btn btn-danger" onClick={() => void controller.storageClearConfirm()}>
-              {`Delete ${fmtInt(flow.preview.total)} rows`}
+            <button type="button" className="btn btn-danger" disabled={total <= 0} onClick={() => void controller.storageClearConfirm()}>
+              {total > 0 ? `Delete ${fmtInt(total)} rows` : 'Nothing to delete'}
             </button>
             <button type="button" className="btn" onClick={() => controller.storageClearCancel()}>
               Cancel
@@ -731,13 +773,18 @@ function ClearPanel({ storage, controller }: { storage: StorageView; controller:
           </div>
         </div>
       );
+    }
     case 'clearing':
-      return <p className="meta">Clearing…</p>;
+      return (
+        <p className="meta" role="status">
+          Clearing…
+        </p>
+      );
     case 'cleared':
       return (
         <div className="storage-result">
-          <p>{`Cleared ${fmtInt(flow.total)} rows.`}</p>
-          <button type="button" className="btn" onClick={() => controller.storageClearCancel()}>
+          <p role="status">{`Cleared ${fmtInt(flow.total)} rows.`}</p>
+          <button ref={doneRef} type="button" className="btn" onClick={() => controller.storageClearCancel()}>
             Done
           </button>
         </div>
@@ -745,8 +792,10 @@ function ClearPanel({ storage, controller }: { storage: StorageView; controller:
     case 'failed':
       return (
         <div className="storage-result">
-          <p className="storage-error" role="alert">{flow.message}</p>
-          <button type="button" className="btn" onClick={() => controller.storageClearCancel()}>
+          <p className="storage-error" role="alert">
+            {flow.message}
+          </p>
+          <button ref={doneRef} type="button" className="btn" onClick={() => controller.storageClearCancel()}>
             Close
           </button>
         </div>
@@ -763,7 +812,7 @@ function CompactPanel({ storage, controller }: { storage: StorageView; controlle
         {flow.kind === 'running' ? 'Compacting…' : 'Compact store'}
       </button>
       {flow.kind === 'done' ? (
-        <p className="meta">
+        <p className="meta" role="status">
           Freed {fmtBytes(flow.freedBytes)} ({fmtInt(flow.pagesFreed)} pages, {flow.mode}, {fmtDuration(flow.ms)}).
         </p>
       ) : null}
