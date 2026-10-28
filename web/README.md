@@ -84,7 +84,8 @@ scripts/build-os-wasm.sh --check  # builds into a temp dir and diffs against the
 ```
 
 `--check` is skipped (exit 0, with a message) when the local rustc differs from the one
-recorded in `bytes.ts`: wasm output is only reproducible with the same toolchain. The
+recorded in `bytes.ts`: wasm output is only reproducible with the same toolchain and platform
+(CI checks the glue and types with `--glue-only` and the bytes by running the tests). The
 `wasm-bindgen` CLI must match the `wasm-bindgen` version in `rust/Cargo.lock` (0.2.129).
 
 ### The OS as a graph

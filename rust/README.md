@@ -20,8 +20,10 @@ been removed from the Node package. Its output is frozen in `os-graph/tests/gold
 
 The page runs the crate as **embedded WASM**: `web/src/wasm/` holds the generated glue and
 the module as base64, and `web/src/systemGraph.ts` calls it. The wasm build is reproducible
-with the same rustc only, so it is committed. CI installs that rustc and runs
-`scripts/build-os-wasm.sh --check --strict`, so a stale bundle fails the build.
+with the same rustc on the same platform only, so it is committed. CI installs that rustc and runs
+`scripts/build-os-wasm.sh --check --strict --glue-only` (the JS glue and types must match a fresh
+build; the wasm bytes differ between Linux and macOS hosts and are validated by the parity and web
+tests instead). Run the full `--check --strict` locally on the platform that built the bytes.
 
 Parity is checked by `os-graph/tests/parity.rs` against the golden files. The system graph
 must equal the golden exactly. Orbit coordinates must match within 1e-9; the remaining

@@ -160,9 +160,11 @@ boundary. Run the tests with `cd rust && cargo test --release`.
 `scripts/build-os-wasm.sh` builds them and writes `web/src/wasm/pkg/` and `web/src/wasm/bytes.ts`
 (the `.wasm` as base64, with the rustc version in a header). To embed the module without a
 network fetch, import `initSync` from the glue and pass the decoded bytes, as `web/src/wasm/index.ts`
-does. Wasm output is reproducible only with the rustc recorded in `bytes.ts`, so
-`scripts/build-os-wasm.sh --check --strict` fails when the local toolchain differs. Pin your own
-build to that version if you rebuild the module.
+does. Wasm output is reproducible only with the rustc recorded in `bytes.ts` and only on the
+platform that built it (the same toolchain gives different code on Linux x86_64 and macOS aarch64;
+the JS glue and `.d.ts` are identical on both). `scripts/build-os-wasm.sh --check --strict` fails
+when the local toolchain differs; CI runs it with `--glue-only` (glue and types only) and validates
+the committed bytes by behaviour instead. Pin your own build to that version if you rebuild the module.
 
 Requirements: the rustc recorded in `web/src/wasm/bytes.ts` (currently 1.99.1), the
 `wasm32-unknown-unknown` target for the WASM build, and the `wasm-bindgen` CLI at the version in

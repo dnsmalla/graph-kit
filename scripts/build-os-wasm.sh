@@ -43,15 +43,17 @@ TOOLCHAIN="${OS_WASM_TOOLCHAIN:-stable}"
 
 mode="build"
 strict=0
+glue_only=0
 for arg in "$@"; do
   case "$arg" in
     --check) mode="check" ;;
     --strict) strict=1 ;;
-    *) echo "usage: $0 [--check [--strict]]" >&2; exit 2 ;;
+    --glue-only) glue_only=1 ;;
+    *) echo "usage: $0 [--check [--strict] [--glue-only]]" >&2; exit 2 ;;
   esac
 done
-if [ "$strict" -eq 1 ] && [ "$mode" != "check" ]; then
-  echo "usage: --strict only applies to --check" >&2
+if { [ "$strict" -eq 1 ] || [ "$glue_only" -eq 1 ]; } && [ "$mode" != "check" ]; then
+  echo "usage: --strict and --glue-only only apply to --check" >&2
   exit 2
 fi
 
@@ -131,9 +133,15 @@ tmp="$(mktemp -d "${TMPDIR:-/tmp}/os-wasm-check.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 generate_into "$tmp"
 status=0
-for pair in "graph_kit_os.js:$PKG_DIR/graph_kit_os.js" \
-            "graph_kit_os.d.ts:$PKG_DIR/graph_kit_os.d.ts" \
-            "bytes.ts:$BYTES_TS"; do
+pairs=("graph_kit_os.js:$PKG_DIR/graph_kit_os.js" "graph_kit_os.d.ts:$PKG_DIR/graph_kit_os.d.ts")
+# The wasm bytes are only reproducible on the platform that built them (measured: the same
+# rustc 1.99.1 + wasm-bindgen 0.2.129 give different code on Linux x86_64 vs macOS aarch64,
+# while the JS glue and .d.ts are identical). --glue-only (CI) skips the byte comparison; the
+# committed bytes are validated by behaviour instead (rust parity tests + the web tests).
+if [ "$glue_only" -eq 0 ]; then
+  pairs+=("bytes.ts:$BYTES_TS")
+fi
+for pair in "${pairs[@]}"; do
   built="$tmp/${pair%%:*}"
   committed="${pair#*:}"
   if ! diff -q "$built" "$committed" >/dev/null 2>&1; then
@@ -145,4 +153,8 @@ if [ "$status" -ne 0 ]; then
   echo "run scripts/build-os-wasm.sh and commit the result" >&2
   exit 1
 fi
-echo "ok: generated OS wasm files match a fresh build"
+if [ "$glue_only" -eq 1 ]; then
+  echo "ok: the generated JS glue and .d.ts match a fresh build (wasm bytes not compared: --glue-only)"
+else
+  echo "ok: generated OS wasm files match a fresh build"
+fi
