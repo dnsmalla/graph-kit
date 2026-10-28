@@ -105,8 +105,8 @@ Known limits of the JSON boundary:
   members capped at 40 per hub, or 24 for Activity, with `meta.more`), and a drill-down graph for
   each hub except `code`. `code` drills into the existing SystemGraph; `code_summary_json`
   summarises it for the OS view.
-- Nine hubs, in `HUB_KEYS` order: `code`, `knowledge`, `memory`, `skills`, `models`, `agents`,
-  `routines`, `kits`, `activity`. The OS ring spaces them evenly; with nine hubs the member
+- Ten hubs, in `HUB_KEYS` order: `code`, `knowledge`, `memory`, `skills`, `models`, `agents`,
+  `routines`, `kits`, `activity`, `storage`. The OS ring spaces them evenly; with ten hubs the member
   shells shrink to 0.3 of the chord to the neighbouring hub (`orbit.rs`), so no member reaches
   the next hub's shell. The hub centre is size 6.0.
 - The **activity** hub (`hub:activity`, drill key `activity`) is the recent-activity feed

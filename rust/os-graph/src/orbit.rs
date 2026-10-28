@@ -422,7 +422,7 @@ const HUB_SHELL_FRACTION: f64 = 0.25;
 /// Vertical stagger of the OS hubs, as a fraction of the ring radius (alternating up and down).
 const HUB_STAGGER_FRACTION: f64 = 0.08;
 /// The OS hub shells never exceed this fraction of the chord between neighbouring hubs, so a
-/// member of one hub cannot reach the next hub's shell. With 8 or 9 hubs the chord, not
+/// member of one hub cannot reach the next hub's shell. With 8, 9 or 10 hubs the chord, not
 /// [`HUB_SHELL_FRACTION`], sets the shell.
 const HUB_SHELL_CHORD_FRACTION: f64 = 0.3;
 
@@ -439,7 +439,7 @@ pub(crate) struct HubNode<'a> {
 ///
 /// * The OS (two or more hubs): the hubs sit evenly on a ring in the XZ plane, alternately
 ///   staggered up and down; each hub's members sit on a shell around it, at a quarter of the
-///   ring radius or, when the hubs are closer together (nine hubs), at 0.3 of the chord to the
+///   ring radius or, when the hubs are closer together (nine or ten hubs), at 0.3 of the chord to the
 ///   neighbouring hub, spread by the golden angle.
 /// * One hub (a drill-down): the hub is at the origin, the groups it holds are anchors evenly
 ///   on the ring, and each group's members sit on a shell around its anchor.
@@ -748,18 +748,18 @@ mod tests {
     }
 
     #[test]
-    fn hub_layout_os_with_nine_hubs_keeps_every_member_clear_of_the_next_hub() {
-        // Nine hubs (the OS with the activity hub), each with 40 members (the OS member cap).
-        let mut ids: Vec<(String, bool, f64)> = (0..9).map(|g| (format!("hub:{g}"), true, g as f64)).collect();
-        for g in 0..9 {
+    fn hub_layout_os_with_ten_hubs_keeps_every_member_clear_of_the_next_hub() {
+        // Ten hubs (the OS with the activity and storage hubs), each with 40 members (the OS member cap).
+        let mut ids: Vec<(String, bool, f64)> = (0..10).map(|g| (format!("hub:{g}"), true, g as f64)).collect();
+        for g in 0..10 {
             for m in 0..40 {
                 ids.push((format!("m:{g}:{m:02}"), false, g as f64));
             }
         }
         let layout = hub_layout(&spec(&ids), 100.0);
-        assert_eq!(layout.community_centers.len(), 9);
-        let chord = 2.0 * 100.0 * (std::f64::consts::PI / 9.0).sin();
-        for g in 0..9 {
+        assert_eq!(layout.community_centers.len(), 10);
+        let chord = 2.0 * 100.0 * (std::f64::consts::PI / 10.0).sin();
+        for g in 0..10 {
             let hub = at(&layout, &format!("hub:{g}"));
             for m in 0..40 {
                 let p = at(&layout, &format!("m:{g}:{m:02}"));
@@ -767,7 +767,7 @@ mod tests {
                 assert!(dist(p, hub) <= 0.3 * chord + 1e-9, "m:{g}:{m:02} strays from its hub");
                 // ...and so cannot reach another hub's shell: every other hub is at least a
                 // chord away from this hub, leaving 0.7 chord from any member to any other hub.
-                for other in 0..9 {
+                for other in 0..10 {
                     if other != g {
                         let q = at(&layout, &format!("hub:{other}"));
                         assert!(dist(p, q) >= 0.6 * chord, "m:{g}:{m:02} is close to hub {other}");

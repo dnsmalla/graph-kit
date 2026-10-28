@@ -41,6 +41,7 @@
               "liveSessions": 0,
               "members": 0,
               "more": 0,
+              "recentRuns": 0,
               "running": 0
             },
             "size": 6.0,
@@ -197,6 +198,28 @@
           }
         ],
         "title": "Skills"
+      },
+      "storage": {
+        "edges": [],
+        "level": "storage",
+        "nodes": [
+          {
+            "drill": "storage",
+            "group": 9,
+            "id": "hub:storage",
+            "kind": "hub",
+            "label": "Storage",
+            "labelled": true,
+            "meta": {
+              "groups": 0,
+              "members": 0,
+              "more": 0
+            },
+            "size": 6.0,
+            "status": "off"
+          }
+        ],
+        "title": "Storage"
       }
     },
     "os": {
@@ -305,6 +328,7 @@
             "liveSessions": 0,
             "members": 0,
             "more": 0,
+            "recentRuns": 0,
             "running": 0
           },
           "size": 6.0,
@@ -357,6 +381,21 @@
             "more": 0,
             "newestAt": null,
             "unread": 0
+          },
+          "size": 6.0,
+          "status": "off"
+        },
+        {
+          "drill": "storage",
+          "group": 9,
+          "id": "hub:storage",
+          "kind": "hub",
+          "label": "Storage",
+          "labelled": true,
+          "meta": {
+            "groups": 0,
+            "members": 0,
+            "more": 0
           },
           "size": 6.0,
           "status": "off"

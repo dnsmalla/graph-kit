@@ -130,6 +130,18 @@
             "source": "hub:agents",
             "target": "liveSession:live-1",
             "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "run:loop-1",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:agents",
+            "target": "run:turn-1",
+            "weight": 1.0
           }
         ],
         "level": "agents",
@@ -145,8 +157,9 @@
               "agentRuns": 1,
               "chatTurns": 1,
               "liveSessions": 1,
-              "members": 3,
+              "members": 5,
               "more": 0,
+              "recentRuns": 2,
               "running": 3
             },
             "size": 6.0,
@@ -201,6 +214,50 @@
             },
             "size": 1.0,
             "status": "running"
+          },
+          {
+            "drill": null,
+            "group": 4,
+            "id": "run:turn-1",
+            "kind": "recentRun",
+            "label": "Chat run",
+            "labelled": true,
+            "meta": {
+              "durationMs": 5000,
+              "endedAt": "2026-10-28 10:00:05",
+              "engine": "v2",
+              "errorCode": null,
+              "model": "claude-sonnet",
+              "runStatus": "ok",
+              "source": "chat",
+              "startedAt": "2026-10-28 10:00:00",
+              "tokens": 900,
+              "toolCalls": 2
+            },
+            "size": 1.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 4,
+            "id": "run:loop-1",
+            "kind": "recentRun",
+            "label": "Loop run",
+            "labelled": true,
+            "meta": {
+              "durationMs": 60000,
+              "endedAt": "2026-10-28 09:01:00",
+              "engine": "cli",
+              "errorCode": "CLI_FAILED",
+              "model": null,
+              "runStatus": "error",
+              "source": "loop",
+              "startedAt": "2026-10-28 09:00:00",
+              "tokens": 0,
+              "toolCalls": 0
+            },
+            "size": 0.6,
+            "status": "warn"
           }
         ],
         "title": "Agents"
@@ -1579,6 +1636,163 @@
           }
         ],
         "title": "Skills"
+      },
+      "storage": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "hub:storage",
+            "target": "storage:agent_history",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:storage",
+            "target": "storage:code_graph",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:storage",
+            "target": "storage:meetings",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:storage",
+            "target": "storage:search_index",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:storage",
+            "target": "storage:sources",
+            "weight": 1.0
+          }
+        ],
+        "level": "storage",
+        "nodes": [
+          {
+            "drill": "storage",
+            "group": 9,
+            "id": "hub:storage",
+            "kind": "hub",
+            "label": "Storage",
+            "labelled": true,
+            "meta": {
+              "agentStoreHealth": "ok",
+              "agentStoreState": "ok",
+              "bytes": 18000,
+              "groups": 5,
+              "lastCleanedAt": "2026-10-20T08:00:00Z",
+              "members": 5,
+              "more": 0,
+              "retentionDays": 90,
+              "rows": 164
+            },
+            "size": 6.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "storage:search_index",
+            "kind": "storage",
+            "label": "Search index",
+            "labelled": true,
+            "meta": {
+              "actions": [],
+              "bytes": null,
+              "bytesApprox": null,
+              "key": "search_index",
+              "lastCleanedAt": null,
+              "retentionDays": null,
+              "rows": 120
+            },
+            "size": 3.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "storage:agent_history",
+            "kind": "storage",
+            "label": "Agent history",
+            "labelled": true,
+            "meta": {
+              "actions": [
+                "clear",
+                "compact"
+              ],
+              "bytes": 18000,
+              "bytesApprox": true,
+              "key": "agent_history",
+              "lastCleanedAt": "2026-10-20T08:00:00Z",
+              "retentionDays": 90,
+              "rows": 42
+            },
+            "size": 2.5685422788728385,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "storage:code_graph",
+            "kind": "storage",
+            "label": "Code graph",
+            "labelled": true,
+            "meta": {
+              "actions": [],
+              "bytes": null,
+              "bytesApprox": null,
+              "key": "code_graph",
+              "lastCleanedAt": null,
+              "retentionDays": null,
+              "rows": 1
+            },
+            "size": 1.2890648263178879,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "storage:sources",
+            "kind": "storage",
+            "label": "Sources",
+            "labelled": true,
+            "meta": {
+              "actions": [],
+              "bytes": null,
+              "bytesApprox": null,
+              "key": "sources",
+              "lastCleanedAt": null,
+              "retentionDays": null,
+              "rows": 1
+            },
+            "size": 1.2890648263178879,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "storage:meetings",
+            "kind": "storage",
+            "label": "Meetings",
+            "labelled": true,
+            "meta": {
+              "actions": [],
+              "bytes": null,
+              "bytesApprox": null,
+              "key": "meetings",
+              "lastCleanedAt": null,
+              "retentionDays": null,
+              "rows": 0
+            },
+            "size": 1.0,
+            "status": "off"
+          }
+        ],
+        "title": "Storage"
       }
     },
     "os": {
@@ -1611,6 +1825,18 @@
           "kind": "member",
           "source": "hub:agents",
           "target": "liveSession:live-1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "run:loop-1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:agents",
+          "target": "run:turn-1",
           "weight": 1.0
         },
         {
@@ -1828,6 +2054,36 @@
           "kind": "member",
           "source": "hub:skills",
           "target": "skillSource:project",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:storage",
+          "target": "storage:agent_history",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:storage",
+          "target": "storage:code_graph",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:storage",
+          "target": "storage:meetings",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:storage",
+          "target": "storage:search_index",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:storage",
+          "target": "storage:sources",
           "weight": 1.0
         },
         {
@@ -2193,8 +2449,9 @@
             "agentRuns": 1,
             "chatTurns": 1,
             "liveSessions": 1,
-            "members": 3,
+            "members": 5,
             "more": 0,
+            "recentRuns": 2,
             "running": 3
           },
           "size": 6.0,
@@ -2249,6 +2506,50 @@
           },
           "size": 1.0,
           "status": "running"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "run:turn-1",
+          "kind": "recentRun",
+          "label": "Chat run",
+          "labelled": false,
+          "meta": {
+            "durationMs": 5000,
+            "endedAt": "2026-10-28 10:00:05",
+            "engine": "v2",
+            "errorCode": null,
+            "model": "claude-sonnet",
+            "runStatus": "ok",
+            "source": "chat",
+            "startedAt": "2026-10-28 10:00:00",
+            "tokens": 900,
+            "toolCalls": 2
+          },
+          "size": 1.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 5,
+          "id": "run:loop-1",
+          "kind": "recentRun",
+          "label": "Loop run",
+          "labelled": false,
+          "meta": {
+            "durationMs": 60000,
+            "endedAt": "2026-10-28 09:01:00",
+            "engine": "cli",
+            "errorCode": "CLI_FAILED",
+            "model": null,
+            "runStatus": "error",
+            "source": "loop",
+            "startedAt": "2026-10-28 09:00:00",
+            "tokens": 0,
+            "toolCalls": 0
+          },
+          "size": 0.6,
+          "status": "warn"
         },
         {
           "drill": "routines",
@@ -2675,6 +2976,125 @@
           },
           "size": 0.6,
           "status": null
+        },
+        {
+          "drill": "storage",
+          "group": 9,
+          "id": "hub:storage",
+          "kind": "hub",
+          "label": "Storage",
+          "labelled": true,
+          "meta": {
+            "agentStoreHealth": "ok",
+            "agentStoreState": "ok",
+            "bytes": 18000,
+            "groups": 5,
+            "lastCleanedAt": "2026-10-20T08:00:00Z",
+            "members": 5,
+            "more": 0,
+            "retentionDays": 90,
+            "rows": 164
+          },
+          "size": 6.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 9,
+          "id": "storage:search_index",
+          "kind": "storage",
+          "label": "Search index",
+          "labelled": false,
+          "meta": {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "search_index",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 120
+          },
+          "size": 3.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 9,
+          "id": "storage:agent_history",
+          "kind": "storage",
+          "label": "Agent history",
+          "labelled": false,
+          "meta": {
+            "actions": [
+              "clear",
+              "compact"
+            ],
+            "bytes": 18000,
+            "bytesApprox": true,
+            "key": "agent_history",
+            "lastCleanedAt": "2026-10-20T08:00:00Z",
+            "retentionDays": 90,
+            "rows": 42
+          },
+          "size": 2.5685422788728385,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 9,
+          "id": "storage:code_graph",
+          "kind": "storage",
+          "label": "Code graph",
+          "labelled": false,
+          "meta": {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "code_graph",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 1
+          },
+          "size": 1.2890648263178879,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 9,
+          "id": "storage:sources",
+          "kind": "storage",
+          "label": "Sources",
+          "labelled": false,
+          "meta": {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "sources",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 1
+          },
+          "size": 1.2890648263178879,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 9,
+          "id": "storage:meetings",
+          "kind": "storage",
+          "label": "Meetings",
+          "labelled": false,
+          "meta": {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "meetings",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 0
+          },
+          "size": 1.0,
+          "status": "off"
         }
       ],
       "title": "OS"
@@ -2843,6 +3263,36 @@
         ],
         "unread": 2
       },
+      "agents": {
+        "recentRuns": [
+          {
+            "durationMs": 5000,
+            "endedAt": "2026-10-28 10:00:05",
+            "engine": "v2",
+            "errorCode": null,
+            "id": "turn-1",
+            "model": "claude-sonnet",
+            "source": "chat",
+            "startedAt": "2026-10-28 10:00:00",
+            "status": "ok",
+            "tokens": 900,
+            "toolCalls": 2
+          },
+          {
+            "durationMs": 60000,
+            "endedAt": "2026-10-28 09:01:00",
+            "engine": "cli",
+            "errorCode": "CLI_FAILED",
+            "id": "loop-1",
+            "model": null,
+            "source": "loop",
+            "startedAt": "2026-10-28 09:00:00",
+            "status": "error",
+            "tokens": 0,
+            "toolCalls": 0
+          }
+        ]
+      },
       "apiVersion": 79,
       "generatedAt": "2026-10-26T13:56:08.696Z",
       "knowledge": {
@@ -2926,6 +3376,67 @@
             "planId": null,
             "sessionId": "live-1",
             "startedAt": "2026-10-26T13:56:08.695Z"
+          }
+        ]
+      },
+      "storage": {
+        "agentStore": {
+          "health": "ok",
+          "state": "ok"
+        },
+        "groups": [
+          {
+            "actions": [
+              "clear",
+              "compact"
+            ],
+            "bytes": 18000,
+            "bytesApprox": true,
+            "key": "agent_history",
+            "label": "Agent history",
+            "lastCleanedAt": "2026-10-20T08:00:00Z",
+            "retentionDays": 90,
+            "rows": 42
+          },
+          {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "search_index",
+            "label": "Search index",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 120
+          },
+          {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "code_graph",
+            "label": "Code graph",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 1
+          },
+          {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "sources",
+            "label": "Sources",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 1
+          },
+          {
+            "actions": [],
+            "bytes": null,
+            "bytesApprox": null,
+            "key": "meetings",
+            "label": "Meetings",
+            "lastCleanedAt": null,
+            "retentionDays": null,
+            "rows": 0
           }
         ]
       },

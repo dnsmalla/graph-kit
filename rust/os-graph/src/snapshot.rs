@@ -53,7 +53,7 @@ pub struct OsActivityItem {
 // Every field has a default and every bad value falls back to it, so a server that adds or
 // reshapes a field never fails the whole view. Only the parts the OS graph reads are declared.
 
-use crate::models::{lenient_opt_string, lenient_string, lenient_value, lenient_vec};
+use crate::models::{lenient_f64, lenient_opt_string, lenient_string, lenient_value, lenient_vec};
 use serde::de::DeserializeOwned;
 use serde::Deserializer;
 use serde_json::Value;
@@ -78,6 +78,14 @@ where
     Ok(Option::<Value>::deserialize(d)?
         .and_then(|v| v.as_f64())
         .unwrap_or(0.0))
+}
+
+/// An optional boolean: a JSON boolean, else `None` (null, missing or any other type).
+pub(crate) fn lenient_bool_opt<'de, D>(d: D) -> Result<Option<bool>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<Value>::deserialize(d)?.and_then(|v| v.as_bool()))
 }
 
 /// A JSON boolean, else `false`.
@@ -151,6 +159,90 @@ pub struct OsSnapshotFull {
     pub knowledge: OsKnowledge,
     #[serde(default, deserialize_with = "lenient_default")]
     pub activity: OsActivityFull,
+    /// The storage report (`GET /kb/storage`); `None` when the server sent null or no object.
+    #[serde(default, deserialize_with = "lenient_value")]
+    pub storage: Option<OsStorage>,
+    #[serde(default, deserialize_with = "lenient_default")]
+    pub agents: OsAgents,
+}
+
+/// The storage report the Storage hub reads (`StorageReport` in agent-history.schema.json).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OsStorage {
+    #[serde(default, deserialize_with = "lenient_vec")]
+    pub groups: Vec<OsStorageGroup>,
+    /// The agent store's health and state; a missing object reads as `down`.
+    #[serde(default, deserialize_with = "lenient_default")]
+    pub agent_store: OsAgentStore,
+}
+
+/// One data group of the Storage hub. `rows` is this user's rows; `bytes` is set for the agent
+/// history group only (approximate, see `bytes_approx`).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OsStorageGroup {
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub key: String,
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub label: String,
+    #[serde(default, deserialize_with = "lenient_num")]
+    pub rows: f64,
+    #[serde(default, deserialize_with = "lenient_f64")]
+    pub bytes: Option<f64>,
+    #[serde(default, deserialize_with = "lenient_bool_opt")]
+    pub bytes_approx: Option<bool>,
+    #[serde(default, deserialize_with = "lenient_opt_string")]
+    pub last_cleaned_at: Option<String>,
+    #[serde(default, deserialize_with = "lenient_f64")]
+    pub retention_days: Option<f64>,
+    #[serde(default, deserialize_with = "lenient_str_list")]
+    pub actions: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OsAgentStore {
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub health: String,
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub state: String,
+}
+
+/// The agent runs the Agents hub lists (`agents.recentRuns`, newest first, codes only).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OsAgents {
+    #[serde(default, deserialize_with = "lenient_vec")]
+    pub recent_runs: Vec<OsRecentRun>,
+}
+
+/// One agent run (`AgentRun` in os.schema.json). A run with no string `id` is skipped.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OsRecentRun {
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub id: String,
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub source: String,
+    #[serde(default, deserialize_with = "lenient_opt_string")]
+    pub engine: Option<String>,
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub status: String,
+    #[serde(default, deserialize_with = "lenient_opt_string")]
+    pub started_at: Option<String>,
+    #[serde(default, deserialize_with = "lenient_opt_string")]
+    pub ended_at: Option<String>,
+    #[serde(default, deserialize_with = "lenient_f64")]
+    pub duration_ms: Option<f64>,
+    #[serde(default, deserialize_with = "lenient_num")]
+    pub tokens: f64,
+    #[serde(default, deserialize_with = "lenient_num")]
+    pub tool_calls: f64,
+    #[serde(default, deserialize_with = "lenient_opt_string")]
+    pub model: Option<String>,
+    #[serde(default, deserialize_with = "lenient_opt_string")]
+    pub error_code: Option<String>,
 }
 
 /// The activity feed the OS graph reads (`activity` in `OsSnapshot`). Newest first.

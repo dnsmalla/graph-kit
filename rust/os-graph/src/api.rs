@@ -370,9 +370,9 @@ mod tests {
     fn os_view_json_has_the_os_graph_and_every_hub_but_code() {
         let out = parse_value(&build_os_view_json("null"));
         assert_eq!(out["os"]["level"], "os");
-        assert_eq!(out["os"]["nodes"].as_array().unwrap().len(), 9);
+        assert_eq!(out["os"]["nodes"].as_array().unwrap().len(), 10);
         let hubs = out["hubs"].as_object().unwrap();
-        assert_eq!(hubs.len(), 8);
+        assert_eq!(hubs.len(), 9);
         assert!(!hubs.contains_key("code"));
         let bad = parse_value(&build_os_view_json("{not json"));
         assert!(bad["error"].as_str().unwrap().starts_with("osInput:"));
@@ -415,9 +415,9 @@ mod tests {
         let view = parse_value(&viz);
         let os = serde_json::to_string(&view["os"]).unwrap();
         let layout = parse_value(&viz_layout_json(&os, "{}"));
-        assert_eq!(layout["core"].as_array().unwrap().len(), 9 + 1);
-        // Hub groups are the hub indices, so nine communities at most.
-        assert_eq!(layout["communityCenters"].as_array().unwrap().len(), 9);
+        assert_eq!(layout["core"].as_array().unwrap().len(), 10 + 1);
+        // Hub groups are the hub indices, so ten communities at most.
+        assert_eq!(layout["communityCenters"].as_array().unwrap().len(), 10);
         // The same input twice gives the same layout bytes.
         assert_eq!(layout, parse_value(&viz_layout_json(&os, "{}")));
         let weird = r#"{"nodes":[{"id":"a"},{"id":"b","group":"x"},{"label":"no id"}],

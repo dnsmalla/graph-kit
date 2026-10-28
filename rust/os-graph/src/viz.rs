@@ -14,7 +14,7 @@ use crate::builder::{js_cmp, CoreCategory, SystemCoreNode, SystemGraph};
 use crate::models::{lenient_value, lenient_vec};
 use crate::snapshot::{
     ActivityId, OsActivityRow, OsChecks, OsCodeGraph, OsCounts, OsKindCount, OsKit, OsKnowledge,
-    OsProjectMemory, OsSnapshotFull,
+    OsProjectMemory, OsRecentRun, OsSnapshotFull,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -23,7 +23,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// One node of a [`VizGraph`]. `kind` is one of `hub`, `codeCluster`, `sourceKind`,
 /// `memoryRepo`, `skill`, `skillSource`, `model`, `provider`, `caller`, `endpoint`,
-/// `chatTurn`, `agentRun`, `liveSession`, `routine`, `kit`, `feature`, `check`, `activity`.
+/// `chatTurn`, `agentRun`, `liveSession`, `recentRun`, `routine`, `kit`, `feature`, `check`,
+/// `activity`, `storage`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VizNode {
@@ -137,7 +138,7 @@ pub struct OsView {
 }
 
 /// Hub keys in display order. `code` is the existing SystemGraph; the rest are built here.
-pub const HUB_KEYS: [&str; 9] = [
+pub const HUB_KEYS: [&str; 10] = [
     "code",
     "knowledge",
     "memory",
@@ -147,6 +148,7 @@ pub const HUB_KEYS: [&str; 9] = [
     "routines",
     "kits",
     "activity",
+    "storage",
 ];
 
 /// Most members a hub shows at the OS level; the rest are counted in its `more` meta.
@@ -173,6 +175,7 @@ fn hub_title(key: &str) -> &'static str {
         "routines" => "Routines",
         "kits" => "Kits",
         "activity" => "Activity",
+        "storage" => "Storage",
         _ => "",
     }
 }
@@ -702,6 +705,7 @@ fn activity_rows(items: &[OsActivityRow]) -> Vec<(String, &OsActivityRow)> {
 fn os_part(key: &str, input: &OsVizInput) -> Part {
     match key {
         "activity" => activity_part(input),
+        "storage" => storage_part(input),
         "code" => code_part(input),
         "knowledge" => knowledge_part(input),
         "memory" => memory_part(input),
@@ -1018,8 +1022,12 @@ fn agents_part(input: &OsVizInput) -> Part {
             .then_with(|| js_cmp(&a.0.id, &b.0.id))
     });
     let running = members.len();
+    let recent = recent_run_members(s);
+    let recent_count = recent.len();
+    members.extend(recent);
     part.members = members;
     part.meta.insert("running".into(), json!(running));
+    part.meta.insert("recentRuns".into(), json!(recent_count));
     part.meta
         .insert("chatTurns".into(), json!(s.running.chat_turns.len()));
     part.meta.insert(
@@ -1028,7 +1036,157 @@ fn agents_part(input: &OsVizInput) -> Part {
     );
     part.meta
         .insert("liveSessions".into(), json!(s.running.live_sessions.len()));
-    part.status = if running > 0 { "running" } else { "off" }.into();
+    part.status = if running > 0 {
+        "running"
+    } else if recent_count > 0 {
+        "ok"
+    } else {
+        "off"
+    }
+    .into();
+    part
+}
+
+/// The label of an agent run's source in the Agents hub.
+fn run_source_label(source: &str) -> &'static str {
+    match source {
+        "chat" => "Chat",
+        "loop" => "Loop",
+        "meeting" => "Meeting",
+        "autotask" => "Auto task",
+        "dispatch" => "Dispatch",
+        "review" => "Review",
+        _ => "Agent",
+    }
+}
+
+/// The newest agent runs that are not running now (those are in `agent_members`), in input
+/// order (newest first). The newest is the largest, so the drill labels it first; a run's status
+/// is its status ring: ok, warn for an error or abort, off for a cancel.
+fn recent_run_members(s: &OsSnapshotFull) -> Vec<Member> {
+    let runs: Vec<&OsRecentRun> = s
+        .agents
+        .recent_runs
+        .iter()
+        .filter(|r| !r.id.is_empty() && r.status != "running")
+        .collect();
+    let n = runs.len();
+    runs.into_iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let size = if n <= 1 {
+                1.0
+            } else {
+                1.0 - 0.4 * i as f64 / (n - 1) as f64
+            };
+            let label = format!("{} run", run_source_label(&r.source));
+            let mut node = node(format!("run:{}", r.id), label, "recentRun", 0, size)
+                .with("source", json!(r.source))
+                .with("runStatus", json!(r.status))
+                .with("engine", opt(&r.engine))
+                .with("startedAt", opt(&r.started_at))
+                .with("endedAt", opt(&r.ended_at))
+                .with(
+                    "durationMs",
+                    r.duration_ms.map_or(Value::Null, int),
+                )
+                .with("tokens", int(r.tokens))
+                .with("toolCalls", int(r.tool_calls))
+                .with("model", opt(&r.model))
+                .with("errorCode", opt(&r.error_code));
+            let status = match r.status.as_str() {
+                "ok" => Some("ok"),
+                "error" | "aborted" => Some("warn"),
+                "cancelled" => Some("off"),
+                _ => None,
+            };
+            if let Some(st) = status {
+                node = node.status(st);
+            }
+            (node, size)
+        })
+        .collect()
+}
+
+/// The Storage hub: one member per data group, sized by its rows. The agent-history group's
+/// status is the agent store's health (`ok`, else warn); the main-DB groups are `ok` when they
+/// hold rows and `off` when they hold none. A missing report (null) is the hub alone, `off`.
+fn storage_part(input: &OsVizInput) -> Part {
+    let mut part = Part::new("off");
+    let empty = OsSnapshotFull::default();
+    let Some(storage) = input.snapshot.as_ref().unwrap_or(&empty).storage.as_ref() else {
+        part.meta.insert("groups".into(), json!(0));
+        return part;
+    };
+    let store_ok = storage.agent_store.health == "ok";
+    let max_rows = storage
+        .groups
+        .iter()
+        .map(|g| g.rows)
+        .fold(0.0_f64, f64::max);
+    let total_rows: f64 = storage.groups.iter().map(|g| g.rows).sum();
+    let known_bytes: Vec<f64> = storage.groups.iter().filter_map(|g| g.bytes).collect();
+    let mut members: Vec<Member> = Vec::new();
+    for g in storage.groups.iter().filter(|g| !g.key.is_empty()) {
+        let status = if g.key == "agent_history" {
+            if store_ok { "ok" } else { "warn" }
+        } else if g.rows > 0.0 {
+            "ok"
+        } else {
+            "off"
+        };
+        let n = node(
+            format!("storage:{}", g.key),
+            if g.label.is_empty() { g.key.clone() } else { g.label.clone() },
+            "storage",
+            0,
+            log_size(g.rows, max_rows),
+        )
+        .status(status)
+        .with("key", json!(g.key))
+        .with("rows", int(g.rows))
+        .with("bytes", g.bytes.map_or(Value::Null, int))
+        .with("bytesApprox", g.bytes_approx.map_or(Value::Null, |b| json!(b)))
+        .with("lastCleanedAt", opt(&g.last_cleaned_at))
+        .with("retentionDays", g.retention_days.map_or(Value::Null, int))
+        .with("actions", json!(g.actions));
+        members.push((n, g.rows));
+    }
+    sort_by_value(&mut members);
+    let retention = storage
+        .groups
+        .iter()
+        .find(|g| g.key == "agent_history")
+        .and_then(|g| g.retention_days);
+    part.meta.insert("groups".into(), json!(storage.groups.len()));
+    part.meta.insert("rows".into(), int(total_rows));
+    part.meta.insert(
+        "bytes".into(),
+        if known_bytes.is_empty() {
+            Value::Null
+        } else {
+            int(known_bytes.iter().sum())
+        },
+    );
+    part.meta.insert(
+        "lastCleanedAt".into(),
+        opt(&newest(storage.groups.iter().map(|g| g.last_cleaned_at.as_deref()))),
+    );
+    part.meta
+        .insert("retentionDays".into(), retention.map_or(Value::Null, int));
+    part.meta
+        .insert("agentStoreHealth".into(), json!(storage.agent_store.health));
+    part.meta
+        .insert("agentStoreState".into(), json!(storage.agent_store.state));
+    part.members = members;
+    part.status = if storage.groups.is_empty() {
+        "off"
+    } else if store_ok {
+        "ok"
+    } else {
+        "warn"
+    }
+    .into();
     part
 }
 
@@ -1563,11 +1721,11 @@ mod tests {
     }
 
     #[test]
-    fn empty_input_gives_nine_hubs_all_off_except_none() {
+    fn empty_input_gives_ten_hubs_all_off_except_none() {
         let g = build_os_graph(&OsVizInput::default());
         assert_eq!(g.level, "os");
         let hubs: Vec<&VizNode> = g.nodes.iter().filter(|n| n.kind == "hub").collect();
-        assert_eq!(hubs.len(), 9);
+        assert_eq!(hubs.len(), 10);
         assert!(hubs.iter().all(|h| h.status.as_deref() == Some("off")));
         assert!(hubs.iter().all(|h| h.labelled && h.size == 6.0));
         let drills: Vec<&str> = hubs.iter().filter_map(|h| h.drill.as_deref()).collect();
@@ -1582,7 +1740,8 @@ mod tests {
                 "agents",
                 "routines",
                 "kits",
-                "activity"
+                "activity",
+                "storage"
             ]
         );
         // The code-feature edge needs a feature node, so it is gone with no kits.
@@ -2058,7 +2217,7 @@ mod tests {
         assert!(snap.running.chat_turns.is_empty());
         // The rest of the snapshot still counts.
         assert_eq!(snap.tokens.totals.billable, 5.0);
-        assert_eq!(build_os_view(&input).hubs.len(), 8);
+        assert_eq!(build_os_view(&input).hubs.len(), 9);
     }
 
     #[test]
@@ -2592,5 +2751,126 @@ mod tests {
         // Edges are sorted, as every graph's are.
         let sorted = g.edges.windows(2).all(|w| js_cmp(&w[0].source, &w[1].source) != Ordering::Greater);
         assert!(sorted);
+    }
+}
+
+#[cfg(test)]
+mod storage_and_agents_tests {
+    use super::*;
+
+    fn input(v: Value) -> OsVizInput {
+        serde_json::from_value(v).expect("input")
+    }
+
+    fn hub<'a>(g: &'a VizGraph, key: &str) -> &'a VizNode {
+        g.nodes
+            .iter()
+            .find(|n| n.id == format!("hub:{key}"))
+            .expect("hub")
+    }
+
+    fn storage_input(health: &str) -> OsVizInput {
+        input(json!({"snapshot": {"storage": {
+            "groups": [
+                {"key": "agent_history", "label": "Agent history", "rows": 10, "bytes": 2000,
+                 "bytesApprox": true, "lastCleanedAt": "2026-10-20T08:00:00Z",
+                 "retentionDays": 90, "actions": ["clear", "compact"]},
+                {"key": "search_index", "label": "Search index", "rows": 0, "bytes": null,
+                 "bytesApprox": null, "lastCleanedAt": null, "retentionDays": null, "actions": []},
+                {"key": "sources", "label": "Sources", "rows": 4, "bytes": null,
+                 "bytesApprox": null, "lastCleanedAt": null, "retentionDays": null, "actions": []}
+            ],
+            "agentStore": {"health": health, "state": "ok"}
+        }}}))
+    }
+
+    #[test]
+    fn storage_hub_has_one_member_per_group_sized_by_rows() {
+        let g = build_os_graph(&storage_input("ok"));
+        let h = hub(&g, "storage");
+        assert_eq!(h.status.as_deref(), Some("ok"));
+        assert_eq!(h.meta["groups"], json!(3));
+        assert_eq!(h.meta["rows"], json!(14));
+        assert_eq!(h.meta["bytes"], json!(2000));
+        assert_eq!(h.meta["lastCleanedAt"], json!("2026-10-20T08:00:00Z"));
+        assert_eq!(h.meta["retentionDays"], json!(90));
+        let members: Vec<&VizNode> = g.nodes.iter().filter(|n| n.kind == "storage").collect();
+        assert_eq!(members.len(), 3);
+        // Largest (by rows) first in the ranking, so agent history and sources come before the empty index.
+        let agent = members.iter().find(|n| n.id == "storage:agent_history").unwrap();
+        assert_eq!(agent.status.as_deref(), Some("ok"));
+        assert_eq!(agent.meta["bytes"], json!(2000));
+        assert_eq!(agent.meta["actions"], json!(["clear", "compact"]));
+        let index = members.iter().find(|n| n.id == "storage:search_index").unwrap();
+        assert_eq!(index.status.as_deref(), Some("off"));
+        assert!(index.meta["bytes"].is_null());
+        assert!(agent.size > index.size);
+        assert!(g
+            .edges
+            .iter()
+            .any(|e| e.source == "hub:storage" && e.target == "storage:sources" && e.kind == "member"));
+    }
+
+    #[test]
+    fn a_degraded_agent_store_warns_the_hub_and_its_group() {
+        let g = build_os_graph(&storage_input("degraded"));
+        assert_eq!(hub(&g, "storage").status.as_deref(), Some("warn"));
+        let agent = g.nodes.iter().find(|n| n.id == "storage:agent_history").unwrap();
+        assert_eq!(agent.status.as_deref(), Some("warn"));
+        let sources = g.nodes.iter().find(|n| n.id == "storage:sources").unwrap();
+        assert_eq!(sources.status.as_deref(), Some("ok"));
+    }
+
+    #[test]
+    fn a_null_storage_report_is_the_hub_alone_and_off() {
+        let g = build_os_graph(&input(json!({"snapshot": {"storage": null}})));
+        assert_eq!(hub(&g, "storage").status.as_deref(), Some("off"));
+        assert!(!g.nodes.iter().any(|n| n.kind == "storage"));
+        let absent = build_os_graph(&OsVizInput::default());
+        assert_eq!(hub(&absent, "storage").status.as_deref(), Some("off"));
+        let drill = build_hub_graph("storage", &OsVizInput::default()).unwrap();
+        assert_eq!(drill.nodes.len(), 1);
+    }
+
+    #[test]
+    fn recent_runs_are_agent_members_with_status_rings_newest_labelled() {
+        let runs = json!([
+            {"id": "r1", "source": "chat", "engine": "v2", "status": "ok", "startedAt": "2026-10-28 10:00:00",
+             "endedAt": "2026-10-28 10:00:05", "durationMs": 5000, "tokens": 900, "toolCalls": 2,
+             "model": "m", "errorCode": null},
+            {"id": "r2", "source": "loop", "engine": null, "status": "error", "startedAt": "2026-10-28 09:00:00",
+             "endedAt": null, "durationMs": null, "tokens": 0, "toolCalls": 0, "model": null, "errorCode": "E1"},
+            {"id": "r3", "source": "meeting", "engine": null, "status": "cancelled", "startedAt": "2026-10-28 08:00:00",
+             "endedAt": null, "durationMs": 10, "tokens": 0, "toolCalls": 0, "model": null, "errorCode": null},
+            {"id": "r4", "source": "chat", "engine": null, "status": "running", "startedAt": "2026-10-28 11:00:00",
+             "endedAt": null, "durationMs": null, "tokens": 0, "toolCalls": 0, "model": null, "errorCode": null}
+        ]);
+        let g = build_os_graph(&input(json!({"snapshot": {"agents": {"recentRuns": runs}}})));
+        let h = hub(&g, "agents");
+        assert_eq!(h.status.as_deref(), Some("ok"));
+        assert_eq!(h.meta["recentRuns"], json!(3));
+        let r1 = g.nodes.iter().find(|n| n.id == "run:r1").unwrap();
+        assert_eq!(r1.kind, "recentRun");
+        assert_eq!(r1.label, "Chat run");
+        assert_eq!(r1.status.as_deref(), Some("ok"));
+        assert_eq!(r1.meta["tokens"], json!(900));
+        assert_eq!(r1.meta["durationMs"], json!(5000));
+        assert_eq!(r1.meta["errorCode"], Value::Null);
+        assert_eq!(g.nodes.iter().find(|n| n.id == "run:r2").unwrap().status.as_deref(), Some("warn"));
+        assert_eq!(g.nodes.iter().find(|n| n.id == "run:r3").unwrap().status.as_deref(), Some("off"));
+        // A running run is shown once, as the running list has it (here it is not in the list).
+        assert!(!g.nodes.iter().any(|n| n.id == "run:r4"));
+        assert!(r1.size > g.nodes.iter().find(|n| n.id == "run:r3").unwrap().size);
+        // The newest run is labelled in its own hub's drill.
+        let drill = build_hub_graph("agents", &input(json!({"snapshot": {"agents": {"recentRuns": runs}}}))).unwrap();
+        assert!(drill.nodes.iter().find(|n| n.id == "run:r1").unwrap().labelled);
+    }
+
+    #[test]
+    fn a_run_listed_as_running_is_not_repeated_and_no_runs_is_off() {
+        let g = build_os_graph(&input(json!({"snapshot": {"agents": {"recentRuns": [
+            {"id": "x", "source": "chat", "status": "running"}]}}})));
+        assert_eq!(hub(&g, "agents").status.as_deref(), Some("off"));
+        assert!(!g.nodes.iter().any(|n| n.kind == "recentRun"));
     }
 }
