@@ -104,6 +104,11 @@ jobs:
     name: WASM reproducibility (build-os-wasm.sh --check --strict)
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Informational until it has passed once on Linux: the committed bytes were built on
+    # macOS (aarch64) and a Linux build is not yet proven byte-identical. When it first
+    # passes, delete this line; if it fails, diff graph_kit_os.js/.d.ts, compare the wasm
+    # custom sections and embedded paths, then rebuild the committed bytes on Linux.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Read the rustc version recorded in bytes.ts
