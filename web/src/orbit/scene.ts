@@ -503,6 +503,7 @@ export const HUB_HUE: Record<string, SystemHue> = {
   routines: "green",
   kits: "yellow",
   activity: "cyan",
+  storage: "brown",
 };
 
 /** Point colour of a VizGraph node as rgb 0..1: its kind colour, greyed when off. */

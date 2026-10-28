@@ -9,7 +9,7 @@ export type VizStatus = 'ok' | 'warn' | 'off' | 'running' | 'unknown';
 export interface VizNode {
   id: string;
   label: string;
-  /** hub, codeCluster, sourceKind, memoryRepo, skill, skillSource, model, provider, caller, endpoint, chatTurn, agentRun, liveSession, routine, kit, feature, check, activity, ... */
+  /** hub, codeCluster, sourceKind, memoryRepo, skill, skillSource, model, provider, caller, endpoint, chatTurn, agentRun, liveSession, recentRun, routine, kit, feature, check, activity, storage, ... */
   kind: string;
   /** The layout community: the hub's index at the OS level, a family within a hub. */
   group: number;
@@ -73,7 +73,7 @@ export interface OsViewInput {
 }
 
 /** Hub keys in display order. `code` is the project's SystemGraph; the rest are VizGraphs. */
-export const HUB_KEYS = ['code', 'knowledge', 'memory', 'skills', 'models', 'agents', 'routines', 'kits', 'activity'] as const;
+export const HUB_KEYS = ['code', 'knowledge', 'memory', 'skills', 'models', 'agents', 'routines', 'kits', 'activity', 'storage'] as const;
 export type HubKey = (typeof HUB_KEYS)[number];
 
 /** The titles of the hubs, as the core names them. */
@@ -87,6 +87,7 @@ export const HUB_TITLES: Record<HubKey, string> = {
   routines: 'Routines',
   kits: 'Kits',
   activity: 'Activity',
+  storage: 'Storage',
 };
 
 export function isHubKey(value: unknown): value is HubKey {
@@ -138,10 +139,11 @@ export function swallowsPick(guard: DrillGuard | null, id: string, now: number):
  *   memory      memoryRepo
  *   skills      skill, skillSource
  *   models      model, provider, caller, endpoint
- *   agents      chatTurn, agentRun, liveSession
+ *   agents      chatTurn, agentRun, liveSession, recentRun
  *   routines    routine
  *   kits        kit, feature, check
  *   activity    activity
+ *   storage     storage
  *
  * `group` rows and any kind not listed here have no hub and draw in the neutral grey.
  */
@@ -158,11 +160,13 @@ export const KIND_HUB: Record<string, string> = {
   chatTurn: 'agents',
   agentRun: 'agents',
   liveSession: 'agents',
+  recentRun: 'agents',
   routine: 'routines',
   kit: 'kits',
   feature: 'kits',
   check: 'kits',
   activity: 'activity',
+  storage: 'storage',
 };
 
 /**

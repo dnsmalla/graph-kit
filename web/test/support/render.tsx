@@ -5,6 +5,7 @@ import { Brain } from '../../src/components/Brain';
 import { Recent } from '../../src/components/Recent';
 import { CodePreview, Selection } from '../../src/components/Selection';
 import { CodeStructure } from '../../src/components/CodeStructure';
+import { HubOverview } from '../../src/components/HubOverview';
 import { EMPTY_CORE_VIEW, EMPTY_RING_VIEW, type CoreView } from '../../src/systemGraph';
 import type { FilePreview, OsController, OsSelection } from '../../src/controller';
 import type { CGData } from '../../../typescript/src/models';
@@ -123,4 +124,13 @@ export function renderCodeBrain(controller: OsController, core: CoreView): strin
       activity={[]}
     />,
   ));
+}
+
+/** One hub's overview in the details drawer, with the controller's current state (its data must be loaded). */
+export function renderHub(controller: OsController, hub: string): string {
+  const state = controller.getSnapshot();
+  if (!state.data) throw new Error('renderHub needs loaded data');
+  return renderToString(
+    <HubOverview hub={hub} data={state.data} state={state} controller={controller} core={EMPTY_CORE_VIEW} selected={null} />,
+  );
 }

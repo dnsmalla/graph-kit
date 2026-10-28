@@ -10,7 +10,7 @@ import { uniqueCacheDir } from './support/cacheDir.mjs';
 import react from '@vitejs/plugin-react';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const HUB_NAMES = ['activity', 'agents', 'kits', 'knowledge', 'memory', 'models', 'routines', 'skills'];
+const HUB_NAMES = ['activity', 'agents', 'kits', 'knowledge', 'memory', 'models', 'routines', 'skills', 'storage'];
 
 let server;
 let api;
@@ -109,7 +109,7 @@ describe('wasm wrappers: buildOsView, vizLayout, codeSummary', () => {
   it('buildOsView with no input gives the OS graph as one centre per hub, and a graph per hub but code', () => {
     const out = api.wasm.buildOsView({ snapshot: null, skills: [], routines: [], code: null });
     assert.equal(out.os.level, 'os');
-    assert.equal(out.os.nodes.length, 9, 'nine hub centres');
+    assert.equal(out.os.nodes.length, 10, 'ten hub centres');
     assert.ok(out.os.nodes.every((n) => n.kind === 'hub' && n.drill), 'every centre opens its hub');
     assert.deepEqual(Object.keys(out.hubs).sort(), HUB_NAMES, 'every hub but code has a graph');
     for (const name of HUB_NAMES) assert.equal(out.hubs[name].nodes.length, 1, `${name} with no data is its centre only`);
@@ -182,6 +182,7 @@ describe('the memoised OS view and layout', () => {
     running.running.chatTurns = [];
     running.running.meetingAgentRuns = [];
     running.running.liveSessions = [];
+    running.agents.recentRuns = [];
     const b = api.systemGraph.computeOsView(running, skills, routines, core);
     assert.notEqual(a, b);
     assert.equal(b.hubs.agents.nodes.length, 1, 'nothing running now');

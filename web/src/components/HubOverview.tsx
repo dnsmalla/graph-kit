@@ -3,11 +3,13 @@
 // controller already holds; nothing here fetches. A click that opens a node goes through the
 // controller, so the brain flies to it and selects it.
 import { useState } from 'react';
-import type { ExtraStatus, OsController, OsSelection, ViewState } from '../controller';
+import type { ExtraStatus, OsController, OsSelection, StorageView, ViewState } from '../controller';
 import type { CoreView } from '../systemGraph';
-import type { OsActivityItem, OsCancel, OsRoutine, OsSkill, OsSnapshot, OsUsageCounts } from '../types';
+import type { OsActivityItem, OsAgentRun, OsCancel, OsRoutine, OsSkill, OsSnapshot, OsStorageGroup, OsStorageReport, OsUsageCounts } from '../types';
 import { clusterSummary, uniqueCoreNodes } from '../orbit/scene';
-import { fmtInt, fmtTime, pct, shortSha, words } from '../format';
+import { countRows } from '../storageFlow';
+import { RETENTION_MAX, RETENTION_MIN } from '../storageFlow';
+import { fmtBytes, fmtDuration, fmtInt, fmtRelative, fmtTime, pct, shortSha, words } from '../format';
 import { Bar, Empty } from './common';
 import { Recent } from './Recent';
 
@@ -536,12 +538,65 @@ function RunRow({
   );
 }
 
+/** The label of an agent run's source. */
+const SOURCE_LABELS: Record<string, string> = {
+  chat: 'Chat',
+  loop: 'Loop',
+  meeting: 'Meeting',
+  autotask: 'Auto task',
+  dispatch: 'Dispatch',
+  review: 'Review',
+};
+
+/** A run's status as the word the chip shows (never colour alone). */
+const RUN_STATUS_WORDS: Record<OsAgentRun['status'], string> = {
+  running: 'Running',
+  ok: 'Done',
+  error: 'Error',
+  cancelled: 'Cancelled',
+  aborted: 'Aborted',
+};
+
+/** A run's detail line: start, duration, tokens, then the model and error code when there are any. */
+function runDetail(run: OsAgentRun): string {
+  const parts = [fmtTime(run.startedAt), fmtDuration(run.durationMs), `${fmtInt(run.tokens)} tokens`];
+  if (run.model) parts.push(run.model);
+  if (run.errorCode) parts.push(run.errorCode);
+  return parts.join(' · ');
+}
+
+/** The newest agent runs: status chip, duration and tokens. Codes only, no prompt text. */
+function RecentRuns({ runs }: { runs: OsAgentRun[] }) {
+  return (
+    <>
+      <h3 className="sub-title">Recent runs</h3>
+      {runs.length === 0 ? (
+        <Empty>No agent runs yet. Chat turns, loops and meeting agents appear here when they finish.</Empty>
+      ) : (
+        <ul className="rows run-rows">
+          {runs.map((run) => (
+            <li key={run.id} className="row">
+              <div className="row-main">
+                <strong>{`${SOURCE_LABELS[run.source] ?? 'Agent'} run`}</strong>
+                <div className="meta">{runDetail(run)}</div>
+              </div>
+              <span className={`chip run-chip run-chip-${run.status}`}>{RUN_STATUS_WORDS[run.status] ?? run.status}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
 export function AgentsOverview({
   running,
+  recentRuns,
   stopping,
   onStop,
 }: {
   running: Running;
+  recentRuns: OsAgentRun[];
   stopping: string | null;
   onStop: (cancel: OsCancel, key: string) => void;
 }) {
@@ -587,6 +642,220 @@ export function AgentsOverview({
             />
           ))}
         </ul>
+      )}
+      <RecentRuns runs={recentRuns} />
+    </div>
+  );
+}
+
+/* ---- Storage: what is kept, and the clear and compact actions ---- */
+
+const GROUP_ACTIONS_NOTE = 'Only the agent history can be cleared or compacted here.';
+
+/** The retention editor: a whole number of days, 7 to 365, saved to the host. */
+function RetentionEditor({ storage, controller, current }: { storage: StorageView; controller: OsController; current: number | null }) {
+  const [draft, setDraft] = useState<string>(current === null ? '' : String(current));
+  const saving = storage.retention.status === 'saving';
+  const days = Number(draft);
+  const invalid = draft.trim() === '' || !Number.isInteger(days) || days < RETENTION_MIN || days > RETENTION_MAX;
+  return (
+    <div className="storage-retention">
+      <label className="field">
+        <span>Keep raw history for (days)</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={RETENTION_MIN}
+          max={RETENTION_MAX}
+          step={1}
+          value={draft}
+          aria-invalid={invalid}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+      </label>
+      <button
+        type="button"
+        className="btn"
+        disabled={saving || invalid}
+        onClick={() => void controller.setStorageRetention(days)}
+      >
+        {saving ? 'Saving…' : 'Save retention'}
+      </button>
+      {storage.retention.message ? <p className="meta storage-error">{storage.retention.message}</p> : null}
+      {storage.retention.status === 'saved' ? <p className="meta">Retention saved.</p> : null}
+    </div>
+  );
+}
+
+/** The Clear flow as the user sees it: scope buttons, the dry-run counts, then an explicit confirm. */
+function ClearPanel({ storage, controller }: { storage: StorageView; controller: OsController }) {
+  const flow = storage.clear;
+  switch (flow.kind) {
+    case 'idle':
+      return (
+        <div className="storage-actions">
+          <button type="button" className="btn" onClick={() => void controller.storageClearPreview('raw', null)}>
+            Clear raw history…
+          </button>
+          <button type="button" className="btn btn-danger" onClick={() => void controller.storageClearPreview('all', null)}>
+            Clear all agent history…
+          </button>
+          <p className="meta">
+            Raw clears keep the daily summaries. Clearing all history also removes the summaries. Live state is never touched.
+          </p>
+        </div>
+      );
+    case 'previewing':
+      return <p className="meta">Checking what would be deleted…</p>;
+    case 'confirm':
+      return (
+        <div className="storage-preview" role="group" aria-label="Clear preview">
+          {flow.notice ? <p className="meta storage-notice">{flow.notice}</p> : null}
+          <h4 className="sub-title">Would delete ({flow.scope === 'all' ? 'all history' : 'raw rows'})</h4>
+          <dl className="totals">
+            {countRows(flow.preview.wouldDelete).map((row) => (
+              <div key={row.key}>
+                <dt>{row.label}</dt>
+                <dd>{fmtInt(row.count)}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="meta">The preview expires {fmtRelative(flow.preview.expiresAt)}. Confirm to delete these rows.</p>
+          <div className="storage-actions">
+            <button type="button" className="btn btn-danger" onClick={() => void controller.storageClearConfirm()}>
+              {`Delete ${fmtInt(flow.preview.total)} rows`}
+            </button>
+            <button type="button" className="btn" onClick={() => controller.storageClearCancel()}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    case 'clearing':
+      return <p className="meta">Clearing…</p>;
+    case 'cleared':
+      return (
+        <div className="storage-result">
+          <p>{`Cleared ${fmtInt(flow.total)} rows.`}</p>
+          <button type="button" className="btn" onClick={() => controller.storageClearCancel()}>
+            Done
+          </button>
+        </div>
+      );
+    case 'failed':
+      return (
+        <div className="storage-result">
+          <p className="storage-error" role="alert">{flow.message}</p>
+          <button type="button" className="btn" onClick={() => controller.storageClearCancel()}>
+            Close
+          </button>
+        </div>
+      );
+  }
+}
+
+/** Compact: busy and disk-space failures get their own message. */
+function CompactPanel({ storage, controller }: { storage: StorageView; controller: OsController }) {
+  const flow = storage.compact;
+  return (
+    <div className="storage-compact">
+      <button type="button" className="btn" disabled={flow.kind === 'running'} onClick={() => void controller.storageCompact()}>
+        {flow.kind === 'running' ? 'Compacting…' : 'Compact store'}
+      </button>
+      {flow.kind === 'done' ? (
+        <p className="meta">
+          Freed {fmtBytes(flow.freedBytes)} ({fmtInt(flow.pagesFreed)} pages, {flow.mode}, {fmtDuration(flow.ms)}).
+        </p>
+      ) : null}
+      {flow.kind === 'failed' ? (
+        <p className="storage-error" role="alert">
+          {flow.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function GroupRow({ group, max }: { group: OsStorageGroup; max: number }) {
+  const bytes = group.bytes === null ? null : `${group.bytesApprox ? '~' : ''}${fmtBytes(group.bytes)}`;
+  return (
+    <li>
+      <div className="breakdown-head">
+        <span>{group.label}</span>
+        <span className="meta">
+          {fmtInt(group.rows)} rows{bytes ? ` · ${bytes}` : ''}
+        </span>
+      </div>
+      <Bar value={group.rows} max={max} label={`${group.label}: ${fmtInt(group.rows)} rows`} />
+      {group.lastCleanedAt ? <p className="meta">Last cleaned {fmtRelative(group.lastCleanedAt)}</p> : null}
+    </li>
+  );
+}
+
+/** The Storage hub's overview: the size of each data group, retention, the clear and compact actions. */
+export function StorageOverview({ report, storage, controller }: { report: OsStorageReport | null; storage: StorageView; controller: OsController }) {
+  if (report === null) {
+    return (
+      <div className="hub-body">
+        <h3 className="sub-title">Storage</h3>
+        <Empty>The storage report is not available. The agent store could not be read.</Empty>
+      </div>
+    );
+  }
+  const groups = report.groups;
+  const max = groups.reduce((m, g) => Math.max(m, g.rows), 0);
+  const agent = groups.find((g) => g.key === 'agent_history') ?? null;
+  const knownBytes = groups.filter((g) => g.bytes !== null).reduce((sum, g) => sum + (g.bytes ?? 0), 0);
+  const lastCleaned = groups.reduce<string | null>((latest, g) => (g.lastCleanedAt && (!latest || g.lastCleanedAt > latest) ? g.lastCleanedAt : latest), null);
+  const retention = storage.retentionDays ?? agent?.retentionDays ?? null;
+  const canAct = agent !== null && agent.actions.length > 0;
+  const healthy = report.agentStore.health === 'ok';
+  return (
+    <div className="hub-body">
+      <h3 className="sub-title">Storage</h3>
+      <dl className="totals">
+        <div>
+          <dt>Groups</dt>
+          <dd>{fmtInt(groups.length)}</dd>
+        </div>
+        <div>
+          <dt>Size</dt>
+          <dd>{knownBytes > 0 ? fmtBytes(knownBytes) : '—'}</dd>
+        </div>
+        <div>
+          <dt>Last cleaned</dt>
+          <dd>{lastCleaned ? fmtRelative(lastCleaned) : 'never'}</dd>
+        </div>
+      </dl>
+      <ul className="breakdown">
+        {groups.map((g) => (
+          <GroupRow key={g.key} group={g} max={max} />
+        ))}
+      </ul>
+      {agent?.bytesApprox ? <p className="meta">Agent history sizes are approximate.</p> : null}
+      {!healthy ? (
+        <p className="storage-error" role="alert">
+          The agent store is {report.agentStore.health === 'down' ? 'down' : 'degraded'}. Clear and compact may not work until it recovers.
+        </p>
+      ) : null}
+      {report.agentHistory?.quarantinedAt ? (
+        <p className="meta storage-notice">The agent store was reset after damage on {fmtTime(report.agentHistory.quarantinedAt)}.</p>
+      ) : null}
+      {report.agentHistory ? (
+        <p className="meta">
+          Raw history from {report.agentHistory.rawFromDay ?? '—'} ({fmtInt(report.agentHistory.rawRows)} rows), {fmtInt(report.agentHistory.rolledDays)} days
+          summarised{report.agentHistory.droppedRows > 0 ? `, ${fmtInt(report.agentHistory.droppedRows)} rows dropped by the write queue` : ''}.
+        </p>
+      ) : null}
+      {storage.canSetRetention ? <RetentionEditor storage={storage} controller={controller} current={retention} /> : null}
+      {canAct ? (
+        <>
+          {storage.canClear ? <ClearPanel storage={storage} controller={controller} /> : null}
+          {storage.canCompact ? <CompactPanel storage={storage} controller={controller} /> : null}
+          {!storage.canClear && !storage.canCompact ? <p className="meta">{GROUP_ACTIONS_NOTE}</p> : null}
+        </>
+      ) : (
+        <p className="meta">{GROUP_ACTIONS_NOTE}</p>
       )}
     </div>
   );
@@ -690,7 +959,9 @@ export function HubOverview({ hub, data, state, controller, core, selected }: Hu
     case 'routines':
       return <RoutinesOverview routines={state.routines} status={state.routinesStatus} controller={controller} />;
     case 'agents':
-      return <AgentsOverview running={data.running} stopping={state.stopping} onStop={stop} />;
+      return <AgentsOverview running={data.running} recentRuns={data.agents?.recentRuns ?? []} stopping={state.stopping} onStop={stop} />;
+    case 'storage':
+      return <StorageOverview report={data.storage ?? null} storage={state.storage} controller={controller} />;
     case 'activity':
       return <ActivityOverview items={data.activity.items} controller={controller} selected={selected} heading="Activity" />;
     case 'code':

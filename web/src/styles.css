@@ -1460,3 +1460,54 @@ select:focus-visible {
   margin: 0;
   flex-basis: 100%;
 }
+
+/* ---- agent runs and storage ---- */
+
+.run-chip {
+  color: var(--tok-color-text);
+}
+
+.run-chip-ok {
+  border-color: var(--os-status-ok);
+}
+
+.run-chip-error,
+.run-chip-aborted {
+  border-color: var(--os-status-warn);
+}
+
+.run-chip-running {
+  border-color: var(--os-status-running);
+}
+
+.run-chip-cancelled {
+  opacity: 0.75;
+}
+
+.storage-actions,
+.storage-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tok-space-sm);
+  align-items: center;
+}
+
+.storage-retention {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tok-space-sm);
+  align-items: flex-end;
+  margin: var(--tok-space-sm) 0;
+}
+
+.storage-retention input {
+  width: 6em;
+}
+
+.storage-error {
+  color: var(--tok-color-danger);
+}
+
+.storage-notice {
+  color: var(--os-status-warn);
+}
