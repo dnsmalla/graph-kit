@@ -3,6 +3,39 @@
 // the overview renders them; nothing here touches the host, so every path is testable on its own.
 import type { OsClearCounts, OsClearResult } from './types';
 
+const COUNT_KEYS = ['agent_runs', 'agent_tool_events', 'turn_composition', 'agent_daily', 'agent_daily_tools'] as const;
+
+/** Whether a value is a full set of clear counts (every table, each a finite number). */
+export function isCountSet(value: unknown): value is OsClearCounts {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return COUNT_KEYS.every((k) => typeof v[k] === 'number' && Number.isFinite(v[k]));
+}
+
+/** Whether a host answer is a usable dry run: the counts, a non-empty previewId and a total. */
+export function isDryRunResult(value: unknown): value is DryRunClear {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    v.dryRun === true &&
+    isCountSet(v.wouldDelete) &&
+    typeof v.previewId === 'string' &&
+    v.previewId.length > 0 &&
+    typeof v.total === 'number' &&
+    Number.isFinite(v.total)
+  );
+}
+
+/** Whether a host answer is a real clear: the deleted counts and a total. */
+export function isRealClearResult(value: unknown): value is Extract<OsClearResult, { dryRun: false }> {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return v.dryRun === false && isCountSet(v.deleted) && typeof v.total === 'number' && Number.isFinite(v.total);
+}
+
+export const UNEXPECTED_PREVIEW = 'The host sent an unexpected answer to the preview. Nothing was cleared.';
+export const UNEXPECTED_CLEAR = 'The host sent an unexpected answer to the clear. The history may or may not have been cleared; check it before trying again.';
+
 export type ClearScope = 'raw' | 'all';
 
 /** The dry run a confirm shows: the counts a real clear would delete, and the previewId that binds the clear to them. */

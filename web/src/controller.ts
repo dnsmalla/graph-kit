@@ -17,6 +17,10 @@ import {
   previewing,
   retentionError,
   type ClearFlow,
+  isDryRunResult,
+  isRealClearResult,
+  UNEXPECTED_CLEAR,
+  UNEXPECTED_PREVIEW,
   type ClearScope,
   type CompactFlow,
 } from './storageFlow';
@@ -290,6 +294,8 @@ export class OsController {
   private skillsSeq = 0;
   private routinesSeq = 0;
   private storageSeq = 0;
+  /** Bumped by every clear step that supersedes an answer in flight: preview, confirm, cancel, project reset. */
+  private clearSeq = 0;
   /** The latest code-preview request; an older response is dropped. */
   private fileSeq = 0;
   /** The camera each level was left at, by levelKey: returning to a level puts the camera back. */
@@ -385,6 +391,7 @@ export class OsController {
     if (!projectChanged) return;
     // A new project has its own graph and remembered views: the brain starts again at the OS.
     this.cameras.clear();
+    this.clearSeq++;
     this.fileSeq++;
     this.set({
       view: { level: 'os' },
@@ -832,79 +839,92 @@ export class OsController {
     this.set({ storage: { ...this.state.storage, ...patch } });
   }
 
-  /** Dry run for a clear: shows the counts and the previewId. Needs host.storageClear. */
+  /**
+   * Dry run for a clear: shows the counts and the previewId. Needs host.storageClear. Ignored while a
+   * real clear is in flight. A newer preview supersedes an older one: only the latest answer counts.
+   */
   async storageClearPreview(scope: ClearScope, beforeDays: number | null): Promise<void> {
-    if (this.disposed || !this.state.storage.canClear) return;
+    if (this.disposed || !this.state.storage.canClear || this.state.storage.clear.kind === 'clearing') return;
+    const seq = ++this.clearSeq;
     this.setStorage({ clear: previewing(scope, beforeDays) });
-    await this.runPreview(scope, beforeDays, null);
+    await this.runPreview(scope, beforeDays, null, seq);
   }
 
   /**
    * Sends the real clear for the preview on screen (its previewId). Only a shown preview can be
-   * confirmed. A stale preview (expired, invalid or changed rows) re-previews once with a notice; the
-   * user must confirm the fresh counts. Any other failure shows its message.
+   * confirmed, and only once: the flow is `clearing` from the first call, so a second confirm is a
+   * no-op. A stale preview (expired, invalid or changed rows) re-previews once with a notice; the user
+   * must confirm the fresh counts. Any other failure shows its message.
    */
   async storageClearConfirm(): Promise<void> {
     const flow = this.state.storage.clear;
     const host = this.deps.host;
     if (this.disposed || flow.kind !== 'confirm' || typeof host.storageClear !== 'function') return;
     const { scope, beforeDays, preview } = flow;
+    const seq = ++this.clearSeq;
     this.setStorage({ clear: confirming(flow) });
     const req: OsClearRequest = { scope, dryRun: false, previewId: preview.previewId };
     if (beforeDays !== null) req.beforeDays = beforeDays;
     try {
-      const result = await host.storageClear(req);
-      if (this.disposed) return;
-      if (result.dryRun !== false) {
-        this.setStorage({ clear: clearFailed(scope, beforeDays, 'The host did not clear the history.') });
+      const result: unknown = await host.storageClear(req);
+      if (this.disposed || seq !== this.clearSeq) return;
+      if (!isRealClearResult(result)) {
+        this.setStorage({ clear: clearFailed(scope, beforeDays, UNEXPECTED_CLEAR) });
         return;
       }
       this.setStorage({ clear: cleared(this.state.storage.clear, result) });
       await this.refresh();
     } catch (err) {
-      if (this.disposed) return;
+      if (this.disposed || seq !== this.clearSeq) return;
       if (isAuthError(err)) {
         this.handleAuthError();
         return;
       }
-      const code = storageCode(err);
-      const action = clearFailure(code, describe(err));
+      const action = clearFailure(storageCode(err), describe(err));
       if (action.action === 'repreview') {
-        await this.runPreview(scope, beforeDays, action.notice);
+        await this.runPreview(scope, beforeDays, action.notice, seq);
         return;
       }
       this.setStorage({ clear: clearFailed(scope, beforeDays, action.message) });
     }
   }
 
-  /** Puts the Clear flow back to idle (the user closed the preview or the result). */
+  /**
+   * Puts the Clear flow back to idle: the user closed the preview or the result. Ignored while a real
+   * clear is in flight (its delete cannot be undone from here). Any answer still on its way is dropped.
+   */
   storageClearCancel(): void {
+    if (this.state.storage.clear.kind === 'clearing') return;
+    this.clearSeq++;
     this.setStorage({ clear: { kind: 'idle' } });
   }
 
-  /** The dry run shared by a fresh preview and a re-preview after a stale one. Sets confirm or failed. */
-  private async runPreview(scope: ClearScope, beforeDays: number | null, notice: string | null): Promise<void> {
+  /**
+   * The dry run shared by a fresh preview and a re-preview after a stale one. Sets confirm or failed.
+   * An answer for an older request (`seq` no longer current) is dropped, so it cannot reopen a cancelled
+   * preview. A malformed answer is a failure, never a throw.
+   */
+  private async runPreview(scope: ClearScope, beforeDays: number | null, notice: string | null, seq: number): Promise<void> {
     const host = this.deps.host;
     if (typeof host.storageClear !== 'function') return;
     const req: OsClearRequest = { scope, dryRun: true };
     if (beforeDays !== null) req.beforeDays = beforeDays;
     try {
-      const result = await host.storageClear(req);
-      if (this.disposed) return;
-      if (result.dryRun !== true) {
-        this.setStorage({ clear: clearFailed(scope, beforeDays, 'The host did not return a preview.') });
+      const result: unknown = await host.storageClear(req);
+      if (this.disposed || seq !== this.clearSeq) return;
+      if (!isDryRunResult(result)) {
+        this.setStorage({ clear: clearFailed(scope, beforeDays, UNEXPECTED_PREVIEW) });
         return;
       }
       this.setStorage({ clear: previewed(scope, beforeDays, result, notice) });
     } catch (err) {
-      if (this.disposed) return;
+      if (this.disposed || seq !== this.clearSeq) return;
       if (isAuthError(err)) {
         this.handleAuthError();
         return;
       }
-      const code = storageCode(err);
       // A preview that fails again is not retried: the user sees why and starts the clear over.
-      const action = clearFailure(code, describe(err));
+      const action = clearFailure(storageCode(err), describe(err));
       this.setStorage({ clear: clearFailed(scope, beforeDays, action.action === 'fail' ? action.message : 'Could not preview the clear.') });
     }
   }

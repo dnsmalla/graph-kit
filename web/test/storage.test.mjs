@@ -479,3 +479,134 @@ describe('the Storage overview and the Agents runs', () => {
     assert.doesNotMatch(html, /prompt/i);
   });
 });
+
+/** A promise the test settles by hand. */
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((a, b) => {
+    resolve = a;
+    reject = b;
+  });
+  return { promise, resolve, reject };
+}
+
+describe('the clear flow under races', () => {
+  it('a double confirm sends exactly one real clear', async () => {
+    const real = deferred();
+    const { host, calls } = storageHost({
+      clear: (req) => (req.dryRun ? DRY('p1') : real.promise),
+    });
+    const controller = await loaded(host);
+    await controller.storageClearPreview('raw', null);
+    const first = controller.storageClearConfirm();
+    const second = controller.storageClearConfirm();
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'clearing');
+    real.resolve(REAL);
+    await Promise.all([first, second]);
+    assert.equal(calls.clear.filter((r) => !r.dryRun).length, 1, 'exactly one real clear');
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'cleared');
+  });
+
+  it('cancel while the preview is pending: the late answer does not reopen the confirm', async () => {
+    const preview = deferred();
+    const { host } = storageHost({ clear: () => preview.promise });
+    const controller = await loaded(host);
+    const pending = controller.storageClearPreview('raw', null);
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'previewing');
+    controller.storageClearCancel();
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'idle');
+    preview.resolve(DRY('p1'));
+    await pending;
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'idle');
+  });
+
+  it('a preview that fails after cancel is dropped too', async () => {
+    const preview = deferred();
+    const { host } = storageHost({ clear: () => preview.promise });
+    const controller = await loaded(host);
+    const pending = controller.storageClearPreview('all', null);
+    controller.storageClearCancel();
+    preview.reject(new api.host.OsStorageError('busy', 'busy'));
+    await pending;
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'idle', 'no failure shown for a cancelled preview');
+  });
+
+  it('overlapping previews: only the latest request wins, whatever order the answers come in', async () => {
+    const first = deferred();
+    const second = deferred();
+    let n = 0;
+    const { host } = storageHost({ clear: () => (++n === 1 ? first.promise : second.promise) });
+    const controller = await loaded(host);
+    const a = controller.storageClearPreview('raw', null);
+    const b = controller.storageClearPreview('raw', null);
+    second.resolve(DRY('p2'));
+    await b;
+    first.resolve(DRY('p1'));
+    await a;
+    const s = controller.getSnapshot().storage.clear;
+    assert.equal(s.kind, 'confirm');
+    assert.equal(s.preview.previewId, 'p2', 'the older answer did not overwrite the newer one');
+  });
+
+  it('while a real clear is in flight, cancel and a new preview are ignored', async () => {
+    const real = deferred();
+    const { host, calls } = storageHost({ clear: (req) => (req.dryRun ? DRY('p1') : real.promise) });
+    const controller = await loaded(host);
+    await controller.storageClearPreview('raw', null);
+    const confirm = controller.storageClearConfirm();
+    controller.storageClearCancel();
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'clearing', 'cancel ignored');
+    const before = calls.clear.length;
+    await controller.storageClearPreview('all', null);
+    assert.equal(calls.clear.length, before, 'no new preview sent');
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'clearing');
+    real.resolve(REAL);
+    await confirm;
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'cleared');
+  });
+
+  it('a project reset mid-preview drops the answer', async () => {
+    const preview = deferred();
+    const { host } = storageHost({ clear: () => preview.promise });
+    const controller = await loaded(host);
+    const pending = controller.storageClearPreview('raw', null);
+    controller.configure({ projectName: 'another project' });
+    preview.resolve(DRY('p1'));
+    await pending;
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'idle');
+  });
+
+  it('a project reset mid-confirm drops the real clear answer (the flow never reopens)', async () => {
+    const real = deferred();
+    const { host } = storageHost({ clear: (req) => (req.dryRun ? DRY('p1') : real.promise) });
+    const controller = await loaded(host);
+    await controller.storageClearPreview('raw', null);
+    const confirm = controller.storageClearConfirm();
+    controller.configure({ projectName: 'another project' });
+    real.resolve(REAL);
+    await confirm;
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'idle');
+  });
+
+  it('a malformed preview answer is a failure with the unexpected-answer message, not a throw', async () => {
+    for (const bad of [null, { dryRun: true }, { dryRun: true, wouldDelete: { agent_runs: 'x' }, previewId: 'p', total: 1 }, { dryRun: true, wouldDelete: DRY('p').wouldDelete, previewId: '', total: 12 }]) {
+      const { host } = storageHost({ clear: () => bad });
+      const controller = await loaded(host);
+      await controller.storageClearPreview('raw', null);
+      const s = controller.getSnapshot().storage.clear;
+      assert.equal(s.kind, 'failed', JSON.stringify(bad));
+      assert.match(s.message, /unexpected answer/);
+    }
+  });
+
+  it('a malformed real-clear answer is a failure that says the history may not have been cleared', async () => {
+    const { host } = storageHost({ clear: (req) => (req.dryRun ? DRY('p1') : { dryRun: false }) });
+    const controller = await loaded(host);
+    await controller.storageClearPreview('raw', null);
+    await controller.storageClearConfirm();
+    const s = controller.getSnapshot().storage.clear;
+    assert.equal(s.kind, 'failed');
+    assert.match(s.message, /may or may not have been cleared/);
+  });
+});
