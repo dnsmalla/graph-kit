@@ -346,6 +346,19 @@ describe('compact and retention through the controller', () => {
     });
   }
 
+  it('a plain Error with a string code is read the same way as an OsStorageError', async () => {
+    const { host } = storageHost({
+      compact: async () => {
+        throw Object.assign(new Error('full'), { code: 'disk_space' });
+      },
+    });
+    const controller = await loaded(host);
+    await controller.storageCompact();
+    const s = controller.getSnapshot().storage;
+    assert.equal(s.compact.code, 'disk_space');
+    assert.match(s.compact.message, /disk space/);
+  });
+
   it('compact without host.storageCompact does nothing', async () => {
     const { host } = storageHost({});
     const controller = await loaded(host);

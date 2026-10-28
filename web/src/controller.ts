@@ -4,7 +4,7 @@
 import type { CGData } from '../../typescript/src/models';
 import { copyToClipboard } from './clipboard';
 import { isRepoPath } from './fileTree';
-import { OsAuthError, OsStorageError, type OsClearRequest, type OsFileContent, type OsHost, type OsOpenTarget, type OsRange } from './host';
+import { OsAuthError, type OsClearRequest, type OsFileContent, type OsHost, type OsOpenTarget, type OsRange } from './host';
 import {
   cleared,
   clearFailure,
@@ -150,6 +150,12 @@ type Obj = Record<string, unknown>;
 
 function isObject(value: unknown): value is Obj {
   return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** The server's error code of a storage failure (any error with a string `code`), or '' when it has none. */
+function storageCode(err: unknown): string {
+  const code = err && typeof err === 'object' ? (err as { code?: unknown }).code : undefined;
+  return typeof code === 'string' ? code : '';
 }
 
 function isId(value: unknown): value is string {
@@ -861,7 +867,7 @@ export class OsController {
         this.handleAuthError();
         return;
       }
-      const code = err instanceof OsStorageError ? err.code : '';
+      const code = storageCode(err);
       const action = clearFailure(code, describe(err));
       if (action.action === 'repreview') {
         await this.runPreview(scope, beforeDays, action.notice);
@@ -896,7 +902,7 @@ export class OsController {
         this.handleAuthError();
         return;
       }
-      const code = err instanceof OsStorageError ? err.code : '';
+      const code = storageCode(err);
       // A preview that fails again is not retried: the user sees why and starts the clear over.
       const action = clearFailure(code, describe(err));
       this.setStorage({ clear: clearFailed(scope, beforeDays, action.action === 'fail' ? action.message : 'Could not preview the clear.') });
@@ -919,7 +925,7 @@ export class OsController {
         this.handleAuthError();
         return;
       }
-      const code = err instanceof OsStorageError ? err.code : 'failed';
+      const code = storageCode(err) || 'failed';
       this.setStorage({ compact: compactFailed(code, describe(err)) });
     }
   }
