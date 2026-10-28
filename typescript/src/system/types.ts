@@ -91,6 +91,12 @@ export interface OsSnapshot {
       createdAt: string;
     })[];
   };
+  /** The storage report (`GET /kb/storage`, schema agent-history.schema.json). null when the agent store could not be read; the rest of the state is unaffected. */
+  storage: OsStorageReport | null;
+  agents: {
+    /** This user's newest 20 agent runs (codes only, no prompt or error text). */
+    recentRuns: OsAgentRun[];
+  };
   tokens: {
     window: "day" | "week";
     /** Calendar days in the window: 1 = today since local midnight (same as the daily model-limit cap), 7 = the last 7 days including today. */
@@ -286,3 +292,106 @@ export interface OrbitLayout {
   /** Max distance from the origin of any core or ring point (0 when empty). */
   bounds: { radius: number };
 }
+
+// ---- Storage (agent-history.schema.json) and agent runs (os.schema.json) ----
+
+/** One data group of the Storage hub. Only `agent_history` carries bytes and the clear/compact actions. */
+export type OsStorageGroup = {
+  key: "agent_history" | "search_index" | "code_graph" | "sources" | "meetings";
+  label: string;
+  /** Rows for this user (agent_history: runs, tool events and composition rows). */
+  rows: number;
+  /** Approximate bytes for agent_history; null for the main-DB groups. */
+  bytes: number | null;
+  bytesApprox: boolean | null;
+  /** ISO time of the last clear (agent_history only). */
+  lastCleanedAt: string | null;
+  /** Raw-row retention in days (agent_history only). */
+  retentionDays: number | null;
+  /** Actions the page may offer. Only agent_history has any. */
+  actions: ("clear" | "compact")[];
+};
+
+/** The agent store's health and state. */
+export type OsAgentStore = {
+  health: "ok" | "degraded" | "down";
+  state: "closed" | "ok" | "down";
+};
+
+/** The storage report: the same data as `GET /kb/storage`. */
+export type OsStorageReport = {
+  generatedAt: string;
+  groups: OsStorageGroup[];
+  /** Null when the agent store is down. */
+  agentHistory: {
+    rawFromDay: string | null;
+    rawRows: number;
+    rolledDays: number;
+    oldestDay: string | null;
+    quarantinedAt: string | null;
+    droppedRows: number;
+    watermark: string | null;
+  } | null;
+  agentStore: OsAgentStore;
+};
+
+/** One agent run for the Agents hub. No prompt, message or error text: codes only. */
+export type OsAgentRun = {
+  id: string;
+  source: "chat" | "loop" | "meeting" | "autotask" | "dispatch" | "review";
+  engine: string | null;
+  status: "running" | "ok" | "error" | "cancelled" | "aborted";
+  startedAt: string;
+  endedAt: string | null;
+  durationMs: number | null;
+  /** Input plus output tokens of the run. */
+  tokens: number;
+  toolCalls: number;
+  model: string | null;
+  errorCode: string | null;
+};
+
+/** The per-table counts a clear would delete (dry run) or deleted (real clear). */
+export type OsClearCounts = {
+  agent_runs: number;
+  agent_tool_events: number;
+  turn_composition: number;
+  agent_daily: number;
+  agent_daily_tools: number;
+};
+
+/** Response of `POST /kb/agent-history/clear`: a dry run (preview) or a real clear. */
+export type OsClearResult =
+  | {
+      dryRun: true;
+      scope: "raw" | "all";
+      beforeDays: number | null;
+      wouldDelete: OsClearCounts;
+      total: number;
+      /** Valid five minutes for this user, scope and cutoff; single use. */
+      previewId: string;
+      expiresAt: string;
+    }
+  | {
+      dryRun: false;
+      scope: "raw" | "all";
+      beforeDays: number | null;
+      deleted: OsClearCounts;
+      total: number;
+    };
+
+/** Response of `POST /kb/agent-history/compact`. */
+export type OsCompactResult = {
+  ok: true;
+  mode: "incremental" | "full";
+  pagesFreed: number;
+  bytesBefore: number;
+  bytesAfter: number;
+  ms: number;
+};
+
+/** Response of `GET` and `PUT /kb/agent-history/settings` (the page reads retentionDays). */
+export type OsStorageSettings = {
+  retentionDays: number;
+};
+

@@ -277,6 +277,33 @@ export const fixtureSnapshot: OsSnapshot = {
   "macOnly": {
     "loop": "on this Mac",
     "autoTasks": "on this Mac"
+  },
+  "storage": {
+    "generatedAt": "2026-10-26T13:56:08.696Z",
+    "groups": [
+      { "key": "agent_history", "label": "Agent history", "rows": 1240, "bytes": 412000, "bytesApprox": true, "lastCleanedAt": "2026-10-20T08:00:00.000Z", "retentionDays": 90, "actions": ["clear", "compact"] },
+      { "key": "search_index", "label": "Search index", "rows": 5300, "bytes": null, "bytesApprox": null, "lastCleanedAt": null, "retentionDays": null, "actions": [] },
+      { "key": "code_graph", "label": "Code graph", "rows": 1, "bytes": null, "bytesApprox": null, "lastCleanedAt": null, "retentionDays": null, "actions": [] },
+      { "key": "sources", "label": "Sources", "rows": 1, "bytes": null, "bytesApprox": null, "lastCleanedAt": null, "retentionDays": null, "actions": [] },
+      { "key": "meetings", "label": "Meetings", "rows": 0, "bytes": null, "bytesApprox": null, "lastCleanedAt": null, "retentionDays": null, "actions": [] }
+    ],
+    "agentHistory": {
+      "rawFromDay": "2026-07-30",
+      "rawRows": 1240,
+      "rolledDays": 58,
+      "oldestDay": "2026-08-30",
+      "quarantinedAt": null,
+      "droppedRows": 0,
+      "watermark": "2026-10-25"
+    },
+    "agentStore": { "health": "ok", "state": "ok" }
+  },
+  "agents": {
+    "recentRuns": [
+      { "id": "turn-example-1", "source": "chat", "engine": "v2", "status": "ok", "startedAt": "2026-10-26 13:40:00", "endedAt": "2026-10-26 13:40:12", "durationMs": 12000, "tokens": 5400, "toolCalls": 3, "model": "claude-sonnet", "errorCode": null },
+      { "id": "loop-example-1", "source": "loop", "engine": "cli", "status": "error", "startedAt": "2026-10-26 11:02:00", "endedAt": "2026-10-26 11:04:30", "durationMs": 150000, "tokens": 0, "toolCalls": 0, "model": null, "errorCode": "CLI_FAILED" },
+      { "id": "meeting-example-1", "source": "meeting", "engine": null, "status": "cancelled", "startedAt": "2026-10-25 17:30:00", "endedAt": "2026-10-25 17:30:05", "durationMs": 5000, "tokens": 0, "toolCalls": 0, "model": null, "errorCode": null }
+    ]
   }
 };
 

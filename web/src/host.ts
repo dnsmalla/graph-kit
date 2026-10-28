@@ -1,7 +1,16 @@
 // The contract between the System view and the app that hosts it. The page
 // holds no transport of its own: a host (e.g. a native app bridge or an HTTP client,
 // or the demo fixture) answers these calls with data.
-import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
+import type {
+  OsCancel,
+  OsClearResult,
+  OsCompactResult,
+  OsLiveStatus,
+  OsRoutine,
+  OsSkill,
+  OsSnapshot,
+  OsStorageSettings,
+} from './types';
 
 export type OsRange = 'day' | 'week';
 
@@ -27,6 +36,29 @@ export interface OsFileContent {
   bytes?: number;
   language?: string | null;
   binary?: boolean;
+}
+
+/**
+ * A storage call that the server refused or failed. `code` is the server's error code: for a clear,
+ * PREVIEW_EXPIRED, PREVIEW_INVALID, preview_stale (the page re-previews); for a compact, busy,
+ * disk_space or store_down. Hosts throw this (or any Error with a `code` string).
+ */
+export class OsStorageError extends Error {
+  readonly code: string;
+  constructor(code: string, message = code) {
+    super(message);
+    this.name = 'OsStorageError';
+    this.code = code;
+  }
+}
+
+/** A clear request (POST /kb/agent-history/clear). A real clear (dryRun false) needs the previewId of its dry run. */
+export interface OsClearRequest {
+  scope: 'raw' | 'all';
+  /** Only rows older than this many days; omitted for all rows. */
+  beforeDays?: number;
+  dryRun: boolean;
+  previewId?: string;
 }
 
 export interface OsHost {
@@ -67,4 +99,15 @@ export interface OsHost {
   loadSkills?(): Promise<OsSkill[]>;
   /** Scheduled routines for the Routines panel. Optional. Called on the same occasions as loadProjectGraph. */
   loadRoutines?(): Promise<OsRoutine[]>;
+  /**
+   * Dry run (`dryRun: true`, the counts and a previewId) or real clear (`dryRun: false` with the
+   * previewId). Optional: without it the page offers no Clear. Rejects with OsStorageError (see its code).
+   */
+  storageClear?(req: OsClearRequest): Promise<OsClearResult>;
+  /** Compacts the agent store (POST /kb/agent-history/compact). Optional. Rejects with OsStorageError: busy, disk_space or store_down. */
+  storageCompact?(): Promise<OsCompactResult>;
+  /** The storage settings (GET /kb/agent-history/settings). Optional. */
+  storageSettings?(): Promise<OsStorageSettings>;
+  /** Sets the raw-row retention in days, 7 to 365 (PUT /kb/agent-history/settings). Optional. Resolves the stored value. */
+  setStorageRetention?(days: number): Promise<OsStorageSettings>;
 }

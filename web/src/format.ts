@@ -126,3 +126,13 @@ export function fmtClock(value: string | null | undefined): string {
   if (Number.isNaN(ms)) return value;
   return new Date(ms).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
+
+/** A duration in milliseconds as seconds or minutes: "850 ms", "12 s", "2 min 30 s". */
+export function fmtDuration(ms: number | null | undefined): string {
+  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms < 0) return '—';
+  if (ms < 1000) return `${fmtInt(ms)} ms`;
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 120) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes} min ${seconds % 60} s`;
+}

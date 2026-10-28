@@ -3,11 +3,18 @@
 // contract) and are re-exported here so the page imports one place.
 export type {
   OsActivityItem,
+  OsAgentRun,
   OsCancel,
+  OsClearCounts,
+  OsClearResult,
+  OsCompactResult,
   OsKitStatus,
   OsLiveStatus,
   OsRoutine,
   OsSkill,
   OsSnapshot,
+  OsStorageGroup,
+  OsStorageReport,
+  OsStorageSettings,
   OsUsageCounts,
 } from '../../typescript/src/system/types.js';
