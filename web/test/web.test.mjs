@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createServer } from 'vite';
+import { uniqueCacheDir } from './support/cacheDir.mjs';
 import react from '@vitejs/plugin-react';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,6 +19,7 @@ before(async () => {
   server = await createServer({
     root: ROOT,
     configFile: false,
+    cacheDir: uniqueCacheDir(),
     plugins: [react()],
     logLevel: 'silent',
     appType: 'custom',

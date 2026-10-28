@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite",
     "type-check": "tsc --noEmit",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test --test-timeout=180000 test/*.test.mjs"
   },
   "peerDependencies": {
     "react": "^19.2.0",
