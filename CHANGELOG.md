@@ -4,6 +4,10 @@ All notable changes to GraphKit. The Swift package and the TypeScript package
 (`typescript/`) share one canonical graph schema (`schema/SCHEMA.md`); the schema's
 `schemaVersion` is versioned independently of the package tags.
 
+**Tags.** Release tags are plain `X.Y.Z` (e.g. `1.7.0`); that is the canonical form. `vX.Y.Z`
+is also accepted by `release.yml`, but prefer the plain form. The tag must equal
+`typescript/package.json`'s version and have a `## [X.Y.Z]` section below.
+
 ## [Unreleased]
 
 ### Added

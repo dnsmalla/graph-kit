@@ -1,57 +1,60 @@
 name: Release
 
-# Tag-driven release: push a semver tag (e.g. `1.6.0`) and this workflow
-# re-runs the full test matrix, creates a GitHub Release, and publishes the
-# TypeScript package to npm when an NPM_TOKEN secret is configured.
+# Tag-driven release: push a semver tag and this workflow re-runs the full CI matrix
+# (ci.yml, including the Rust crate, the web page and the WASM reproducibility check),
+# creates a GitHub Release, and publishes the TypeScript package to npm when an
+# NPM_TOKEN secret is configured.
+#
+# Tag form: the canonical tag is plain `X.Y.Z` (e.g. `1.6.0`). `vX.Y.Z` is accepted too.
+# The version is the tag without its `v`; it must equal typescript/package.json's version.
 
 on:
   push:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: write
 
 jobs:
-  test-swift:
-    name: Swift tests
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-      - run: swift test
+  ci:
+    name: Full test matrix
+    uses: ./.github/workflows/ci.yml
 
-  test-ts:
-    name: TypeScript tests
+  verify:
+    name: Verify tag, package version and CHANGELOG
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: typescript/package-lock.json
-      - name: Verify package.json version matches the tag
-        working-directory: typescript
+      - name: Tag matches typescript/package.json
         run: |
-          pkg_ver=$(node -p "require('./package.json').version")
-          if [ "$pkg_ver" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::typescript/package.json ($pkg_ver) != tag (${GITHUB_REF_NAME})"
+          version="${GITHUB_REF_NAME#v}"
+          pkg_ver=$(node -p "require('./typescript/package.json').version")
+          if [ "$pkg_ver" != "$version" ]; then
+            echo "::error::typescript/package.json ($pkg_ver) != tag ($version)"
             exit 1
           fi
-      - run: npm ci
-        working-directory: typescript
-      - run: npm test
-        working-directory: typescript
+      - name: CHANGELOG has a section for this version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! grep -Eq "^## \[${version//./\\.}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$version]' section"
+            exit 1
+          fi
 
   release:
     name: GitHub Release + npm publish
-    needs: [test-swift, test-ts]
+    needs: [ci, verify]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Extract this version's CHANGELOG section
         run: |
-          awk -v ver="${GITHUB_REF_NAME}" '
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
             $0 ~ "^## \\[" ver "\\]" {flag=1; next}
             /^## \[/ {flag=0}
             flag' CHANGELOG.md > release-notes.md
