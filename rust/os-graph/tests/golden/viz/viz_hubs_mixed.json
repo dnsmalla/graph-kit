@@ -1,6 +1,29 @@
 {
   "expected": {
     "hubs": {
+      "activity": {
+        "edges": [],
+        "level": "activity",
+        "nodes": [
+          {
+            "drill": "activity",
+            "group": 8,
+            "id": "hub:activity",
+            "kind": "hub",
+            "label": "Activity",
+            "labelled": true,
+            "meta": {
+              "members": 0,
+              "more": 0,
+              "newestAt": null,
+              "unread": 0
+            },
+            "size": 6.0,
+            "status": "off"
+          }
+        ],
+        "title": "Activity"
+      },
       "agents": {
         "edges": [
           {
@@ -33,7 +56,7 @@
               "more": 0,
               "running": 2
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "running"
           },
           {
@@ -158,7 +181,7 @@
               "members": 5,
               "more": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "warn"
           },
           {
@@ -348,7 +371,7 @@
               "pendingReviews": 3,
               "sources": 5
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "warn"
           },
           {
@@ -487,7 +510,7 @@
               "repos": 1,
               "superseded": 2
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -608,7 +631,7 @@
               "more": 0,
               "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -901,7 +924,7 @@
               "more": 0,
               "routines": 2
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1007,7 +1030,7 @@
               "skills": 2,
               "sources": 2
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1232,7 +1255,7 @@
             "more": 0,
             "totalNodes": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -1252,7 +1275,7 @@
             "pendingReviews": 3,
             "sources": 5
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "warn"
         },
         {
@@ -1324,7 +1347,7 @@
             "repos": 1,
             "superseded": 2
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -1357,7 +1380,7 @@
             "skills": 2,
             "sources": 2
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -1403,7 +1426,7 @@
             "more": 0,
             "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -1490,7 +1513,7 @@
             "more": 0,
             "running": 2
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "running"
         },
         {
@@ -1540,7 +1563,7 @@
             "more": 0,
             "routines": 2
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -1590,7 +1613,7 @@
             "members": 5,
             "more": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "warn"
         },
         {
@@ -1664,6 +1687,22 @@
           },
           "size": 1.0,
           "status": "ok"
+        },
+        {
+          "drill": "activity",
+          "group": 8,
+          "id": "hub:activity",
+          "kind": "hub",
+          "label": "Activity",
+          "labelled": true,
+          "meta": {
+            "members": 0,
+            "more": 0,
+            "newestAt": null,
+            "unread": 0
+          },
+          "size": 6.0,
+          "status": "off"
         }
       ],
       "title": "OS"

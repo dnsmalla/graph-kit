@@ -102,15 +102,28 @@ Known limits of the JSON boundary:
 `level`, `title`) feeds one layout (`viz_layout_json`) and one renderer:
 
 - `build_os_view_json(input)` returns `{os, hubs}`: the top-level graph (one hub per part,
-  members capped at 40 per hub with `meta.more`), and a drill-down graph for each hub except
-  `code`. `code` drills into the existing SystemGraph; `code_summary_json` summarises it for the
-  OS view.
+  members capped at 40 per hub, or 24 for Activity, with `meta.more`), and a drill-down graph for
+  each hub except `code`. `code` drills into the existing SystemGraph; `code_summary_json`
+  summarises it for the OS view.
+- Nine hubs, in `HUB_KEYS` order: `code`, `knowledge`, `memory`, `skills`, `models`, `agents`,
+  `routines`, `kits`, `activity`. The OS ring spaces them evenly; with nine hubs the member
+  shells shrink to 0.3 of the chord to the neighbouring hub (`orbit.rs`), so no member reaches
+  the next hub's shell. The hub centre is size 6.0.
+- The **activity** hub (`hub:activity`, drill key `activity`) is the recent-activity feed
+  (`activity.items`, newest first). At the OS level its members are the newest 24 rows
+  (`activity:<id>`, kind `activity`, size 1.0 for the newest falling linearly to 0.6). Its
+  centre `meta` has `members` (all usable rows), `more`, `unread` (the feed's unread count) and
+  `newestAt` (the newest `createdAt`, or `null`). A member's `meta` has `title`, `activityKind`,
+  `createdAt` (or `null`), `link` (or `null`) and `detail` (the object, else `null`). The drill
+  shows the newest 60, grouped under one `group` node per kind (`group:activity:<kind>`, labelled,
+  `meta.count`); items hang off their group and groups off the hub. The eight newest items are
+  labelled. An empty feed is the centre alone, status `off`.
 - Cross-hub edges are only the ones the data states: kit to feature, Knowledge to Code when a
   code graph exists, Routines to Models when auto-task usage exists, and Code to the
   `code_graph_3d` feature. Model usage is not cross-tabulated by caller in the snapshot, so models
   link to the Models hub only.
-- Ids are stable (`hub:models`, `model:<provider>/<model>`, `skill:<id>`, ...), all lists are
-  sorted, and the output does not depend on input order.
+- Ids are stable (`hub:models`, `model:<provider>/<model>`, `skill:<id>`, `activity:<id>`, ...),
+  all lists are sorted, and the output does not depend on input order.
 
 Goldens for it are in `os-graph/tests/golden/viz/` (a subfolder on purpose: the web test reads
 only the top level of `tests/golden/` and expects the system-graph shape there). They are

@@ -13,8 +13,8 @@
 use crate::builder::{js_cmp, CoreCategory, SystemCoreNode, SystemGraph};
 use crate::models::{lenient_value, lenient_vec};
 use crate::snapshot::{
-    OsChecks, OsCodeGraph, OsCounts, OsKindCount, OsKit, OsKnowledge, OsProjectMemory,
-    OsSnapshotFull,
+    ActivityId, OsActivityRow, OsChecks, OsCodeGraph, OsCounts, OsKindCount, OsKit, OsKnowledge,
+    OsProjectMemory, OsSnapshotFull,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -137,7 +137,7 @@ pub struct OsView {
 }
 
 /// Hub keys in display order. `code` is the existing SystemGraph; the rest are built here.
-pub const HUB_KEYS: [&str; 8] = [
+pub const HUB_KEYS: [&str; 9] = [
     "code",
     "knowledge",
     "memory",
@@ -146,10 +146,16 @@ pub const HUB_KEYS: [&str; 8] = [
     "agents",
     "routines",
     "kits",
+    "activity",
 ];
 
 /// Most members a hub shows at the OS level; the rest are counted in its `more` meta.
 pub const OS_MEMBER_CAP: usize = 40;
+/// The activity hub shows only the newest rows at the OS level (its drill-down shows
+/// [`DRILL_MEMBER_CAP`]).
+pub const ACTIVITY_OS_MEMBERS: usize = 24;
+/// The activity drill-down labels its newest items up to this many (groups are always labelled).
+const ACTIVITY_LABELLED: usize = 8;
 /// Most leaf members a hub drill-down shows per list (models, callers, endpoints, skills per
 /// source, ...); the rest are counted in the centre's `more` meta.
 pub const DRILL_MEMBER_CAP: usize = 60;
@@ -166,6 +172,7 @@ fn hub_title(key: &str) -> &'static str {
         "agents" => "Agents",
         "routines" => "Routines",
         "kits" => "Kits",
+        "activity" => "Activity",
         _ => "",
     }
 }
@@ -284,14 +291,14 @@ fn spoke(hub: &str, id: &str) -> VizEdge {
     edge(hub, id, "member", 1.0)
 }
 
-/// The hub node: size 4, labelled, opens its drill-down.
+/// The hub node: size 6, labelled, opens its drill-down.
 fn center(key: &str, status: &str, meta: BTreeMap<String, Value>) -> VizNode {
     let mut n = node(
         format!("hub:{key}"),
         hub_title(key).to_owned(),
         "hub",
         hub_index(key).unwrap_or(0),
-        4.0,
+        6.0,
     );
     n.labelled = true;
     n.drill = Some(key.to_owned());
@@ -654,10 +661,47 @@ fn agent_members(s: &OsSnapshotFull) -> Vec<Member> {
     out
 }
 
+/// The label of an activity kind in a group node (the kinds `kb/activity.mjs` writes). An
+/// unknown kind is labelled with its own name.
+fn activity_kind_label(kind: &str) -> String {
+    match kind {
+        "knowledge_updated" => "Knowledge updated",
+        "regression_done" => "Regression done",
+        "loop_engineering_done" => "Loop engineering done",
+        "issue_created" => "Issue created",
+        "comment_added" => "Comment added",
+        "dispatch_issue_created" => "Dispatch issue created",
+        "outcome_changed" => "Outcome changed",
+        "meeting_added" => "Meeting added",
+        "email_fetched" => "Email fetched",
+        "slack_fetched" => "Slack fetched",
+        "model_fallback" => "Model fallback",
+        other => other,
+    }
+    .to_owned()
+}
+
+/// The usable activity rows, in input order (newest first), with their node ids. A row needs
+/// an id (a non-empty string, or a number) and a kind; a repeated id keeps its first row.
+fn activity_rows(items: &[OsActivityRow]) -> Vec<(String, &OsActivityRow)> {
+    let mut seen = BTreeSet::new();
+    items
+        .iter()
+        .filter_map(|row| {
+            let id = row.id.as_ref().map(ActivityId::to_js_string)?;
+            if id.is_empty() || row.kind.is_empty() || !seen.insert(id.clone()) {
+                return None;
+            }
+            Some((id, row))
+        })
+        .collect()
+}
+
 // ---- The OS level: one part per hub ----
 
 fn os_part(key: &str, input: &OsVizInput) -> Part {
     match key {
+        "activity" => activity_part(input),
         "code" => code_part(input),
         "knowledge" => knowledge_part(input),
         "memory" => memory_part(input),
@@ -704,6 +748,45 @@ fn code_part(input: &OsVizInput) -> Part {
     if !part.members.is_empty() {
         part.status = "ok".into();
     }
+    part
+}
+
+/// The activity hub: the feed's rows, newest first. A row's size falls linearly from 1.0 (the
+/// newest) to 0.6 (the oldest row of the feed), so newer rows draw larger.
+fn activity_part(input: &OsVizInput) -> Part {
+    let empty = OsSnapshotFull::default();
+    let feed = &input.snapshot.as_ref().unwrap_or(&empty).activity;
+    let rows = activity_rows(&feed.items);
+    let total = rows.len();
+    let mut part = Part::new(if total == 0 { "off" } else { "ok" });
+    for (i, (id, row)) in rows.iter().enumerate() {
+        let size = if total <= 1 {
+            1.0
+        } else {
+            1.0 - 0.4 * i as f64 / (total - 1) as f64
+        };
+        let label = if row.title.is_empty() {
+            activity_kind_label(&row.kind)
+        } else {
+            row.title.clone()
+        };
+        let created = (!row.created_at.is_empty()).then(|| row.created_at.clone());
+        let n = node(format!("activity:{id}"), label, "activity", 0, size)
+            .with("title", json!(row.title))
+            .with("activityKind", json!(row.kind))
+            .with("createdAt", opt(&created))
+            .with("link", opt(&row.link))
+            .with("detail", row.detail.clone().unwrap_or(Value::Null));
+        // Rank by position so the list keeps its newest-first order.
+        part.members.push((n, (total - i) as f64));
+    }
+    sort_by_value(&mut part.members);
+    let newest_at = newest(
+        rows.iter()
+            .map(|(_, r)| (!r.created_at.is_empty()).then_some(r.created_at.as_str())),
+    );
+    part.meta.insert("unread".into(), int(feed.unread.max(0.0)));
+    part.meta.insert("newestAt".into(), opt(&newest_at));
     part
 }
 
@@ -1030,6 +1113,15 @@ fn kits_part(input: &OsVizInput) -> Part {
     part
 }
 
+/// Most members a hub shows at the OS level.
+fn os_member_cap(key: &str) -> usize {
+    if key == "activity" {
+        ACTIVITY_OS_MEMBERS
+    } else {
+        OS_MEMBER_CAP
+    }
+}
+
 /// The OS graph: one hub per part, each hub's members around it (capped), and the cross-hub
 /// edges the data states.
 pub fn build_os_graph(input: &OsVizInput) -> VizGraph {
@@ -1042,7 +1134,7 @@ pub fn build_os_graph(input: &OsVizInput) -> VizGraph {
         // Each part ranks its own members, so deduping keeps that order.
         let members = dedupe(part.members);
         let total = members.len();
-        let shown = total.min(OS_MEMBER_CAP);
+        let shown = total.min(os_member_cap(key));
         let mut meta = part.meta;
         meta.insert("members".into(), json!(total));
         meta.insert("more".into(), json!(total - shown));
@@ -1098,6 +1190,32 @@ fn hub_detail(key: &str, input: &OsVizInput, part: Part) -> Detail {
     let mut edges = part.edges;
     let (mut members, mut more) = (nodes.len(), 0);
     match key {
+        "activity" => {
+            // The newest rows up to the drill cap, each kind under its own labelled group. A
+            // group hangs off the hub and its items hang off the group.
+            let all = std::mem::take(&mut nodes);
+            members = all.len();
+            let (kept, left) = capped_nodes(all, DRILL_MEMBER_CAP);
+            more = left;
+            let kinds: BTreeSet<String> = kept.iter().map(|n| meta_str(n, "activityKind")).collect();
+            for (gi, kind) in kinds.iter().enumerate() {
+                let count = kept
+                    .iter()
+                    .filter(|n| meta_str(n, "activityKind") == *kind)
+                    .count();
+                let gid = format!("group:activity:{kind}");
+                let mut g = group_node(&gid, &activity_kind_label(kind), count);
+                g.group = 1 + gi as u32;
+                nodes.push(g);
+                edges.push(spoke(&hub, &gid));
+            }
+            for mut n in kept {
+                let kind = meta_str(&n, "activityKind");
+                n.group = 1 + kinds.iter().position(|k| *k == kind).unwrap_or(0) as u32;
+                edges.push(edge(&n.id, &format!("group:activity:{kind}"), "member", 1.0));
+                nodes.push(n);
+            }
+        }
         "knowledge" => {
             let k = &s.knowledge;
             let max = k.outcomes.by_state.values().copied().fold(0.0, f64::max);
@@ -1402,11 +1520,19 @@ pub fn build_hub_graph(hub: &str, input: &OsVizInput) -> Option<VizGraph> {
     meta.insert("more".into(), json!(detail.more));
     let mut members = detail.nodes;
     // Families within a hub get their own group, numbered by kind (sorted); the centre is 0.
-    let kinds: BTreeSet<String> = members.iter().map(|n| n.kind.clone()).collect();
-    for n in members.iter_mut() {
-        n.group = 1 + kinds.iter().position(|k| *k == n.kind).unwrap_or(0) as u32;
+    // The activity drill sets its own groups (one per kind) in `hub_detail`.
+    if hub != "activity" {
+        let kinds: BTreeSet<String> = members.iter().map(|n| n.kind.clone()).collect();
+        for n in members.iter_mut() {
+            n.group = 1 + kinds.iter().position(|k| *k == n.kind).unwrap_or(0) as u32;
+        }
     }
-    mark_labels(&mut members, LABELLED_HUB_MEMBERS);
+    let labelled = if hub == "activity" {
+        ACTIVITY_LABELLED
+    } else {
+        LABELLED_HUB_MEMBERS
+    };
+    mark_labels(&mut members, labelled);
     let mut nodes = vec![center(hub, &status, meta)];
     nodes.extend(members);
     Some(finish(hub, hub_title(hub), nodes, detail.edges))
@@ -1437,13 +1563,13 @@ mod tests {
     }
 
     #[test]
-    fn empty_input_gives_eight_hubs_all_off_except_none() {
+    fn empty_input_gives_nine_hubs_all_off_except_none() {
         let g = build_os_graph(&OsVizInput::default());
         assert_eq!(g.level, "os");
         let hubs: Vec<&VizNode> = g.nodes.iter().filter(|n| n.kind == "hub").collect();
-        assert_eq!(hubs.len(), 8);
+        assert_eq!(hubs.len(), 9);
         assert!(hubs.iter().all(|h| h.status.as_deref() == Some("off")));
-        assert!(hubs.iter().all(|h| h.labelled && h.size == 4.0));
+        assert!(hubs.iter().all(|h| h.labelled && h.size == 6.0));
         let drills: Vec<&str> = hubs.iter().filter_map(|h| h.drill.as_deref()).collect();
         assert_eq!(
             drills,
@@ -1455,7 +1581,8 @@ mod tests {
                 "models",
                 "agents",
                 "routines",
-                "kits"
+                "kits",
+                "activity"
             ]
         );
         // The code-feature edge needs a feature node, so it is gone with no kits.
@@ -1931,7 +2058,7 @@ mod tests {
         assert!(snap.running.chat_turns.is_empty());
         // The rest of the snapshot still counts.
         assert_eq!(snap.tokens.totals.billable, 5.0);
-        assert_eq!(build_os_view(&input).hubs.len(), 7);
+        assert_eq!(build_os_view(&input).hubs.len(), 8);
     }
 
     #[test]
@@ -2263,5 +2390,207 @@ mod tests {
             .edges
             .iter()
             .any(|e| e.source == "hub:routines" || e.target == "hub:routines"));
+    }
+
+    /// An OS input whose activity feed holds `n` rows, newest first (ids `n` down to 1).
+    /// Even rows are `meeting_added` with a detail object; odd rows are `knowledge_updated`.
+    fn activity_input(n: usize, unread: u32) -> OsVizInput {
+        let items: Vec<Value> = (0..n)
+            .map(|i| {
+                let id = n - i;
+                let even = id.is_multiple_of(2);
+                json!({
+                    "id": id,
+                    "kind": if even { "meeting_added" } else { "knowledge_updated" },
+                    "title": format!("Row {id}"),
+                    "detail": if even { json!({"count": id}) } else { Value::Null },
+                    "link": if even { Value::Null } else { json!("https://example.com/x") },
+                    "createdAt": format!("2026-10-{:02} 09:00:00", 1 + (id % 27)),
+                })
+            })
+            .collect();
+        let text = json!({"activity": {"unread": unread, "items": items}}).to_string();
+        OsVizInput {
+            snapshot: Some(snapshot(&text)),
+            ..OsVizInput::default()
+        }
+    }
+
+    fn activity_hub(g: &VizGraph) -> &VizNode {
+        g.nodes.iter().find(|n| n.id == "hub:activity").expect("activity hub")
+    }
+
+    #[test]
+    fn activity_hub_is_the_ninth_hub_and_shows_the_newest_24_rows() {
+        let input = activity_input(30, 4);
+        let os = build_os_graph(&input);
+        let hub = activity_hub(&os);
+        assert_eq!(hub.kind, "hub");
+        assert_eq!(hub.group, 8);
+        assert_eq!(hub.drill.as_deref(), Some("activity"));
+        assert_eq!(hub.status.as_deref(), Some("ok"));
+        assert_eq!(hub.size, 6.0);
+        assert_eq!(hub.meta["members"], json!(30));
+        assert_eq!(hub.meta["more"], json!(6));
+        assert_eq!(hub.meta["unread"], json!(4));
+        // The newest timestamp of the whole feed (the maximum, not the first row's).
+        assert_eq!(hub.meta["newestAt"], json!("2026-10-27 09:00:00"));
+        let members: Vec<&VizNode> = os.nodes.iter().filter(|n| n.group == 8 && n.kind != "hub").collect();
+        assert_eq!(members.len(), 24);
+        // Newest first: the first input row is `activity:30`, the 24th is `activity:7`.
+        assert_eq!(members[0].id, "activity:30");
+        assert_eq!(members[23].id, "activity:7");
+        assert!(members.iter().all(|m| m.kind == "activity" && m.status.is_none()));
+        // Size falls from 1.0 (newest) to 0.6 (the 24th row), linearly.
+        assert_eq!(members[0].size, 1.0);
+        assert!((members[23].size - (1.0 - 0.4 * 23.0 / 29.0)).abs() < 1e-12);
+        for m in &members {
+            assert!(os.edges.iter().any(|e| e.source == "hub:activity"
+                && e.target == m.id
+                && e.kind == "member"));
+        }
+    }
+
+    #[test]
+    fn activity_member_meta_carries_title_kind_time_link_and_detail() {
+        let os = build_os_graph(&activity_input(2, 0));
+        let even = os.nodes.iter().find(|n| n.id == "activity:2").unwrap();
+        assert_eq!(even.label, "Row 2");
+        assert_eq!(even.meta["title"], json!("Row 2"));
+        assert_eq!(even.meta["activityKind"], json!("meeting_added"));
+        assert_eq!(even.meta["createdAt"], json!("2026-10-03 09:00:00"));
+        assert_eq!(even.meta["link"], Value::Null);
+        assert_eq!(even.meta["detail"], json!({"count": 2}));
+        let odd = os.nodes.iter().find(|n| n.id == "activity:1").unwrap();
+        assert_eq!(odd.meta["activityKind"], json!("knowledge_updated"));
+        assert_eq!(odd.meta["link"], json!("https://example.com/x"));
+        assert_eq!(odd.meta["detail"], Value::Null);
+    }
+
+    #[test]
+    fn activity_drill_caps_at_60_and_groups_by_kind() {
+        let input = activity_input(70, 0);
+        let g = build_hub_graph("activity", &input).expect("activity drill");
+        assert_eq!(g.level, "activity");
+        let centre = &g.nodes[0];
+        assert_eq!(centre.id, "hub:activity");
+        assert_eq!(centre.meta["members"], json!(70));
+        assert_eq!(centre.meta["more"], json!(10));
+        let items: Vec<&VizNode> = g.nodes.iter().filter(|n| n.kind == "activity").collect();
+        assert_eq!(items.len(), DRILL_MEMBER_CAP);
+        // The cap keeps the newest 60 (ids 70 down to 11).
+        assert!(items.iter().any(|n| n.id == "activity:11"));
+        assert!(!items.iter().any(|n| n.id == "activity:10"));
+        let groups: Vec<&VizNode> = g.nodes.iter().filter(|n| n.kind == "group").collect();
+        assert_eq!(groups.len(), 2);
+        let meeting = groups.iter().find(|n| n.id == "group:activity:meeting_added").unwrap();
+        assert_eq!(meeting.label, "Meeting added");
+        assert!(meeting.labelled);
+        assert_eq!(meeting.meta["count"], json!(30));
+        let knowledge = groups.iter().find(|n| n.id == "group:activity:knowledge_updated").unwrap();
+        assert_eq!(knowledge.label, "Knowledge updated");
+        assert_eq!(knowledge.meta["count"], json!(30));
+        // Every item hangs off its kind's group, and every group off the hub.
+        for item in &items {
+            let group = if item.meta["activityKind"] == json!("meeting_added") {
+                "group:activity:meeting_added"
+            } else {
+                "group:activity:knowledge_updated"
+            };
+            assert!(g.edges.iter().any(|e| e.source == item.id && e.target == group));
+            let group_node = groups.iter().find(|n| n.id == group).unwrap();
+            assert_eq!(item.group, group_node.group, "{} shares its group's anchor", item.id);
+        }
+        for group in &groups {
+            assert!(g.edges.iter().any(|e| e.source == "hub:activity" && e.target == group.id));
+        }
+    }
+
+    #[test]
+    fn activity_drill_labels_groups_and_the_eight_newest_items() {
+        let g = build_hub_graph("activity", &activity_input(20, 0)).unwrap();
+        for n in &g.nodes {
+            if n.kind == "group" || n.kind == "hub" {
+                assert!(n.labelled, "{} is labelled", n.id);
+            }
+        }
+        let labelled: Vec<&str> = g
+            .nodes
+            .iter()
+            .filter(|n| n.kind == "activity" && n.labelled)
+            .map(|n| n.id.as_str())
+            .collect();
+        assert_eq!(labelled.len(), ACTIVITY_LABELLED);
+        for id in ["activity:20", "activity:13"] {
+            assert!(labelled.contains(&id), "{id} is among the 8 newest");
+        }
+        assert!(!labelled.contains(&"activity:12"));
+    }
+
+    #[test]
+    fn empty_activity_is_the_hub_centre_only_and_off() {
+        let os = build_os_graph(&OsVizInput::default());
+        let hub = activity_hub(&os);
+        assert_eq!(hub.status.as_deref(), Some("off"));
+        assert_eq!(hub.meta["members"], json!(0));
+        assert_eq!(hub.meta["more"], json!(0));
+        assert_eq!(hub.meta["unread"], json!(0));
+        assert_eq!(hub.meta["newestAt"], Value::Null);
+        assert!(!os.edges.iter().any(|e| e.source == "hub:activity"));
+        let drill = build_hub_graph("activity", &OsVizInput::default()).unwrap();
+        assert_eq!(drill.nodes.len(), 1);
+        assert_eq!(drill.nodes[0].id, "hub:activity");
+        assert!(drill.edges.is_empty());
+    }
+
+    #[test]
+    fn malformed_activity_rows_are_skipped_and_the_rest_counts() {
+        let text = r#"{"activity":{"unread":"lots","items":[
+            {"id":5,"kind":"meeting_added","title":"ok","createdAt":"2026-10-02 10:00:00","detail":[1]},
+            {"id":true,"kind":"x","title":"bad id"},
+            {"kind":"x","title":"no id"},
+            {"id":6,"title":"no kind"},
+            {"id":"","kind":"x","title":"empty id"},
+            {"id":5,"kind":"meeting_added","title":"duplicate of 5"},
+            "not an object",
+            null,
+            {"id":"s-1","kind":"knowledge_updated","title":"","link":42,"createdAt":""}
+        ]}}"#;
+        let input = OsVizInput {
+            snapshot: Some(snapshot(text)),
+            ..OsVizInput::default()
+        };
+        let os = build_os_graph(&input);
+        let hub = activity_hub(&os);
+        // Two usable rows: 5 (first wins over its duplicate) and "s-1". Unread is not a count.
+        assert_eq!(hub.meta["members"], json!(2));
+        assert_eq!(hub.meta["unread"], json!(0));
+        assert_eq!(hub.meta["newestAt"], json!("2026-10-02 10:00:00"));
+        let five = os.nodes.iter().find(|n| n.id == "activity:5").unwrap();
+        assert_eq!(five.meta["title"], json!("ok"));
+        // A non-object detail is kept as null.
+        assert_eq!(five.meta["detail"], Value::Null);
+        let s1 = os.nodes.iter().find(|n| n.id == "activity:s-1").unwrap();
+        // An empty title falls back to the kind's label; an empty createdAt is null.
+        assert_eq!(s1.label, "Knowledge updated");
+        assert_eq!(s1.meta["createdAt"], Value::Null);
+        assert_eq!(s1.meta["link"], Value::Null);
+        assert_eq!(s1.size, 0.6);
+    }
+
+    #[test]
+    fn activity_ids_are_prefixed_unique_and_input_order_independent() {
+        let a = activity_input(10, 1);
+        let g = build_hub_graph("activity", &a).unwrap();
+        let mut ids: Vec<&str> = g.nodes.iter().map(|n| n.id.as_str()).collect();
+        let before = ids.len();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), before);
+        assert!(g.nodes.iter().filter(|n| n.kind == "activity").all(|n| n.id.starts_with("activity:")));
+        assert!(g.nodes.iter().filter(|n| n.kind == "group").all(|n| n.id.starts_with("group:activity:")));
+        // Edges are sorted, as every graph's are.
+        let sorted = g.edges.windows(2).all(|w| js_cmp(&w[0].source, &w[1].source) != Ordering::Greater);
+        assert!(sorted);
     }
 }

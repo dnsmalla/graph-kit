@@ -128,8 +128,16 @@ where
     })
 }
 
+/// `null` or any non-object is `None`; an object is kept as it is (the activity `detail`).
+fn lenient_object<'de, D>(d: D) -> Result<Option<Value>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<Value>::deserialize(d)?.filter(|v| v.is_object()))
+}
+
 /// Lenient view of `OsSnapshot` (`typescript/src/system/types.ts`): the system, running,
-/// token and knowledge parts the OS graph reads. Activity is not read here.
+/// token, knowledge and activity parts the OS graph reads.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OsSnapshotFull {
@@ -141,6 +149,41 @@ pub struct OsSnapshotFull {
     pub tokens: OsTokens,
     #[serde(default, deserialize_with = "lenient_default")]
     pub knowledge: OsKnowledge,
+    #[serde(default, deserialize_with = "lenient_default")]
+    pub activity: OsActivityFull,
+}
+
+/// The activity feed the OS graph reads (`activity` in `OsSnapshot`). Newest first.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OsActivityFull {
+    /// Rows newer than the user's last-seen cursor.
+    #[serde(default, deserialize_with = "lenient_num")]
+    pub unread: f64,
+    /// Rows that do not fit (no id, no kind, not objects) are dropped.
+    #[serde(default, deserialize_with = "lenient_vec")]
+    pub items: Vec<OsActivityRow>,
+}
+
+/// One activity row. `id` is `None` when it is neither a number nor a string, and the builder
+/// then skips the row.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OsActivityRow {
+    #[serde(default, deserialize_with = "lenient_value")]
+    pub id: Option<ActivityId>,
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub kind: String,
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub title: String,
+    #[serde(default, deserialize_with = "lenient_opt_string")]
+    pub link: Option<String>,
+    /// Local time as stored, `YYYY-MM-DD HH:MM:SS`.
+    #[serde(default, deserialize_with = "lenient_string")]
+    pub created_at: String,
+    /// The event's structured detail: an object, else `None`.
+    #[serde(default, deserialize_with = "lenient_object")]
+    pub detail: Option<Value>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]

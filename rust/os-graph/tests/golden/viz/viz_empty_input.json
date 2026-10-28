@@ -1,6 +1,29 @@
 {
   "expected": {
     "hubs": {
+      "activity": {
+        "edges": [],
+        "level": "activity",
+        "nodes": [
+          {
+            "drill": "activity",
+            "group": 8,
+            "id": "hub:activity",
+            "kind": "hub",
+            "label": "Activity",
+            "labelled": true,
+            "meta": {
+              "members": 0,
+              "more": 0,
+              "newestAt": null,
+              "unread": 0
+            },
+            "size": 6.0,
+            "status": "off"
+          }
+        ],
+        "title": "Activity"
+      },
       "agents": {
         "edges": [],
         "level": "agents",
@@ -20,7 +43,7 @@
               "more": 0,
               "running": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -45,7 +68,7 @@
               "members": 0,
               "more": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -72,7 +95,7 @@
               "pendingReviews": 0,
               "sources": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -97,7 +120,7 @@
               "repos": 0,
               "superseded": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -122,7 +145,7 @@
               "more": 0,
               "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -146,7 +169,7 @@
               "more": 0,
               "routines": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -169,7 +192,7 @@
               "skills": 0,
               "sources": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -194,7 +217,7 @@
             "more": 0,
             "totalNodes": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -214,7 +237,7 @@
             "pendingReviews": 0,
             "sources": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -232,7 +255,7 @@
             "repos": 0,
             "superseded": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -248,7 +271,7 @@
             "skills": 0,
             "sources": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -266,7 +289,7 @@
             "more": 0,
             "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -284,7 +307,7 @@
             "more": 0,
             "running": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -301,7 +324,7 @@
             "more": 0,
             "routines": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -319,7 +342,23 @@
             "members": 0,
             "more": 0
           },
-          "size": 4.0,
+          "size": 6.0,
+          "status": "off"
+        },
+        {
+          "drill": "activity",
+          "group": 8,
+          "id": "hub:activity",
+          "kind": "hub",
+          "label": "Activity",
+          "labelled": true,
+          "meta": {
+            "members": 0,
+            "more": 0,
+            "newestAt": null,
+            "unread": 0
+          },
+          "size": 6.0,
           "status": "off"
         }
       ],

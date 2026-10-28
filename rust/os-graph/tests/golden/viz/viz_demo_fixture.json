@@ -1,6 +1,116 @@
 {
   "expected": {
     "hubs": {
+      "activity": {
+        "edges": [
+          {
+            "kind": "member",
+            "source": "activity:1",
+            "target": "group:activity:meeting_added",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "activity:2",
+            "target": "group:activity:knowledge_updated",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:activity",
+            "target": "group:activity:knowledge_updated",
+            "weight": 1.0
+          },
+          {
+            "kind": "member",
+            "source": "hub:activity",
+            "target": "group:activity:meeting_added",
+            "weight": 1.0
+          }
+        ],
+        "level": "activity",
+        "nodes": [
+          {
+            "drill": "activity",
+            "group": 8,
+            "id": "hub:activity",
+            "kind": "hub",
+            "label": "Activity",
+            "labelled": true,
+            "meta": {
+              "members": 2,
+              "more": 0,
+              "newestAt": "2026-10-26 13:56:08",
+              "unread": 2
+            },
+            "size": 6.0,
+            "status": "ok"
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "group:activity:knowledge_updated",
+            "kind": "group",
+            "label": "Knowledge updated",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "group:activity:meeting_added",
+            "kind": "group",
+            "label": "Meeting added",
+            "labelled": true,
+            "meta": {
+              "count": 1
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 1,
+            "id": "activity:2",
+            "kind": "activity",
+            "label": "Ingested 3 notes",
+            "labelled": true,
+            "meta": {
+              "activityKind": "knowledge_updated",
+              "createdAt": "2026-10-26 13:56:08",
+              "detail": null,
+              "link": null,
+              "title": "Ingested 3 notes"
+            },
+            "size": 1.0,
+            "status": null
+          },
+          {
+            "drill": null,
+            "group": 2,
+            "id": "activity:1",
+            "kind": "activity",
+            "label": "Weekly sync",
+            "labelled": true,
+            "meta": {
+              "activityKind": "meeting_added",
+              "createdAt": "2026-10-26 13:56:08",
+              "detail": {
+                "meetingId": "m-1"
+              },
+              "link": "https://example.com/meeting/m-1",
+              "title": "Weekly sync"
+            },
+            "size": 0.6,
+            "status": null
+          }
+        ],
+        "title": "Activity"
+      },
       "agents": {
         "edges": [
           {
@@ -39,7 +149,7 @@
               "more": 0,
               "running": 3
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "running"
           },
           {
@@ -289,7 +399,7 @@
               "members": 18,
               "more": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -648,7 +758,7 @@
               "pendingReviews": 1,
               "sources": 1
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "warn"
           },
           {
@@ -747,7 +857,7 @@
               "repos": 1,
               "superseded": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -850,7 +960,7 @@
               "more": 0,
               "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1103,7 +1213,7 @@
               "more": 0,
               "routines": 5
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1299,7 +1409,7 @@
               "skills": 8,
               "sources": 3
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1473,6 +1583,18 @@
     },
     "os": {
       "edges": [
+        {
+          "kind": "member",
+          "source": "hub:activity",
+          "target": "activity:1",
+          "weight": 1.0
+        },
+        {
+          "kind": "member",
+          "source": "hub:activity",
+          "target": "activity:2",
+          "weight": 1.0
+        },
         {
           "kind": "member",
           "source": "hub:agents",
@@ -1773,7 +1895,7 @@
             "more": 0,
             "totalNodes": 2500
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -1873,7 +1995,7 @@
             "pendingReviews": 1,
             "sources": 1
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "warn"
         },
         {
@@ -1918,7 +2040,7 @@
             "repos": 1,
             "superseded": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -1951,7 +2073,7 @@
             "skills": 8,
             "sources": 3
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2011,7 +2133,7 @@
             "more": 0,
             "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2075,7 +2197,7 @@
             "more": 0,
             "running": 3
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "running"
         },
         {
@@ -2142,7 +2264,7 @@
             "more": 0,
             "routines": 5
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2240,7 +2362,7 @@
             "members": 18,
             "more": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2501,6 +2623,58 @@
           },
           "size": 1.0,
           "status": "ok"
+        },
+        {
+          "drill": "activity",
+          "group": 8,
+          "id": "hub:activity",
+          "kind": "hub",
+          "label": "Activity",
+          "labelled": true,
+          "meta": {
+            "members": 2,
+            "more": 0,
+            "newestAt": "2026-10-26 13:56:08",
+            "unread": 2
+          },
+          "size": 6.0,
+          "status": "ok"
+        },
+        {
+          "drill": null,
+          "group": 8,
+          "id": "activity:2",
+          "kind": "activity",
+          "label": "Ingested 3 notes",
+          "labelled": false,
+          "meta": {
+            "activityKind": "knowledge_updated",
+            "createdAt": "2026-10-26 13:56:08",
+            "detail": null,
+            "link": null,
+            "title": "Ingested 3 notes"
+          },
+          "size": 1.0,
+          "status": null
+        },
+        {
+          "drill": null,
+          "group": 8,
+          "id": "activity:1",
+          "kind": "activity",
+          "label": "Weekly sync",
+          "labelled": false,
+          "meta": {
+            "activityKind": "meeting_added",
+            "createdAt": "2026-10-26 13:56:08",
+            "detail": {
+              "meetingId": "m-1"
+            },
+            "link": "https://example.com/meeting/m-1",
+            "title": "Weekly sync"
+          },
+          "size": 0.6,
+          "status": null
         }
       ],
       "title": "OS"

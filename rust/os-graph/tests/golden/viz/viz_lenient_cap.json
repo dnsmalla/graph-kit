@@ -1,6 +1,29 @@
 {
   "expected": {
     "hubs": {
+      "activity": {
+        "edges": [],
+        "level": "activity",
+        "nodes": [
+          {
+            "drill": "activity",
+            "group": 8,
+            "id": "hub:activity",
+            "kind": "hub",
+            "label": "Activity",
+            "labelled": true,
+            "meta": {
+              "members": 0,
+              "more": 0,
+              "newestAt": null,
+              "unread": 0
+            },
+            "size": 6.0,
+            "status": "off"
+          }
+        ],
+        "title": "Activity"
+      },
       "agents": {
         "edges": [
           {
@@ -27,7 +50,7 @@
               "more": 0,
               "running": 1
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "running"
           },
           {
@@ -67,7 +90,7 @@
               "members": 0,
               "more": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -94,7 +117,7 @@
               "pendingReviews": 0,
               "sources": 0
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "off"
           }
         ],
@@ -390,7 +413,7 @@
               "repos": 45,
               "superseded": 45
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1199,7 +1222,7 @@
               "more": 0,
               "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1293,7 +1316,7 @@
               "more": 0,
               "routines": 1
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1371,7 +1394,7 @@
               "skills": 1,
               "sources": 1
             },
-            "size": 4.0,
+            "size": 6.0,
             "status": "ok"
           },
           {
@@ -1697,7 +1720,7 @@
             "more": 0,
             "totalNodes": 3
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -1736,7 +1759,7 @@
             "pendingReviews": 0,
             "sources": 0
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "off"
         },
         {
@@ -1754,7 +1777,7 @@
             "repos": 45,
             "superseded": 45
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2450,7 +2473,7 @@
             "skills": 1,
             "sources": 1
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2482,7 +2505,7 @@
             "more": 0,
             "note": "three separate breakdowns of the same total: by model, by caller, by endpoint"
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2523,7 +2546,7 @@
             "more": 0,
             "running": 1
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "running"
         },
         {
@@ -2555,7 +2578,7 @@
             "more": 0,
             "routines": 1
           },
-          "size": 4.0,
+          "size": 6.0,
           "status": "ok"
         },
         {
@@ -2589,7 +2612,23 @@
             "members": 0,
             "more": 0
           },
-          "size": 4.0,
+          "size": 6.0,
+          "status": "off"
+        },
+        {
+          "drill": "activity",
+          "group": 8,
+          "id": "hub:activity",
+          "kind": "hub",
+          "label": "Activity",
+          "labelled": true,
+          "meta": {
+            "members": 0,
+            "more": 0,
+            "newestAt": null,
+            "unread": 0
+          },
+          "size": 6.0,
           "status": "off"
         }
       ],
