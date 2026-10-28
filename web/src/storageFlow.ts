@@ -33,6 +33,19 @@ export function isRealClearResult(value: unknown): value is Extract<OsClearResul
   return v.dryRun === false && isCountSet(v.deleted) && typeof v.total === 'number' && Number.isFinite(v.total);
 }
 
+/**
+ * Codes for an answer the page cannot trust: the request timed out or the reply did not parse. The
+ * operation may have completed on the server, so the page re-reads the storage figures before it says so.
+ */
+export const UNCERTAIN_CODES: readonly string[] = ['timeout', 'bad_reply'];
+
+export function isUncertainCode(code: string): boolean {
+  return UNCERTAIN_CODES.includes(code);
+}
+
+export const UNCERTAIN_MESSAGE =
+  'The request timed out or the reply could not be read, so the operation may have completed. The figures were refreshed; check them before trying again.';
+
 export const UNEXPECTED_PREVIEW = 'The host sent an unexpected answer to the preview. Nothing was cleared.';
 export const UNEXPECTED_CLEAR = 'The host sent an unexpected answer to the clear. The history may or may not have been cleared; check it before trying again.';
 

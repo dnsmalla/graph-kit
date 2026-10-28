@@ -666,3 +666,71 @@ describe('the destructive flow is labelled and linked for assistive tech', () =>
     assert.match(api.render.renderHub(controller, 'storage'), /value="45"/);
   });
 });
+
+describe('uncertain outcomes (timeout, bad_reply): the figures are re-read first', () => {
+  for (const code of ['timeout', 'bad_reply']) {
+    it(`a clear that ends in ${code} re-reads the storage before it says so`, async () => {
+      const { host, calls } = storageHost({
+        clear: (req) => {
+          if (req.dryRun) return DRY('p1');
+          throw new api.host.OsStorageError(code, code);
+        },
+      });
+      const controller = await loaded(host);
+      await controller.storageClearPreview('raw', null);
+      const before = calls.loadState;
+      await controller.storageClearConfirm();
+      const s = controller.getSnapshot().storage.clear;
+      assert.ok(calls.loadState > before, 'the storage was re-read');
+      assert.equal(s.kind, 'failed');
+      assert.match(s.message, /may have completed/);
+      assert.match(s.message, /refreshed/);
+      assert.equal(calls.clear.filter((r) => !r.dryRun).length, 1, 'the clear was sent once, not retried');
+    });
+
+    it(`a compact that ends in ${code} re-reads the storage and says it may have completed`, async () => {
+      const { host, calls } = storageHost({
+        compact: async () => {
+          throw new api.host.OsStorageError(code, code);
+        },
+      });
+      const controller = await loaded(host);
+      const before = calls.loadState;
+      await controller.storageCompact();
+      const s = controller.getSnapshot().storage.compact;
+      assert.ok(calls.loadState > before, 'the storage was re-read');
+      assert.equal(s.kind, 'failed');
+      assert.equal(s.code, code);
+      assert.match(s.message, /may have completed/);
+    });
+  }
+
+  it('a project reset while the figures are re-read drops the uncertain message', async () => {
+    const { host } = storageHost({
+      clear: (req) => {
+        if (req.dryRun) return DRY('p1');
+        throw new api.host.OsStorageError('timeout', 'timeout');
+      },
+    });
+    const controller = await loaded(host);
+    await controller.storageClearPreview('raw', null);
+    const gate = deferred();
+    host.loadState = () => gate.promise;
+    const confirm = controller.storageClearConfirm();
+    controller.configure({ projectName: 'another project' });
+    gate.resolve(seeded());
+    await confirm;
+    assert.equal(controller.getSnapshot().storage.clear.kind, 'idle', 'the stale failure does not reopen');
+  });
+
+  it('a compact answer that arrives after a project reset is dropped', async () => {
+    const compact = deferred();
+    const { host } = storageHost({ compact: () => compact.promise });
+    const controller = await loaded(host);
+    const pending = controller.storageCompact();
+    controller.configure({ projectName: 'another project' });
+    compact.resolve({ ok: true, mode: 'full', pagesFreed: 1, bytesBefore: 2, bytesAfter: 1, ms: 1 });
+    await pending;
+    assert.equal(controller.getSnapshot().storage.compact.kind, 'idle');
+  });
+});

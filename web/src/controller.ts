@@ -19,6 +19,8 @@ import {
   type ClearFlow,
   isDryRunResult,
   isRealClearResult,
+  isUncertainCode,
+  UNCERTAIN_MESSAGE,
   UNEXPECTED_CLEAR,
   UNEXPECTED_PREVIEW,
   type ClearScope,
@@ -296,6 +298,8 @@ export class OsController {
   private storageSeq = 0;
   /** Bumped by every clear step that supersedes an answer in flight: preview, confirm, cancel, project reset. */
   private clearSeq = 0;
+  /** Bumped by a compact start and a project reset: an answer for an older compact is dropped. */
+  private compactSeq = 0;
   /** The latest code-preview request; an older response is dropped. */
   private fileSeq = 0;
   /** The camera each level was left at, by levelKey: returning to a level puts the camera back. */
@@ -392,6 +396,7 @@ export class OsController {
     // A new project has its own graph and remembered views: the brain starts again at the OS.
     this.cameras.clear();
     this.clearSeq++;
+    this.compactSeq++;
     this.fileSeq++;
     this.set({
       view: { level: 'os' },
@@ -880,7 +885,15 @@ export class OsController {
         this.handleAuthError();
         return;
       }
-      const action = clearFailure(storageCode(err), describe(err));
+      const code = storageCode(err);
+      if (isUncertainCode(code)) {
+        // The delete may have run: re-read the figures, and only then say what is known.
+        await this.refresh();
+        if (this.disposed || seq !== this.clearSeq) return;
+        this.setStorage({ clear: clearFailed(scope, beforeDays, UNCERTAIN_MESSAGE) });
+        return;
+      }
+      const action = clearFailure(code, describe(err));
       if (action.action === 'repreview') {
         await this.runPreview(scope, beforeDays, action.notice, seq);
         return;
@@ -929,23 +942,34 @@ export class OsController {
     }
   }
 
-  /** Compacts the agent store. Needs host.storageCompact; busy, disk_space and store_down are typed. */
+  /**
+   * Compacts the agent store. Needs host.storageCompact; busy, disk_space and store_down are typed.
+   * timeout and bad_reply mean the compact may have run: the figures are re-read before the failure
+   * is shown. A project reset during the compact drops its answer.
+   */
   async storageCompact(): Promise<void> {
     const host = this.deps.host;
     if (this.disposed || typeof host.storageCompact !== 'function' || this.state.storage.compact.kind === 'running') return;
+    const seq = ++this.compactSeq;
     this.setStorage({ compact: compactStarted() });
     try {
       const result = await host.storageCompact();
-      if (this.disposed) return;
+      if (this.disposed || seq !== this.compactSeq) return;
       this.setStorage({ compact: compactDone(result) });
       await this.refresh();
     } catch (err) {
-      if (this.disposed) return;
+      if (this.disposed || seq !== this.compactSeq) return;
       if (isAuthError(err)) {
         this.handleAuthError();
         return;
       }
       const code = storageCode(err) || 'failed';
+      if (isUncertainCode(code)) {
+        await this.refresh();
+        if (this.disposed || seq !== this.compactSeq) return;
+        this.setStorage({ compact: { kind: 'failed', code, message: UNCERTAIN_MESSAGE } });
+        return;
+      }
       this.setStorage({ compact: compactFailed(code, describe(err)) });
     }
   }
