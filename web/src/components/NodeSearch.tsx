@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { useId, useMemo, useState, type KeyboardEvent, type Ref } from 'react';
 import type { SystemGraph } from '../../../typescript/src/system/index.js';
 import { searchCoreNodes, searchVizNodes, type NodeSearchHit } from '../orbit/search';
 import type { VizGraph } from '../viz';
@@ -56,10 +56,13 @@ export function NodeSearch({
   graph,
   viz = null,
   onChoose,
+  inputRef,
 }: {
   graph: SystemGraph | null;
   viz?: VizGraph | null;
   onChoose: (hit: NodeSearchHit) => void;
+  /** The input, so the page can focus it with "/". */
+  inputRef?: Ref<HTMLInputElement>;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -107,6 +110,7 @@ export function NodeSearch({
   return (
     <div className="os-search" role="search">
       <input
+        ref={inputRef}
         type="search"
         role="combobox"
         className="os-search-input"

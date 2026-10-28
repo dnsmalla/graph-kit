@@ -460,6 +460,7 @@ export function Selection({
   project = null,
   preview = null,
   onClose,
+  onHide,
   onDrill,
   onOpen,
   onStop,
@@ -484,6 +485,8 @@ export function Selection({
   /** The code preview state of the file last asked for. */
   preview?: FilePreview | null;
   onClose: () => void;
+  /** Hides the drawer that holds the card (the drawer keeps the selection). Without it, Hide folds the card to a tab. */
+  onHide?: () => void;
   onDrill?: (hub: HubKey) => void;
   onOpen?: (target: OsOpenTarget) => void;
   onStop?: (cancel: OsCancel, key: string) => void;
@@ -497,7 +500,10 @@ export function Selection({
   onExploreCluster?: (node: SystemCoreNode | null) => void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsedLocal, setCollapsed] = useState(false);
+  // With onHide the drawer owns the collapse; without it the card folds to its own tab.
+  const collapsed = onHide ? false : collapsedLocal;
+  const hide = () => (onHide ? onHide() : setCollapsed(true));
   const match = findActivity(selected, activity);
   const node = findVizNode(selected, viz);
   const coreNode = selected.type === 'core' && core ? (coreById(core).get(selected.id) ?? null) : null;
@@ -533,7 +539,7 @@ export function Selection({
         onOpenFile={onOpenFile}
         onCopy={onCopy ?? ((text) => copyToClipboard(text))}
         onFocusCore={onFocusCore}
-        onCollapse={() => setCollapsed(true)}
+        onCollapse={hide}
         headingRef={headingRef}
       />
     );
@@ -548,7 +554,7 @@ export function Selection({
     <div className="os-selection-head">
       <span className="meta">{kind}</span>
       <div className="os-selection-buttons">
-        <button type="button" className="btn os-close" onClick={() => setCollapsed(true)}>
+        <button type="button" className="btn os-close" onClick={hide}>
           Hide
         </button>
         <button type="button" className="btn os-close" onClick={onClose}>

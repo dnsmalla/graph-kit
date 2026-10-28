@@ -82,6 +82,13 @@ export type ViewState = {
   filePreview: FilePreview | null;
   /** The code brain's view: the 3D brain (default) or the file structure. */
   codeTab: CodeTab;
+  /**
+   * The details drawer's state per level (levelKey): true = the user hid it there. A level without
+   * an entry shows its drawer when it has something to show. A selection re-opens it.
+   */
+  drawerClosed: Record<string, boolean>;
+  /** The OS level's side panel when nothing is selected: the recent activity list, or none. */
+  osPanel: 'activity' | null;
 };
 
 export type ControllerDeps = {
@@ -278,6 +285,8 @@ export class OsController {
       focusSeq: 0,
       filePreview: null,
       codeTab: 'brain',
+      drawerClosed: {},
+      osPanel: null,
     };
   }
 
@@ -339,6 +348,8 @@ export class OsController {
       routines: null,
       routinesStatus: 'idle',
       filePreview: null,
+      drawerClosed: {},
+      osPanel: null,
     });
     if (this.watching) {
       void this.refresh();
@@ -355,7 +366,7 @@ export class OsController {
     if (this.disposed || !isHubKey(hub)) return;
     if (this.state.view.level === 'hub' && this.state.view.hub === hub) return;
     this.leaving(camera);
-    this.set({ view: { level: 'hub', hub }, selected: null });
+    this.set({ view: { level: 'hub', hub }, selected: null, ...this.drawerFor({ level: 'hub', hub }) });
   }
 
   /**
@@ -371,6 +382,7 @@ export class OsController {
     this.set({
       view: { level: 'os' },
       selected: { type: 'viz', id: `hub:${hub}`, label: HUB_TITLES[hub], detail: 'hub' },
+      ...this.drawerFor({ level: 'os' }),
     });
   }
 
@@ -426,6 +438,7 @@ export class OsController {
       view: { level: 'hub', hub },
       selected: { type: 'viz', id: node.id, label: node.label, detail: node.detail },
       focusSeq: this.state.focusSeq + 1,
+      ...this.drawerFor({ level: 'hub', hub }),
     });
   }
 
@@ -440,10 +453,14 @@ export class OsController {
       view: { level: 'hub', hub: 'code' },
       selected: { type: 'core', id: node.id, label: node.label, detail: node.detail },
       focusSeq: this.state.focusSeq + 1,
+      ...this.drawerFor({ level: 'hub', hub: 'code' }),
     });
   }
 
-  /** Selects a brain or ring item, or clears the selection with null. */
+  /**
+   * Selects a brain or ring item, or clears the selection with null. A selection opens the details
+   * drawer of the level it is on (a user who hid it gets it back).
+   */
   select(item: OsSelection | null): void {
     if (this.disposed) return;
     if (item === null) {
@@ -451,7 +468,38 @@ export class OsController {
       return;
     }
     if (!item || typeof item !== 'object' || !isSelectionType(item.type)) return;
-    this.set({ selected: { type: item.type, id: item.id, label: item.label, detail: item.detail } });
+    this.set({
+      selected: { type: item.type, id: item.id, label: item.label, detail: item.detail },
+      drawerClosed: this.withDrawerOpen(this.state.view),
+    });
+  }
+
+  /** Shows or hides the details drawer of the level the brain is on. Hidden state is remembered per level. */
+  setDrawerOpen(open: boolean): void {
+    if (this.disposed) return;
+    const key = levelKey(this.state.view);
+    const closed = this.state.drawerClosed[key] === true;
+    if (closed === !open) return;
+    this.set({ drawerClosed: { ...this.state.drawerClosed, [key]: !open } });
+  }
+
+  /** Shows or hides the OS level's recent-activity panel (it shows when nothing is selected). */
+  toggleActivity(): void {
+    if (this.disposed) return;
+    this.set({ osPanel: this.state.osPanel === 'activity' ? null : 'activity' });
+  }
+
+  /** The drawer map for a level being entered: that level's hidden flag is cleared (its drawer opens). */
+  private drawerFor(view: ViewLevel): Pick<ViewState, 'drawerClosed'> {
+    return { drawerClosed: this.withDrawerOpen(view) };
+  }
+
+  private withDrawerOpen(view: ViewLevel): Record<string, boolean> {
+    const key = levelKey(view);
+    if (!this.state.drawerClosed[key]) return this.state.drawerClosed;
+    const next = { ...this.state.drawerClosed };
+    delete next[key];
+    return next;
   }
 
   /** The host saw a change: state changed, re-fetch once the burst settles. */

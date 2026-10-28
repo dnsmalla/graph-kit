@@ -61,37 +61,86 @@ h1 {
 }
 
 .os {
-  max-width: 1600px;
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: var(--tok-space-lg);
+  height: 100vh;
+  height: 100dvh;
+  min-height: 540px;
   display: flex;
   flex-direction: column;
-  gap: var(--tok-space-lg);
   /* The dark stage: a soft pool of light behind the brain, fading to the page colour. */
   background: radial-gradient(ellipse at 50% 35%, var(--tok-color-surface) 0%, var(--tok-color-body) 70%) no-repeat;
   background-attachment: fixed;
+  overflow: hidden;
 }
 
-/* ---- header ---- */
+/* ---- top bar: title, Day|Week, live status, the two chips ---- */
 
-.os-head {
+.os-top {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--tok-space-md);
+  gap: var(--tok-space-xs) var(--tok-space-md);
+  padding: var(--tok-space-xs) var(--tok-space-md);
+  min-height: 52px;
+  background: var(--tok-color-surface);
+  border-bottom: 1px solid var(--tok-color-border);
 }
 
-.os-head-controls {
+.os-top-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--tok-space-sm);
+  min-width: 0;
+}
+
+.os-top-title h1 {
+  margin: 0;
+}
+
+.os-top-project {
+  margin: 0;
+  max-width: 24ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.os-top-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--tok-space-md);
+  gap: var(--tok-space-sm) var(--tok-space-md);
+  margin-left: auto;
 }
 
-.os-head-foot {
-  flex-basis: 100%;
+.os-top-updated {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.os-top-chips {
+  display: flex;
+  align-items: center;
+  gap: var(--tok-space-sm);
+}
+
+.os-health,
+.os-running-chip {
+  font: inherit;
+  font-size: var(--tok-type-caption-size);
+  cursor: pointer;
+}
+
+.os-health .dot {
+  margin-right: var(--tok-space-xs);
+}
+
+.os-health-ok .dot {
+  background: var(--tok-color-accent3);
+}
+
+.os-health-bad .dot {
+  background: var(--tok-color-accent4);
 }
 
 .seg {
@@ -141,93 +190,169 @@ h1 {
   background: var(--tok-color-text-muted);
 }
 
-/* ---- layout ---- */
+/* ---- the stage: the graph fills it; every overlay is placed on it ---- */
 
+/* The drawer's width and the inset it takes from the canvas. The canvas shrinks by the drawer's
+   width (and, on a narrow stage, is raised above the bottom sheet), so the brain never draws under
+   the drawer and the selected node stays in view. */
 .os-stage {
-  display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(260px, 320px);
-  gap: var(--tok-space-lg);
-  align-items: start;
-}
-
-.os-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--tok-space-lg);
-  min-width: 0;
-}
-
-.os-col-left {
-  grid-column: 1;
-  grid-row: 1;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 480px;
+  overflow: hidden;
 }
 
 .os-centre {
-  grid-column: 2;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--tok-space-md);
+  position: absolute;
+  inset: 0;
   min-width: 0;
 }
 
-.os-col-right {
-  grid-column: 3;
-  grid-row: 1;
-}
-
-.os-centre-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--tok-space-sm);
-}
-
-/* The brain fills the centre column. Its stage is absolutely placed, so the
-   three.js view gets a definite height without the column's height depending on it. */
 .os-brain {
-  position: relative;
-  min-height: 560px;
-  height: clamp(560px, 70vh, 820px);
-  border: 1px solid var(--tok-color-border);
-  border-radius: var(--tok-radius-md);
-  overflow: hidden;
-  background: var(--tok-color-surface);
-}
-
-.os-brain-stage {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+  background: var(--tok-color-body);
+}
+
+.os-brain-drawer {
+  --os-inset-right: 396px;
+  --os-inset-bottom: 0px;
+}
+
+.os-brain-stage,
+.os-tree-host {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: var(--os-inset-right, 0px);
+  bottom: var(--os-inset-bottom, 0px);
+  transition: right 180ms ease, bottom 180ms ease;
+}
+
+.os-brain-stage .orbit-host {
+  min-height: 0 !important;
 }
 
 .os-brain-status {
   position: absolute;
-  inset: 0;
-  z-index: 1;
+  bottom: var(--tok-space-md);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
   margin: 0;
+  padding: var(--tok-space-xs) var(--tok-space-md);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-sm);
+  background: var(--tok-color-surface2);
+  color: var(--os-muted);
+  white-space: nowrap;
+}
+
+/* Breadcrumb and Back: the top-left pill. */
+.os-top-left {
+  position: absolute;
+  top: var(--tok-space-sm);
+  left: var(--tok-space-sm);
+  z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: var(--tok-color-body);
-  color: var(--os-muted);
+  gap: var(--tok-space-sm);
+  max-width: calc(100% - 300px);
 }
 
-/* The drawer starts below the 3D toolbar (its buttons sit at the top right of the stage). */
-.os {
-  --os-drawer-top: 52px;
-}
-
-/* Selection is a drawer on the right of the brain (it does not cover the node it describes, which
-   the view keeps at the middle-left). It scrolls on its own and collapses to a tab. */
-.os-selection {
+/* Search: a compact field at the top centre that widens when it has focus. */
+.os-top-centre {
   position: absolute;
-  top: var(--os-drawer-top);
-  right: var(--tok-space-md);
-  bottom: var(--tok-space-md);
-  z-index: 2;
-  width: min(340px, calc(100% - 2 * var(--tok-space-md)));
-  max-height: calc(100% - var(--os-drawer-top) - var(--tok-space-md));
+  top: var(--tok-space-sm);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+}
+
+.os-top-centre .os-search-input {
+  width: 200px;
+  transition: width 160ms ease;
+}
+
+.os-top-centre .os-search-input:focus {
+  width: 320px;
+}
+
+.os-notices {
+  position: absolute;
+  top: 52px;
+  left: var(--tok-space-sm);
+  right: var(--tok-space-sm);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-xs);
+  pointer-events: none;
+}
+
+.os-notices > * {
+  pointer-events: auto;
+}
+
+/* Legend, caption and the activity chip: the bottom-left overlay. */
+.os-bottom-left {
+  position: absolute;
+  left: var(--tok-space-sm);
+  bottom: var(--tok-space-sm);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tok-space-xs);
+  max-width: calc(100% - 2 * var(--tok-space-sm));
+  transition: bottom 180ms ease;
+}
+
+.os-bottom-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tok-space-sm);
+}
+
+.os-chip-toggle {
+  font: inherit;
+  font-size: var(--tok-type-caption-size);
+  padding: 2px var(--tok-space-sm);
+  background: var(--tok-color-surface2);
+  color: var(--tok-color-text);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-sm);
+  cursor: pointer;
+}
+
+.os-caption {
+  white-space: nowrap;
+}
+
+.os-bottom-left .os-legend {
+  position: static;
+  margin: 0;
+  padding: var(--tok-space-xs) var(--tok-space-sm);
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tok-space-xs) var(--tok-space-md);
+  background: var(--tok-color-surface2);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-sm);
+}
+
+/* The details drawer: a 380px column on the right, over the stage's edge (the canvas makes room). */
+.os-drawer {
+  position: absolute;
+  top: var(--tok-space-sm);
+  right: var(--tok-space-sm);
+  bottom: var(--tok-space-sm);
+  z-index: 5;
+  width: 380px;
+  max-width: calc(100% - 2 * var(--tok-space-sm));
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
@@ -240,27 +365,37 @@ h1 {
   box-shadow: 0 8px 24px color-mix(in srgb, var(--tok-color-body) 60%, transparent);
 }
 
-.os-selection-head {
+.os-drawer-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--tok-space-sm);
 }
 
-.os-selection-head .btn {
-  padding: 2px var(--tok-space-sm);
+.os-drawer-title {
+  margin: 0;
+  font-size: 1.05em;
+  font-weight: var(--tok-type-title-weight);
 }
 
-.os-selection-buttons {
+.os-drawer-buttons {
   display: flex;
   gap: var(--tok-space-xs);
+  flex-wrap: wrap;
+}
+
+.os-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-md);
 }
 
 .os-drawer-tab {
   position: absolute;
-  top: var(--os-drawer-top);
-  right: var(--tok-space-md);
-  z-index: 2;
+  right: var(--tok-space-sm);
+  bottom: var(--tok-space-sm);
+  z-index: 5;
   padding: 4px var(--tok-space-sm);
   font: inherit;
   font-size: var(--tok-type-caption-size);
@@ -269,6 +404,70 @@ h1 {
   border: 1px solid var(--tok-color-border);
   border-radius: var(--tok-radius-md);
   cursor: pointer;
+}
+
+/* The overview of a hub: its own sections, with the figures and lists the old cards held. */
+.hub-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-sm);
+}
+
+.hub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tok-space-xs);
+}
+
+.os-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tok-type-caption-size);
+}
+
+.os-table th {
+  text-align: left;
+  font-weight: var(--tok-type-title-weight);
+  color: var(--os-muted);
+  padding: var(--tok-space-xs);
+  border-bottom: 1px solid var(--tok-color-border);
+}
+
+.os-table td {
+  padding: var(--tok-space-xs);
+  vertical-align: top;
+  border-bottom: 1px solid var(--tok-color-border);
+}
+
+.os-table-title {
+  font-weight: var(--tok-type-title-weight);
+}
+
+.os-filter-input {
+  font: inherit;
+  font-size: var(--tok-type-body-size);
+  padding: var(--tok-space-xs) var(--tok-space-sm);
+  color: var(--tok-color-text);
+  background: var(--tok-color-surface);
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-sm);
+  width: 100%;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Selection's card sits inside the drawer: a plain column, no overlay of its own. */
+.os-selection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tok-space-sm);
 }
 
 /* ---- code node details (K6b): path, links, preview; the file structure tab ---- */
@@ -756,40 +955,6 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-.card {
-  min-width: 0;
-  background: color-mix(in srgb, var(--tok-color-surface) 86%, transparent);
-  border: 1px solid var(--tok-color-border);
-  border-radius: var(--tok-radius-md);
-  padding: var(--tok-space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--tok-space-md);
-}
-
-.card-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--tok-space-sm);
-}
-
-.card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--tok-space-sm);
-}
-
-.card-title {
-  font-size: var(--tok-type-section-size);
-  font-weight: var(--tok-type-section-weight);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--os-muted);
-}
-
 .chip {
   font-size: var(--tok-type-caption-strong-size);
   font-weight: var(--tok-type-caption-strong-weight);
@@ -837,21 +1002,6 @@ h1 {
   overflow: hidden;
   font-size: var(--tok-type-caption-size);
   color: var(--os-muted);
-}
-
-.routine-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--tok-space-sm);
-  padding: var(--tok-space-sm) 0;
-}
-
-.routine-list li + li {
-  border-top: 1px solid var(--tok-color-border);
-}
-
-.routine-list .dot {
-  margin-top: 6px;
 }
 
 .sub-title {
@@ -1079,51 +1229,55 @@ select:focus-visible {
   border-radius: 4px;
 }
 
-/* ---- widths: three columns above 1100px; below it, the brain first, then the side panels ---- */
-
-@media (max-width: 1100px) {
-  .os-stage {
-    display: flex;
-    flex-direction: column;
+/* ---- narrow stage: the drawer becomes a bottom sheet over the lower 46%; the search takes a row ---- */
+@media (max-width: 760px) {
+  .os-brain-drawer {
+    --os-inset-right: 0px;
+    --os-inset-bottom: 46%;
   }
 
-  .os-centre {
-    order: -1;
-  }
-
-  .os-brain {
-    min-height: 480px;
-    height: clamp(480px, 70vh, 640px);
-  }
-}
-
-@media (max-width: 720px) {
-  .os {
-    padding: var(--tok-space-lg);
-  }
-
-  .os-brain {
-    min-height: 420px;
-    height: 420px;
-  }
-
-  .os-tree-host-drawer .os-tree-panel {
-    right: 0;
-  }
-
-  .os-selection {
+  .os-drawer {
     top: auto;
-    left: var(--tok-space-sm);
-    right: var(--tok-space-sm);
-    bottom: var(--tok-space-sm);
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: auto;
-    max-height: 60%;
+    max-width: none;
+    height: 46%;
+    border-radius: var(--tok-radius-md) var(--tok-radius-md) 0 0;
   }
 
   .os-drawer-tab {
-    top: auto;
     bottom: var(--tok-space-sm);
+  }
+
+  .os-centre-drawer .os-bottom-left {
+    bottom: calc(46% + var(--tok-space-sm));
+  }
+
+  .os-top-left {
+    max-width: calc(100% - 2 * var(--tok-space-sm));
+  }
+
+  .os-top-centre {
+    top: 44px;
+    left: var(--tok-space-sm);
     right: var(--tok-space-sm);
+    transform: none;
+  }
+
+  .os-top-centre .os-search,
+  .os-top-centre .os-search-input,
+  .os-top-centre .os-search-input:focus {
+    width: 100%;
+  }
+
+  .os-notices {
+    top: 88px;
+  }
+
+  .os-top-updated {
+    display: none;
   }
 }
 
@@ -1202,11 +1356,6 @@ select:focus-visible {
 .os-open-btn .row-main {
   display: flex;
   flex-direction: column;
-}
-
-.routine-list .os-open-btn {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .kit .os-open-btn {

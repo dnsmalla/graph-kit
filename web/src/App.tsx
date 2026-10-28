@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import type { CGData } from '../../typescript/src/models';
 import type { OsController, ViewState } from './controller';
 import type { OsRange } from './host';
-import type { OsLiveStatus, OsSnapshot } from './types';
-import { fmtTime } from './format';
+import type { OsLiveStatus } from './types';
+import { fmtClock } from './format';
 import { drawOs, drawViews, osGraphStatus, vizForLevel, whenOsGraphReady, type OsGraphStatus, type VizView } from './systemGraph';
 import { Brain } from './components/Brain';
-import { Knowledge } from './components/Knowledge';
-import { Routines } from './components/Routines';
-import { RunningNow } from './components/RunningNow';
-import { SkillsDeck } from './components/SkillsDeck';
-import { SystemMap } from './components/SystemMap';
-import { TokenFlow } from './components/TokenFlow';
 
 const LIVE_LABEL: Record<OsLiveStatus, string> = {
   idle: 'Not connected',
@@ -26,14 +19,36 @@ const RANGES: Array<{ id: OsRange; label: string }> = [
   { id: 'week', label: 'Week' },
 ];
 
-function Header({ state, controller }: { state: ViewState; controller: OsController }) {
+/** The core's status, re-read once the core has settled (ready or failed). */
+function useOsGraphStatus(): OsGraphStatus {
+  const [status, setStatus] = useState<OsGraphStatus>(osGraphStatus);
+  useEffect(() => {
+    let live = true;
+    void whenOsGraphReady().then(() => {
+      if (live) setStatus(osGraphStatus());
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return status;
+}
+
+/**
+ * The slim top bar: title, project, Day|Week, live status, the update time, and two chips: the
+ * server health (opens Kits) and the running count (opens Agents, hidden at zero).
+ */
+function TopBar({ state, controller }: { state: ViewState; controller: OsController }) {
+  const data = state.data;
+  const running = data ? data.running.chatTurns.length + data.running.meetingAgentRuns.length + data.running.liveSessions.length : 0;
+  const healthy = data?.system.status === 'ok';
   return (
-    <header className="os-head">
-      <div>
+    <header className="os-top">
+      <div className="os-top-title">
         <h1>System</h1>
-        <p className="meta">{state.projectName ?? 'No project open'}</p>
+        <p className="meta os-top-project">{state.projectName ?? 'No project open'}</p>
       </div>
-      <div className="os-head-controls">
+      <div className="os-top-controls">
         <div className="seg" role="group" aria-label="Time window">
           {RANGES.map(({ id, label }) => (
             <button
@@ -52,25 +67,23 @@ function Header({ state, controller }: { state: ViewState; controller: OsControl
           {LIVE_LABEL[state.live]}
           {state.notice ? <span className="meta"> · {state.notice}</span> : null}
         </p>
+        {data ? <p className="meta os-top-updated">Updated {fmtClock(data.generatedAt)}</p> : null}
       </div>
-      {state.data ? <p className="meta os-head-foot">Updated {fmtTime(state.data.generatedAt)}</p> : null}
+      <div className="os-top-chips">
+        {data ? (
+          <button type="button" className={healthy ? 'chip os-health os-health-ok' : 'chip os-health os-health-bad'} onClick={() => controller.drill('kits')}>
+            <span className="dot" aria-hidden="true" />
+            {healthy ? 'Healthy' : 'Degraded'}
+          </button>
+        ) : null}
+        {running > 0 ? (
+          <button type="button" className="chip os-running-chip" onClick={() => controller.drill('agents')}>
+            {running} running
+          </button>
+        ) : null}
+      </div>
     </header>
   );
-}
-
-/** The core's status, re-read once the core has settled (ready or failed). */
-function useOsGraphStatus(): OsGraphStatus {
-  const [status, setStatus] = useState<OsGraphStatus>(osGraphStatus);
-  useEffect(() => {
-    let live = true;
-    void whenOsGraphReady().then(() => {
-      if (live) setStatus(osGraphStatus());
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return status;
 }
 
 export function App({ controller }: { controller: OsController }) {
@@ -78,20 +91,14 @@ export function App({ controller }: { controller: OsController }) {
   const data = state.data;
   // The core's status is a dependency: drawViews reads it, and it changes once when the core is ready.
   const graphStatus = useOsGraphStatus();
-  const drawn = useMemo(
-    () => drawViews(state.projectGraph, data),
-    [state.projectGraph, data, graphStatus],
-  );
-  // The OS view (every part's graph) and the graph of the level the brain is on. The code level
-  // draws the project's core instead, so it needs no OS graph of its own.
+  const drawn = useMemo(() => drawViews(state.projectGraph, data), [state.projectGraph, data, graphStatus]);
   // The code brain shows the project's graph only: the OS view is not built while it is showing.
   const inCode = state.view.level === 'hub' && state.view.hub === 'code';
   const osDrawn = useMemo(
     () => drawOs(data, state.skills, state.routines, drawn.core, { loading: drawn.loading, skip: inCode }),
     [data, state.skills, state.routines, drawn.core, drawn.loading, inCode],
   );
-  // A refresh can remove the part the brain is on, or a node that is selected: the controller brings
-  // the navigation back in line with the new OS view.
+  // A refresh can remove the part the brain is on, or a node that is selected: the controller reconciles.
   useEffect(() => {
     if (osDrawn.view) controller.reconcile(osDrawn.view);
   }, [controller, osDrawn.view]);
@@ -107,33 +114,20 @@ export function App({ controller }: { controller: OsController }) {
 
   return (
     <div className="os">
-      <Header state={state} controller={controller} />
-
-      {state.signedOut ? (
-        <p className="banner banner-warn" role="status">
-          {controller.signedOutNotice}
-        </p>
-      ) : null}
-      {state.error ? (
-        <p className="banner banner-error" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-
-      {!data ? <p className="empty">Loading the System view…</p> : null}
-
-      {data ? (
-        <div className="os-stage">
-          <div className="os-col os-col-left">
-            <SystemMap system={data.system} controller={controller} />
-            <RunningNow
-              running={data.running}
-              stopping={state.stopping}
-              onStop={(cancel, key) => void controller.stopItem(cancel, key)}
-            />
-            <SkillsDeck skills={state.skills} status={state.skillsStatus} controller={controller} />
-          </div>
-
+      <TopBar state={state} controller={controller} />
+      <div className="os-stage">
+        {state.signedOut ? (
+          <p className="banner banner-warn os-stage-banner" role="status">
+            {controller.signedOutNotice}
+          </p>
+        ) : null}
+        {state.error ? (
+          <p className="banner banner-error os-stage-banner" role="alert">
+            {state.error}
+          </p>
+        ) : null}
+        {!data ? <p className="empty os-stage-empty">Loading the System view…</p> : null}
+        {data ? (
           <Brain
             state={state}
             controller={controller}
@@ -142,19 +136,15 @@ export function App({ controller }: { controller: OsController }) {
             drawFailed={drawn.drawFailed}
             coreLoading={drawn.loading}
             activity={data.activity.items}
+            data={data}
             viz={vizDrawn.viz}
             osFailed={osDrawn.failed || vizDrawn.failed}
             osLoading={osDrawn.loading}
             running={data.running}
           />
-
-          <div className="os-col os-col-right">
-            <TokenFlow tokens={data.tokens} />
-            <Knowledge knowledge={data.knowledge} controller={controller} />
-            <Routines routines={state.routines} status={state.routinesStatus} controller={controller} />
-          </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
+

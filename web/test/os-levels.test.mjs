@@ -10,7 +10,7 @@ import { uniqueCacheDir } from './support/cacheDir.mjs';
 import react from '@vitejs/plugin-react';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const HUB_NAMES = ['agents', 'kits', 'knowledge', 'memory', 'models', 'routines', 'skills'];
+const HUB_NAMES = ['activity', 'agents', 'kits', 'knowledge', 'memory', 'models', 'routines', 'skills'];
 
 let server;
 let api;
@@ -109,7 +109,7 @@ describe('wasm wrappers: buildOsView, vizLayout, codeSummary', () => {
   it('buildOsView with no input gives the OS graph as one centre per hub, and a graph per hub but code', () => {
     const out = api.wasm.buildOsView({ snapshot: null, skills: [], routines: [], code: null });
     assert.equal(out.os.level, 'os');
-    assert.equal(out.os.nodes.length, 8, 'eight hub centres');
+    assert.equal(out.os.nodes.length, 9, 'nine hub centres');
     assert.ok(out.os.nodes.every((n) => n.kind === 'hub' && n.drill), 'every centre opens its hub');
     assert.deepEqual(Object.keys(out.hubs).sort(), HUB_NAMES, 'every hub but code has a graph');
     for (const name of HUB_NAMES) assert.equal(out.hubs[name].nodes.length, 1, `${name} with no data is its centre only`);
@@ -318,68 +318,6 @@ describe('controller: navigation between the OS, its parts and the code brain', 
     controller.drill('models');
     controller.back();
     assert.equal(controller.getSnapshot(), before);
-  });
-});
-
-describe('rendering: the OS levels and the side panels', () => {
-  async function render(controllerSetup = () => {}, overrides = {}) {
-    const { controller } = makeController({ host: fakeHost(overrides) });
-    controllerSetup(controller);
-    controller.start();
-    await flush();
-    return { controller, html: api.render.renderApp(controller) };
-  }
-
-  it('the OS shows the whole-OS title, the current OS crumb and no Back button', async () => {
-    const { html, controller } = await render();
-    assert.match(html, /The whole OS/);
-    assert.match(html, /<span class="os-crumb os-crumb-current" aria-current="page">OS<\/span>/);
-    assert.doesNotMatch(html, /os-back/);
-    assert.match(html, /aria-label="Kind legend"/, 'the OS legend lists its kinds');
-    controller.dispose();
-  });
-
-  it('a part shows its title, a clickable OS crumb, Back, and its own legend and counts', async () => {
-    const { html, controller } = await render((c) => c.drill('models'));
-    assert.match(html, /<h2 id="sec-brain"[^>]*>Models<\/h2>/);
-    assert.match(html, /class="os-crumb os-crumb-link"[^>]*>OS<\/button>/);
-    assert.match(html, /class="btn os-back"[^>]*>Back<\/button>/);
-    assert.match(html, /aria-label="Kind legend"/);
-    assert.match(html, />Model<!-- --> · <!-- -->2</, 'the legend counts the models');
-    assert.match(html, /members/, 'the part reports its member count');
-    controller.dispose();
-  });
-
-  it('the code brain keeps its own heading and colour legend', async () => {
-    const { html, controller } = await render((c) => c.drill('code'), { loadProjectGraph: () => Promise.resolve(project()) });
-    await flush();
-    assert.match(html, /Project brain/);
-    assert.match(html, /aria-label="Colour legend"/);
-    controller.dispose();
-  });
-
-  it('the side panels offer their nodes: kits, routines, skills, memory and knowledge', async () => {
-    const { html, controller } = await render(() => {}, {
-      host: {
-        loadProjectGraph: () => Promise.resolve(project()),
-        loadSkills: () => Promise.resolve(api.fixture.demoSkills),
-        loadRoutines: () => Promise.resolve(api.fixture.demoRoutines),
-      },
-    });
-    await flush();
-    assert.ok(html.includes('aria-label="Show agent-kit in the brain"'), 'kit cards are buttons');
-    assert.ok(html.includes('aria-label="Show Regression sweep in the brain"'), 'routine rows are buttons');
-    assert.ok(html.includes('aria-label="Show brainstorming in the brain"'), 'skill cards are buttons');
-    assert.ok(html.includes('>Explore</button>'), 'knowledge explores its hub');
-    controller.dispose();
-  });
-
-  it('the OS shows a project-graph loading notice above the stage while the core loads', async () => {
-    const pending = new Promise(() => {});
-    const { html, controller } = await render(() => {}, { host: { loadProjectGraph: () => pending } });
-    assert.match(html, /role="status"[^>]*>Loading the project graph/);
-    assert.doesNotMatch(html, /No project graph yet/, 'the OS draws; the empty text is the code brain only');
-    controller.dispose();
   });
 });
 

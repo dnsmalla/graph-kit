@@ -1,10 +1,10 @@
 import type { OsController, OsSelection } from '../controller';
 import type { OsActivityItem } from '../types';
-import { fmtTime, words } from '../format';
+import { fmtRelative, fmtTime, words } from '../format';
 import { Empty } from './common';
 
-/** Recent rows shown while the brain draws (WebGL available). Without WebGL the list shows the whole ring. */
-export const RECENT_LIMIT = 5;
+/** Rows the activity timeline shows by default (the ring draws the same items, up to its own cap). */
+export const RECENT_LIMIT = 12;
 
 /** The ring id of an activity row (ring ids are `activity:<id>`). */
 export function ringIdFor(item: OsActivityItem): string {
@@ -12,9 +12,9 @@ export function ringIdFor(item: OsActivityItem): string {
 }
 
 /**
- * The latest activity as a plain list under the brain, so it reads without WebGL.
- * Each row selects its ring item; the row for the current selection is aria-pressed.
- * `limit` is how many rows to show; `onPick` gets the clicked row before the selection changes.
+ * The latest activity as a timeline: kind chip, title and how long ago. Each row selects its ring
+ * item; the row for the current selection is aria-pressed. Works without WebGL. `limit` is how
+ * many rows to show; `onPick` gets the clicked row before the selection changes.
  */
 export function Recent({
   items,
@@ -31,10 +31,7 @@ export function Recent({
 }) {
   const latest = items.slice(0, limit);
   return (
-    <section className="os-recent" aria-labelledby="sec-recent">
-      <h3 id="sec-recent" className="sub-title">
-        Recent
-      </h3>
+    <section className="os-recent" aria-label="Recent activity">
       {latest.length === 0 ? (
         <Empty>No activity yet. Chat turns, ingests and meetings show up here as they happen.</Empty>
       ) : (
@@ -48,13 +45,18 @@ export function Recent({
                   type="button"
                   className="os-recent-item"
                   aria-pressed={pressed}
+                  title={fmtTime(item.createdAt)}
                   onClick={(event) => {
                     onPick?.(event.currentTarget);
                     controller.select({ type: 'ring', id, label: item.title, detail: item.kind });
                   }}
                 >
-                  <time dateTime={item.createdAt}>{fmtTime(item.createdAt)}</time>
-                  <span className="tag">{words(item.kind)}</span>
+                  <span className="os-recent-top">
+                    <span className="tag">{words(item.kind)}</span>
+                    <time dateTime={item.createdAt} className="meta">
+                      {fmtRelative(item.createdAt)}
+                    </time>
+                  </span>
                   <span className="os-recent-title">{item.title}</span>
                 </button>
               </li>

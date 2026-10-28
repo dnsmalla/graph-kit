@@ -73,7 +73,7 @@ export interface OsViewInput {
 }
 
 /** Hub keys in display order. `code` is the project's SystemGraph; the rest are VizGraphs. */
-export const HUB_KEYS = ['code', 'knowledge', 'memory', 'skills', 'models', 'agents', 'routines', 'kits'] as const;
+export const HUB_KEYS = ['code', 'knowledge', 'memory', 'skills', 'models', 'agents', 'routines', 'kits', 'activity'] as const;
 export type HubKey = (typeof HUB_KEYS)[number];
 
 /** The titles of the hubs, as the core names them. */
@@ -86,6 +86,7 @@ export const HUB_TITLES: Record<HubKey, string> = {
   agents: 'Agents',
   routines: 'Routines',
   kits: 'Kits',
+  activity: 'Activity',
 };
 
 export function isHubKey(value: unknown): value is HubKey {

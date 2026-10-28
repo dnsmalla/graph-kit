@@ -6,12 +6,12 @@ import type { OsActivityItem, OsSnapshot } from '../types';
 import { OrbitPanel, type OrbitPanelHandle } from '../orbit/OrbitPanel';
 import type { OrbitColorMode, OrbitPick } from '../orbit/OrbitView';
 import { clusterSummary, CLUSTER_PALETTE_SIZE, uniqueCoreNodes, VIZ_KIND_COLORS, VIZ_KIND_FALLBACK, vizKindSummary } from '../orbit/scene';
-import { fmtInt, humanKey } from '../format';
-import { DRILL_GUARD_MS, HUB_TITLES, isHubKey, swallowsPick, type DrillGuard, type HubKey, type VizGraph } from '../viz';
-import { Recent, RECENT_LIMIT } from './Recent';
+import { fmtInt, humanKey, words } from '../format';
+import { DRILL_GUARD_MS, HUB_TITLES, isHubKey, levelKey, swallowsPick, type DrillGuard, type HubKey, type VizGraph } from '../viz';
 import { NodeSearch } from './NodeSearch';
 import { Selection } from './Selection';
 import { CodeStructure } from './CodeStructure';
+import { HubOverview, ActivityOverview } from './HubOverview';
 import type { CodeTab } from '../controller';
 
 const LEGEND: Array<{ key: 'code' | 'docs' | 'tests' | 'knowledge' | 'other'; label: string }> = [
@@ -39,10 +39,15 @@ function toSelection(item: OrbitPick): OsSelection | null {
   return { type: item.type, id: item.id, label: item.label, detail: item.detail };
 }
 
+/** What the details drawer shows: a hub's overview, a selected node, the activity timeline, or nothing. */
+type DrawerContent = { kind: 'hub'; hub: string } | { kind: 'selection' } | { kind: 'activity' } | null;
+
 /**
- * The centre column: the brain (the OS graph, one part of it, or the project's code graph), its
- * breadcrumb, search, selection, legend and the recent list. A hub node opens its part; Back and
- * Escape return to the OS. The camera is remembered per level.
+ * The stage: the brain fills it (the OS graph, one part of it, or the project's code graph), with
+ * the breadcrumb, search, the code toggle, the legend and the activity chip as overlays, and the
+ * details drawer on the right (a bottom sheet on a narrow stage). The drawer's content follows the
+ * selection and the level; the brain's canvas is padded while the drawer is open, so nothing it
+ * draws sits under it. Back and Escape return to the OS; Escape hides the drawer first.
  */
 export function Brain({
   state,
@@ -52,6 +57,7 @@ export function Brain({
   drawFailed,
   coreLoading,
   activity,
+  data = null,
   viz = null,
   osFailed = false,
   osLoading = false,
@@ -66,6 +72,8 @@ export function Brain({
   /** True while the core is still compiling: the brain shows its loading state. */
   coreLoading: boolean;
   activity: OsActivityItem[];
+  /** The snapshot, for the hub overviews and the drawer's figures. */
+  data?: OsSnapshot | null;
   /** The OS graph or a hub's graph to draw. Null while it loads or when the level has none. */
   viz?: VizView | null;
   /** The OS graph could not be drawn. */
@@ -78,11 +86,9 @@ export function Brain({
   const view = state.view;
   const inCode = view.level === 'hub' && view.hub === 'code';
   const { graph } = core;
-  // The code brain's two views: the 3D brain, or the file structure beside it (the brain stays mounted).
   const codeTab: CodeTab = inCode ? state.codeTab : 'brain';
   const structure = codeTab === 'structure';
   const status = state.projectGraphStatus;
-  // The code brain draws the project's core; the OS levels draw the OS graph or one part of it.
   const drawing = inCode ? !drawFailed && !coreLoading : !osFailed && viz !== null;
   const vizGraph: VizGraph | null = !inCode && drawing && viz ? viz.graph : null;
   const ready = inCode && drawing && status === 'ready' && graph.core.length > 0;
@@ -92,7 +98,6 @@ export function Brain({
         truncated ? ` · showing ${fmtInt(graph.truncated.keptNodes)} of ${fmtInt(graph.truncated.totalNodes)}` : ''
       }`
     : null;
-  // A part's own centre (its hub node) carries the part's counts; the OS graph has no centre.
   const centre = vizGraph && vizGraph.level !== 'os' ? vizGraph.nodes.find((node) => node.kind === 'hub') : undefined;
   const members = typeof centre?.meta.members === 'number' ? centre.meta.members : null;
   const more = typeof centre?.meta.more === 'number' ? centre.meta.more : 0;
@@ -104,28 +109,41 @@ export function Brain({
         }`
     : null;
   const caption = inCode ? codeCaption : vizCaption;
-  // Without WebGL the brain cannot be picked, so the recent list stands in for the whole ring.
-  const [webgl, setWebgl] = useState(true);
+  // Without WebGL the brain cannot be picked; the activity timeline then lists the ring.
+  const [, setWebgl] = useState(true);
   const [colorBy, setColorBy] = useState<OrbitColorMode>('kind');
-  // The brain's imperative handle: search, the camera memory and the focus requests go through it.
+  const [legendOpen, setLegendOpen] = useState(false);
   const brainRef = useRef<OrbitPanelHandle>(null);
-  // The Recent row that opened the current selection; focus returns to it on close.
+  const searchRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  // The drill a double-click made: its trailing pick of the same hub is swallowed (see swallowsPick).
   const drillGuard = useRef<DrillGuard | null>(null);
-  // The level's heading takes focus when the level changes, so a screen reader announces it.
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  // The loading and error texts sit under the stage; the stage's own empty text only
-  // shows once the load has settled, so the two never overlap.
+  const headingRef = useRef<HTMLSpanElement>(null);
   const settled = status !== 'loading' && status !== 'idle' && status !== 'error';
   const clusters = useMemo(() => (inCode ? clusterSummary(uniqueCoreNodes(graph)) : []), [graph, inCode]);
   const kinds = useMemo(() => (vizGraph ? vizKindSummary(vizGraph.nodes) : []), [vizGraph]);
   const viewKey = view.level === 'os' ? 'os' : `hub:${view.hub}`;
-  const title = inCode ? 'Project brain' : view.level === 'os' ? 'The whole OS' : HUB_TITLES[view.hub];
   const crumbTitle = view.level === 'os' ? 'OS' : HUB_TITLES[view.hub];
 
-  // The camera memory: the brain tells the controller where its camera is, so a navigation
-  // remembers the level it leaves; the level being entered gets its remembered pose back.
+  // A hub node selected on the OS (or on a part) is shown as that hub's overview.
+  const selectedHub: string | null = (() => {
+    if (!state.selected || state.selected.type !== 'viz' || !vizGraph) return null;
+    const node = vizGraph.nodes.find((n) => n.id === state.selected?.id);
+    return node && node.kind === 'hub' && isHubKey(node.drill) ? node.drill : null;
+  })();
+  const drawer: DrawerContent = state.selected
+    ? selectedHub
+      ? { kind: 'hub', hub: selectedHub }
+      : { kind: 'selection' }
+    : view.level === 'hub'
+      ? { kind: 'hub', hub: view.hub }
+      : state.osPanel === 'activity'
+        ? { kind: 'activity' }
+        : null;
+  const drawerOpen = drawer !== null && state.drawerClosed[levelKey(view)] !== true;
+  const drawerOpenRef = useRef(drawerOpen);
+  drawerOpenRef.current = drawerOpen;
+
+  // The camera memory: the brain reports its camera so a navigation remembers the level it leaves.
   useEffect(() => {
     controller.setCameraSource(() => brainRef.current?.getCamera() ?? null);
     return () => controller.setCameraSource(null);
@@ -140,7 +158,7 @@ export function Brain({
     headingRef.current?.focus({ preventScroll: true });
   }, [viewKey, controller, view]);
 
-  // A side panel asked for a node: fly to it once the level that holds it is drawn.
+  // A side action asked for a node: fly to it once the level that holds it is drawn.
   const focused = useRef(state.focusSeq);
   useEffect(() => {
     if (focused.current === state.focusSeq) return;
@@ -148,7 +166,7 @@ export function Brain({
     if (state.selected && codeTab === 'brain') brainRef.current?.focusNode(state.selected.id);
   }, [state.focusSeq, state.selected, codeTab]);
 
-  // Back from the structure to the 3D brain: the selected node is flown to (the structure only selects).
+  // Back from the structure to the 3D brain: the selected node is flown to.
   const shownTab = useRef(codeTab);
   useEffect(() => {
     const previous = shownTab.current;
@@ -166,41 +184,57 @@ export function Brain({
     controller.back();
   };
 
-  // Enter opens the selected hub when the focus is on the stage or the card's heading (not on a control).
+  // Enter opens the selected hub when the focus is on the stage (not on a control).
   useEffect(() => {
-    const selected = state.selected;
-    if (!selected || selected.type !== 'viz' || !vizGraph) return;
-    const node = vizGraph.nodes.find((n) => n.id === selected.id);
-    const hub = node && node.kind === 'hub' && isHubKey(node.drill) ? node.drill : null;
-    if (!hub) return;
+    if (!selectedHub || !vizGraph) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Enter' || event.defaultPrevented || event.repeat) return;
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.tagName === 'A' || target.isContentEditable)) return;
       event.preventDefault();
-      drill(hub);
+      if (isHubKey(selectedHub)) drill(selectedHub);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // drill is rebuilt each render but only reads the controller.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.selected, vizGraph, controller]);
+  }, [selectedHub, vizGraph, controller]);
 
-  // Escape returns from a part to the OS. Typing in a field keeps its own Escape (the search clears).
+  // Escape hides the drawer first; with the drawer hidden it returns from a part to the OS.
+  // Typing in a field keeps its own Escape (the search clears).
   useEffect(() => {
-    if (view.level !== 'hub') return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
-      event.preventDefault();
-      goOs();
+      if (drawerOpenRef.current) {
+        event.preventDefault();
+        controller.setDrawerOpen(false);
+        return;
+      }
+      if (view.level === 'hub') {
+        event.preventDefault();
+        goOs();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // goOs is rebuilt each render but only reads the controller.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.level, controller]);
+
+  // "/" focuses the search, unless the focus is already in a field.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.defaultPrevented || event.metaKey || event.ctrlKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const onSearchChoose = (hit: { id: string; label: string; category: string }) => {
     triggerRef.current = null;
@@ -212,92 +246,24 @@ export function Brain({
     );
   };
 
-  // The preview and file callbacks are stable: a new identity on every render would re-run the
-  // Selection's preview request.
+  // Stable callbacks: a new identity on every render would re-run the Selection's preview request.
   const loadPreview = useCallback((path: string) => void controller.loadFilePreview(path), [controller]);
   const openFileInApp = useCallback((path: string) => controller.openFile(path), [controller]);
   const copyTextFor = useCallback((text: string) => controller.copyText(text), [controller]);
 
+  const closeSelection = () => {
+    const trigger = triggerRef.current;
+    triggerRef.current = null;
+    controller.select(null);
+    trigger?.focus();
+  };
+  const hideDrawer = () => controller.setDrawerOpen(false);
+  const showDrawer = () => controller.setDrawerOpen(true);
+  const drawerTitle = drawer?.kind === 'hub' ? (HUB_TITLES[drawer.hub as HubKey] ?? words(drawer.hub)) : drawer?.kind === 'activity' ? 'Activity' : '';
+
   return (
-    <section className="os-centre" aria-labelledby="sec-brain">
-      <div className="os-centre-head">
-        <h2 id="sec-brain" ref={headingRef} tabIndex={-1} className="card-title">
-          {title}
-        </h2>
-        {caption ? <p className="meta">{caption}</p> : null}
-      </div>
-
-      {!inCode ? (
-        <div className="os-notices">
-          {osFailed ? (
-            <p className="banner banner-error" role="alert">
-              Could not draw the OS graph.
-            </p>
-          ) : null}
-          {drawFailed ? (
-            <p className="banner banner-error" role="alert">
-              Could not draw the project graph.
-            </p>
-          ) : null}
-          {status === 'error' ? (
-            <p className="banner banner-error" role="alert">
-              Could not load the project graph.
-            </p>
-          ) : null}
-          {status === 'loading' || status === 'idle' || coreLoading ? (
-            <p className="meta" role="status">
-              Loading the project graph…
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <nav className="os-crumbs" aria-label="Where you are">
-        {view.level === 'os' ? (
-          <span className="os-crumb os-crumb-current" aria-current="page">
-            OS
-          </span>
-        ) : (
-          <>
-            <button type="button" className="os-crumb os-crumb-link" onClick={goOs}>
-              OS
-            </button>
-            <span className="os-crumb-sep" aria-hidden="true">
-              ›
-            </span>
-            <span className="os-crumb os-crumb-current" aria-current="page">
-              {crumbTitle}
-            </span>
-            <button type="button" className="btn os-back" onClick={goOs}>
-              Back
-            </button>
-          </>
-        )}
-      </nav>
-
-      <NodeSearch
-        graph={inCode && ready ? graph : null}
-        viz={vizGraph}
-        onChoose={onSearchChoose}
-      />
-
-      {inCode ? (
-        <div className="seg os-codeview" role="group" aria-label="Code view">
-          {(['brain', 'structure'] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              aria-pressed={codeTab === tab}
-              className={codeTab === tab ? 'seg-btn seg-on' : 'seg-btn'}
-              onClick={() => controller.setCodeTab(tab)}
-            >
-              {tab === 'brain' ? '3D' : 'Structure'}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="os-brain">
+    <section className={drawerOpen ? 'os-centre os-centre-drawer' : 'os-centre'} aria-labelledby="sec-brain">
+      <div className={drawerOpen ? 'os-brain os-brain-drawer' : 'os-brain'}>
         <div className="os-brain-stage" hidden={structure}>
           <OrbitPanel
             ref={brainRef}
@@ -310,7 +276,6 @@ export function Brain({
             onColorByChange={setColorBy}
             onFallback={() => setWebgl(false)}
             onSelect={(item) => {
-              // A click selects: a hub shows its details card, and its Explore action (or a double-click) opens it.
               if (swallowsPick(drillGuard.current, item.id, Date.now())) return;
               triggerRef.current = null;
               const selection = toSelection(item);
@@ -329,19 +294,21 @@ export function Brain({
           />
         </div>
         {inCode && structure ? (
-          <div className={state.selected ? 'os-tree-host os-tree-host-drawer' : 'os-tree-host'}>
+          <div className="os-tree-host os-tree-host-drawer">
             {status === 'ready' || graph.core.length > 0 ? (
-              <CodeStructure nodes={graph.core} selectedId={state.selected?.id ?? null} onSelect={(node) => {
-                triggerRef.current = null;
-                controller.select({ type: 'core', id: node.id, label: node.label ?? node.id, detail: node.category });
-              }} />
+              <CodeStructure
+                nodes={graph.core}
+                selectedId={state.selected?.id ?? null}
+                onSelect={(node) => {
+                  triggerRef.current = null;
+                  controller.select({ type: 'core', id: node.id, label: node.label ?? node.id, detail: node.category });
+                }}
+              />
             ) : (
               <p className="meta os-tree-empty">{status === 'error' ? 'Could not load the project graph.' : 'Loading the project graph…'}</p>
             )}
           </div>
         ) : null}
-        {/* The code brain says what it waits for over the stage. The OS draws at once; its
-            project-graph notices sit above the stage instead, so the graph stays visible. */}
         {inCode && (status === 'loading' || status === 'idle' || coreLoading) ? (
           <p className="os-brain-status" role="status">
             Loading the project graph…
@@ -362,98 +329,207 @@ export function Brain({
             Loading the OS graph…
           </p>
         ) : null}
-        {state.selected ? (
-          <Selection
-            selected={state.selected}
-            activity={activity}
-            viz={vizGraph}
-            running={running}
-            stopping={state.stopping}
-            core={graph.core}
-            project={state.projectGraph}
-            preview={state.filePreview}
-            onDrill={drill}
-            onOpen={(target) => controller.open(target)}
-            onStop={(cancel, key) => void controller.stopItem(cancel, key)}
-            onPreview={loadPreview}
-            onOpenFile={openFileInApp}
-            onCopy={copyTextFor}
-            onFocusCore={(item) => controller.openCodeNode(item)}
-            onExploreCluster={(top) => {
-              triggerRef.current = null;
-              if (top) controller.openCodeNode({ id: top.id, label: top.label ?? top.id, detail: top.category });
-              else drill('code');
-            }}
-            onClose={() => {
-              const trigger = triggerRef.current;
-              triggerRef.current = null;
-              controller.select(null);
-              trigger?.focus();
-            }}
-          />
+      </div>
+
+      <div className="os-top-left">
+        <nav className="os-crumbs" aria-label="Where you are">
+          {view.level === 'os' ? (
+            <span className="os-crumb os-crumb-current" aria-current="page" ref={headingRef} tabIndex={-1} id="sec-brain">
+              OS
+            </span>
+          ) : (
+            <>
+              <button type="button" className="os-crumb os-crumb-link" onClick={goOs}>
+                OS
+              </button>
+              <span className="os-crumb-sep" aria-hidden="true">
+                ›
+              </span>
+              <span className="os-crumb os-crumb-current" aria-current="page" ref={headingRef} tabIndex={-1} id="sec-brain">
+                {crumbTitle}
+              </span>
+              <button type="button" className="btn os-back" onClick={goOs}>
+                Back
+              </button>
+            </>
+          )}
+        </nav>
+        {inCode ? (
+          <div className="seg os-codeview" role="group" aria-label="Code view">
+            {(['brain', 'structure'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                aria-pressed={codeTab === tab}
+                className={codeTab === tab ? 'seg-btn seg-on' : 'seg-btn'}
+                onClick={() => controller.setCodeTab(tab)}
+              >
+                {tab === 'brain' ? '3D' : 'Structure'}
+              </button>
+            ))}
+          </div>
         ) : null}
       </div>
 
-      {inCode && colorBy === 'cluster' ? (
-        <ul className="os-legend" aria-label="Cluster legend">
-          {clusters.slice(0, CLUSTER_LEGEND_LIMIT).map(({ community, count }) => (
-            <li key={community}>
-              <span
-                className="os-swatch"
-                aria-hidden="true"
-                style={{ background: `var(--os-cluster-${(community % CLUSTER_PALETTE_SIZE) + 1})` }}
-              />
-              Cluster {community + 1} · {fmtInt(count)}
-            </li>
-          ))}
-          {clusters.length > CLUSTER_LEGEND_LIMIT ? (
-            <li>and {fmtInt(clusters.length - CLUSTER_LEGEND_LIMIT)} more</li>
+      <div className="os-top-centre">
+        <NodeSearch
+          graph={inCode && ready ? graph : null}
+          viz={vizGraph}
+          onChoose={onSearchChoose}
+          inputRef={searchRef}
+        />
+      </div>
+
+      <div className="os-notices">
+        {osFailed ? (
+          <p className="banner banner-error" role="alert">
+            Could not draw the OS graph.
+          </p>
+        ) : null}
+        {!inCode && drawFailed ? (
+          <p className="banner banner-error" role="alert">
+            Could not draw the project graph.
+          </p>
+        ) : null}
+        {!inCode && status === 'error' ? (
+          <p className="banner banner-error" role="alert">
+            Could not load the project graph.
+          </p>
+        ) : null}
+        {!inCode && (status === 'loading' || status === 'idle' || coreLoading) ? (
+          <p className="meta" role="status">
+            Loading the project graph…
+          </p>
+        ) : null}
+      </div>
+
+      <div className="os-bottom-left">
+        {legendOpen ? (
+          inCode && colorBy === 'cluster' ? (
+            <ul className="os-legend" aria-label="Cluster legend">
+              {clusters.slice(0, CLUSTER_LEGEND_LIMIT).map(({ community, count }) => (
+                <li key={community}>
+                  <span className="os-swatch" aria-hidden="true" style={{ background: `var(--os-cluster-${(community % CLUSTER_PALETTE_SIZE) + 1})` }} />
+                  Cluster {community + 1} · {fmtInt(count)}
+                </li>
+              ))}
+              {clusters.length > CLUSTER_LEGEND_LIMIT ? <li>and {fmtInt(clusters.length - CLUSTER_LEGEND_LIMIT)} more</li> : null}
+              <li>
+                <span className="os-swatch os-swatch-ring" aria-hidden="true" />
+                Recent activity
+              </li>
+            </ul>
+          ) : inCode ? (
+            <ul className="os-legend" aria-label="Colour legend">
+              {LEGEND.map(({ key, label }) => (
+                <li key={key}>
+                  <span className={`os-swatch os-cat-${key}`} aria-hidden="true" />
+                  {label}
+                </li>
+              ))}
+              <li>
+                <span className="os-swatch os-swatch-ring" aria-hidden="true" />
+                Recent activity
+              </li>
+            </ul>
+          ) : vizGraph ? (
+            <ul className="os-legend" aria-label="Kind legend">
+              {kinds.map(({ kind, count }) => (
+                <li key={kind}>
+                  <span className="os-swatch" aria-hidden="true" style={{ background: VIZ_KIND_COLORS[kind] ?? VIZ_KIND_FALLBACK }} />
+                  {humanKey(kind)} · {fmtInt(count)}
+                </li>
+              ))}
+              {STATUS_LEGEND.map(({ key, label }) => (
+                <li key={key} className="os-legend-status">
+                  <span className={`os-chip os-chip-${key}`}>{label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null
+        ) : null}
+        <div className="os-bottom-row">
+          <button type="button" className="chip os-chip-toggle" aria-expanded={legendOpen} onClick={() => setLegendOpen((open) => !open)}>
+            Legend {legendOpen ? '▴' : '▾'}
+          </button>
+          {caption ? <span className="meta os-caption">{caption}</span> : null}
+          {view.level === 'os' ? (
+            <button
+              type="button"
+              className="chip os-chip-toggle"
+              aria-pressed={state.osPanel === 'activity'}
+              onClick={() => controller.toggleActivity()}
+            >
+              Activity · {fmtInt(activity.length)}
+            </button>
           ) : null}
-          <li>
-            <span className="os-swatch os-swatch-ring" aria-hidden="true" />
-            Recent activity
-          </li>
-        </ul>
-      ) : null}
-      {inCode && colorBy !== 'cluster' ? (
-        <ul className="os-legend" aria-label="Colour legend">
-          {LEGEND.map(({ key, label }) => (
-            <li key={key}>
-              <span className={`os-swatch os-cat-${key}`} aria-hidden="true" />
-              {label}
-            </li>
-          ))}
-          <li>
-            <span className="os-swatch os-swatch-ring" aria-hidden="true" />
-            Recent activity
-          </li>
-        </ul>
-      ) : null}
-      {!inCode && vizGraph ? (
-        <ul className="os-legend" aria-label="Kind legend">
-          {kinds.map(({ kind, count }) => (
-            <li key={kind}>
-              <span className="os-swatch" aria-hidden="true" style={{ background: VIZ_KIND_COLORS[kind] ?? VIZ_KIND_FALLBACK }} />
-              {humanKey(kind)} · {fmtInt(count)}
-            </li>
-          ))}
-          {STATUS_LEGEND.map(({ key, label }) => (
-            <li key={key} className="os-legend-status">
-              <span className={`os-chip os-chip-${key}`}>{label}</span>
-            </li>
-          ))}
-        </ul>
+        </div>
+      </div>
+
+      {drawer !== null && !drawerOpen ? (
+        <button type="button" className="os-drawer-tab" aria-label={`Show details for ${drawerTitle || 'the selection'}`} onClick={showDrawer}>
+          Details
+        </button>
       ) : null}
 
-      <Recent
-        items={activity}
-        controller={controller}
-        selected={state.selected}
-        limit={webgl ? RECENT_LIMIT : SYSTEM_VIEW_LIMITS.maxRingItems}
-        onPick={(row) => {
-          triggerRef.current = row;
-        }}
-      />
+      {drawer !== null && drawerOpen ? (
+        <aside className="os-drawer" aria-label="Details">
+          {drawer.kind === 'selection' && state.selected ? (
+            <Selection
+              selected={state.selected}
+              activity={activity}
+              viz={vizGraph}
+              running={running}
+              stopping={state.stopping}
+              core={graph.core}
+              project={state.projectGraph}
+              preview={state.filePreview}
+              onDrill={drill}
+              onOpen={(target) => controller.open(target)}
+              onStop={(cancel, key) => void controller.stopItem(cancel, key)}
+              onPreview={loadPreview}
+              onOpenFile={openFileInApp}
+              onCopy={copyTextFor}
+              onFocusCore={(item) => controller.openCodeNode(item)}
+              onExploreCluster={(top) => {
+                triggerRef.current = null;
+                if (top) controller.openCodeNode({ id: top.id, label: top.label ?? top.id, detail: top.category });
+                else drill('code');
+              }}
+              onHide={hideDrawer}
+              onClose={closeSelection}
+            />
+          ) : (
+            <>
+              <div className="os-drawer-head">
+                <h2 className="os-drawer-title">{drawerTitle}</h2>
+                <div className="os-drawer-buttons">
+                  {drawer.kind === 'hub' && view.level === 'os' && isHubKey(drawer.hub) ? (
+                    <button type="button" className="btn btn-primary" onClick={() => drill(drawer.hub as HubKey)}>
+                      Explore
+                    </button>
+                  ) : null}
+                  {state.selected ? (
+                    <button type="button" className="btn os-close" onClick={closeSelection}>
+                      Close
+                    </button>
+                  ) : null}
+                  <button type="button" className="btn os-close" onClick={hideDrawer}>
+                    Hide
+                  </button>
+                </div>
+              </div>
+              <div className="os-drawer-body">
+                {drawer.kind === 'hub' && data ? (
+                  <HubOverview hub={drawer.hub} data={data} state={state} controller={controller} core={core} selected={state.selected} />
+                ) : drawer.kind === 'activity' ? (
+                  <ActivityOverview items={activity} controller={controller} selected={state.selected} />
+                ) : null}
+              </div>
+            </>
+          )}
+        </aside>
+      ) : null}
     </section>
   );
 }

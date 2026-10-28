@@ -118,3 +118,11 @@ export function fmtBytes(value: number | null | undefined): string {
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MiB`;
 }
+
+/** A server timestamp's clock time, hh:mm (local). Used for "Updated hh:mm" in the top bar. */
+export function fmtClock(value: string | null | undefined): string {
+  if (!value) return '—';
+  const ms = parseServerTime(value);
+  if (Number.isNaN(ms)) return value;
+  return new Date(ms).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+}

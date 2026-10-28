@@ -438,26 +438,19 @@ describe('rendering', () => {
     controller.dispose();
   });
 
-  it('renders every section with the fixture', async () => {
+  it('renders the top bar and the hub overviews with the fixture', async () => {
     const { html, controller } = await renderSeeded(seeded());
-    for (const heading of [
-      'System map',
-      'Running now',
-      'Skills',
-      'The whole OS',
-      'Recent',
-      'Token flow',
-      'Memory and knowledge',
-      'Routines',
-    ]) {
-      assert.ok(html.includes(heading), `section "${heading}" is rendered`);
-    }
     assert.ok(html.includes('Demo project'));
-    assert.ok(html.includes('aria-label="Stop chat turn"'), 'chat turn has a Stop button');
-    assert.ok(html.includes('aria-label="Stop meeting agent"'), 'meeting agent has a Stop button');
-    assert.ok(html.includes('Stop it in the Mac app'), 'live capture has no Stop (cancel is null)');
-    assert.ok(html.includes('Open Loop') && html.includes('Open Auto Tasks'));
     assert.ok(html.includes('aria-pressed="true"'), 'the day toggle is pressed');
+    assert.ok(html.includes('Healthy') || html.includes('Degraded'), 'the health chip shows');
+    assert.ok(html.includes('running'), 'the running chip shows with running items');
+    controller.drill('agents');
+    const agents = api.render.renderApp(controller);
+    assert.ok(agents.includes('aria-label="Stop chat turn"'), 'chat turn has a Stop button');
+    assert.ok(agents.includes('aria-label="Stop meeting agent"'), 'meeting agent has a Stop button');
+    assert.ok(agents.includes('Stop it in the Mac app'), 'live capture has no Stop (cancel is null)');
+    controller.drill('routines');
+    assert.ok(api.render.renderApp(controller).includes('Open Loop') && api.render.renderApp(controller).includes('Open Auto Tasks'));
     controller.dispose();
   });
 
@@ -484,12 +477,15 @@ describe('rendering', () => {
       codeGraph: [],
       projectMemory: [],
     };
-    const { html, controller } = await renderSeeded(empty);
-    assert.ok(html.includes('Nothing is running'));
-    assert.ok(html.includes('No activity yet'));
-    assert.ok(html.includes('No model calls in this window'));
-    assert.ok(html.includes('Nothing indexed yet'));
-    assert.ok(html.includes('Open Library'));
+    const { controller } = await renderSeeded(empty);
+    controller.drill('agents');
+    assert.ok(api.render.renderApp(controller).includes('Nothing is running'));
+    controller.drill('models');
+    assert.ok(api.render.renderApp(controller).includes('No model calls in this window'));
+    controller.drill('knowledge');
+    const knowledge = api.render.renderApp(controller);
+    assert.ok(knowledge.includes('Nothing indexed yet'));
+    assert.ok(knowledge.includes('Open Library'));
     controller.dispose();
   });
 
@@ -699,200 +695,6 @@ describe('controller: project graph, skills, routines and selection', () => {
   });
 });
 
-describe('rendering: the Agentic OS layout', () => {
-  async function renderWith(overrides, snapshot = seeded(), opts = {}) {
-    const fake = fakeHost({ loadState: () => Promise.resolve(snapshot), ...overrides });
-    const { controller } = makeController({ host: fake.host, projectName: 'Demo project' });
-    if (opts.code) controller.drill('code');
-    controller.start();
-    await flush();
-    return { html: api.render.renderApp(controller), controller };
-  }
-
-  const graphOverrides = {
-    loadProjectGraph: () => Promise.resolve(api.fixture.buildDemoProjectGraph()),
-    loadSkills: () => Promise.resolve(api.fixture.demoSkills),
-    loadRoutines: () => Promise.resolve(api.fixture.demoRoutines),
-  };
-
-  it('lays the page out as three columns with the brain in the middle', async () => {
-    const { html, controller } = await renderWith(graphOverrides);
-    const left = html.indexOf('os-col-left');
-    const centre = html.indexOf('os-centre');
-    const right = html.indexOf('os-col-right');
-    assert.ok(left > 0 && centre > left && right > centre, 'DOM order is left, centre, right');
-    assert.ok(html.indexOf('System map') < centre, 'the system map is in the left column');
-    assert.ok(html.indexOf('Token flow') > centre, 'token flow is in the right column');
-    assert.ok(html.indexOf('Routines') > centre, 'routines are in the right column');
-    controller.dispose();
-  });
-
-  it('renders skills and routines with their data, and the header buttons', async () => {
-    const { html, controller } = await renderWith(graphOverrides);
-    assert.ok(html.includes(api.fixture.demoSkills[0].name));
-    assert.ok(html.includes(api.fixture.demoSkills[0].description));
-    assert.ok(html.includes('>8<'), 'the skill count sits in the header');
-    assert.ok(html.includes('Regression sweep'));
-    assert.ok(html.includes('Every weekday at 09:00'));
-    assert.ok(html.includes('Open Loop') && html.includes('Open Auto Tasks'));
-    controller.dispose();
-  });
-
-  it('shows the empty and not-available states for skills and routines', async () => {
-    const none = await renderWith({});
-    assert.ok(none.html.includes('Skills are not available in this host.'));
-    assert.ok(none.html.includes('Routines are not available in this host.'));
-    assert.ok(none.html.includes('Open Loop'), 'the Loop button stays even without routines');
-    none.controller.dispose();
-
-    const empty = await renderWith({ loadSkills: () => Promise.resolve([]), loadRoutines: () => Promise.resolve([]) });
-    assert.ok(empty.html.includes('No skills yet.'));
-    assert.ok(empty.html.includes('No routines yet.'));
-    empty.controller.dispose();
-  });
-
-  it('shows the loading text over the brain while the graph loads, and the error when it fails', async () => {
-    const pending = deferred();
-    const loading = await renderWith({ loadProjectGraph: () => pending.promise });
-    assert.ok(loading.html.includes('Loading the project graph'));
-    loading.controller.dispose();
-
-    const failed = await renderWith({ loadProjectGraph: () => Promise.reject(new Error('down')) });
-    assert.ok(failed.html.includes('Could not load the project graph.'));
-    failed.controller.dispose();
-  });
-
-  it('the recent list shows at most five items', async () => {
-    const snap = seeded();
-    const template = snap.activity.items[0];
-    snap.activity.items = Array.from({ length: 12 }, (_, i) => ({ ...template, id: 500 - i, title: `Item ${i}` }));
-    const { html, controller } = await renderWith({}, snap);
-    const rows = html.split('class="os-recent-item"').length - 1;
-    assert.equal(rows, 5);
-    assert.ok(html.includes('Item 0') && !html.includes('Item 5'));
-    controller.dispose();
-  });
-
-  it('the recent list and the selection both render for a ring item', async () => {
-    const snap = seeded();
-    const { html, controller } = await renderWith(graphOverrides, snap);
-    const first = snap.activity.items[0];
-    controller.select({ type: 'ring', id: `activity:${first.id}`, label: first.title, detail: first.kind });
-    const after = api.render.renderApp(controller);
-    assert.ok(after.includes('os-selection'));
-    assert.ok(after.includes(first.title));
-    assert.ok(after.includes('>Close<'));
-    controller.dispose();
-  });
-
-  it('leaves no OnThisMac or Activity sections behind', async () => {
-    const { html, controller } = await renderWith(graphOverrides);
-    assert.ok(!html.includes('sec-mac'));
-    assert.ok(!html.includes('sec-activity'));
-    assert.ok(!html.includes('Activity timeline'));
-    assert.ok(!html.includes('On this Mac'));
-    controller.dispose();
-  });
-});
-
-describe('rendering: accessibility, empty states and fallbacks', () => {
-  async function renderWith(overrides, snapshot = seeded(), opts = {}) {
-    const fake = fakeHost({ loadState: () => Promise.resolve(snapshot), ...overrides });
-    const { controller } = makeController({ host: fake.host, projectName: 'Demo project' });
-    if (opts.code) controller.drill('code');
-    controller.start();
-    await flush();
-    return { html: api.render.renderApp(controller), controller };
-  }
-
-  /** The markup of the Recent list only (the header's own buttons also carry aria-pressed). */
-  function recentList(html) {
-    const start = html.indexOf('os-recent-list');
-    return html.slice(start, html.indexOf('</ul>', start));
-  }
-
-  it('the recent row for the selection is aria-pressed, the others are not', async () => {
-    const snap = seeded();
-    const { controller } = await renderWith({}, snap);
-    const first = snap.activity.items[0];
-    controller.select({ type: 'ring', id: `activity:${first.id}`, label: first.title, detail: first.kind });
-    const list = recentList(api.render.renderApp(controller));
-    const rows = list.split('class="os-recent-item"').length - 1;
-    assert.ok(rows >= 2, 'the fixture has rows to compare');
-    assert.equal(list.split('aria-pressed="true"').length - 1, 1, 'exactly one row is pressed');
-    assert.equal(list.split('aria-pressed="false"').length - 1, rows - 1, 'the others are not pressed');
-    controller.dispose();
-  });
-
-  it('with no selection every recent row is aria-pressed="false"', async () => {
-    const { html, controller } = await renderWith({});
-    const list = recentList(html);
-    assert.equal(list.split('aria-pressed="true"').length - 1, 0);
-    assert.ok(list.split('aria-pressed="false"').length - 1 >= 1);
-    controller.dispose();
-  });
-
-  it('the selection overlay is a polite live region and its heading can take focus', async () => {
-    const snap = seeded();
-    const { controller } = await renderWith({}, snap);
-    controller.select({ type: 'ring', id: `activity:${snap.activity.items[0].id}`, label: 'Picked', detail: 'merge' });
-    const html = api.render.renderApp(controller);
-    assert.match(html, /class="os-selection"[^>]*aria-live="polite"/);
-    assert.match(html, /id="os-selection-title"[^>]*tabindex="-1"/);
-    controller.dispose();
-  });
-
-  it('the Skills loading text is a live region', async () => {
-    const pending = deferred();
-    const { html, controller } = await renderWith({ loadSkills: () => pending.promise });
-    assert.match(html, /aria-live="polite"[^>]*>Loading skills/);
-    controller.dispose();
-  });
-
-  it('while the graph loads only the brain status shows; the empty text does not overlap it', async () => {
-    const pending = deferred();
-    const { html, controller } = await renderWith({ loadProjectGraph: () => pending.promise });
-    assert.ok(html.includes('Loading the project graph'));
-    assert.doesNotMatch(html, /No project graph yet/);
-    controller.dispose();
-  });
-
-  it('once the graph has settled with none, the empty text shows and is not a second status region', async () => {
-    const { html, controller } = await renderWith({}, seeded(), { code: true });
-    assert.match(html, /No project graph yet/);
-    assert.doesNotMatch(html, /role="status"[^>]*>\s*No project graph yet/);
-    assert.doesNotMatch(html, /class="orbit-empty"[^>]*role="status"/);
-    controller.dispose();
-  });
-
-  it('a graph the layout cannot read shows "Could not draw the project graph" and the rest of the page', async () => {
-    const metadata = {};
-    Object.defineProperty(metadata, 'source_file', {
-      enumerable: true,
-      get() {
-        throw new Error('boom');
-      },
-    });
-    const raw = { nodes: [{ id: 'bad', title: 'Bad', kind: 'function', metadata }], edges: [] };
-    const { html, controller } = await renderWith({ loadProjectGraph: () => Promise.resolve(raw) });
-    assert.match(html, /Could not draw the project graph\./);
-    assert.ok(html.includes('The whole OS') && html.includes('Recent'), 'the rest of the page renders');
-    assert.doesNotMatch(html, /Could not load the project graph/);
-    controller.dispose();
-  });
-
-  it('the recent list shows the whole ring when asked for 24 rows (the no-WebGL case), five by default', () => {
-    const template = seeded().activity.items[0];
-    const items = Array.from({ length: 12 }, (_, i) => ({ ...template, id: 500 - i, title: `Item ${i}` }));
-    const controller = makeController({ host: fakeHost().host }).controller;
-    const defaulted = api.render.renderRecent(items, controller);
-    assert.equal(defaulted.split('class="os-recent-item"').length - 1, 5);
-    const everything = api.render.renderRecent(items, controller, null, 24);
-    assert.equal(everything.split('class="os-recent-item"').length - 1, 12);
-    controller.dispose();
-  });
-});
-
 describe('system view: drawing the brain', () => {
   const boom = () => {
     throw new Error('core crashed');
@@ -922,7 +724,7 @@ describe('system view: drawing the brain', () => {
     const { controller } = makeController({ host: fakeHost().host });
     const html = api.render.renderBrain(controller, { drawFailed: true });
     assert.match(html, /Could not draw the project graph\./);
-    assert.match(html, /The whole OS/);
+    assert.match(html, /OS<\/span>/);
     controller.dispose();
   });
 
