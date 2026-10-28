@@ -1,7 +1,12 @@
 // Pure scene data for the orbit "brain" view: point and line buffers, ring
-// labels and colour helpers. No three.js import, so it is unit-testable in Node.
-// Everything here is a render-time derivation of a SystemGraph + OrbitLayout;
-// the graph itself is never pruned.
+// labels, the native colour palette, point sizes and framing. No three.js import,
+// so it is unit-testable in Node. Everything here is a render-time derivation of a
+// SystemGraph + OrbitLayout; the graph itself is never pruned.
+//
+// The palette is the native Code graph's (mac/.../CodeGraph/Views/CGPalette.swift):
+// Apple system hues on a dark neutral ground, their darker shades on white. The
+// CSS custom properties in os-tokens.css carry the same values; this file mirrors
+// them as defaults (tests keep the two in step).
 
 import type {
   CoreCategory,
@@ -11,19 +16,79 @@ import type {
   SystemRingItem,
   Vec3,
 } from "../../../typescript/src/system/index.js";
+import { KIND_HUB, KIND_SHADE, hubOf } from "../viz";
+
+/** The kind-to-hub table (viz.ts), re-exported with the palette so the legend reads one mapping. */
+export { hubOf, KIND_HUB, KIND_SHADE };
+
+/** The theme a colour is read for. */
+export type PaletteTheme = "dark" | "light";
+
+/** Apple system hues: the dark-appearance values (the native app's dark palette). */
+export const SYSTEM_HUES_DARK = {
+  blue: "#0A84FF",
+  purple: "#BF5AF2",
+  orange: "#FF9F0A",
+  green: "#30D158",
+  indigo: "#5E5CE6",
+  mint: "#63E6E2",
+  red: "#FF453A",
+  yellow: "#FFD60A",
+  cyan: "#64D2FF",
+  pink: "#FF375F",
+  brown: "#AC8E68",
+  gray: "#8E8E93",
+} as const;
+
+/** The same hues darkened to read on a white ground (the light appearance). */
+export const SYSTEM_HUES_LIGHT: Record<keyof typeof SYSTEM_HUES_DARK, string> = {
+  blue: "#007AFF",
+  purple: "#AF52DE",
+  orange: "#FF9500",
+  green: "#34C759",
+  indigo: "#5856D6",
+  mint: "#00A99D",
+  red: "#FF3B30",
+  yellow: "#B38600",
+  cyan: "#1E9BD7",
+  pink: "#E0234F",
+  brown: "#8E6F4C",
+  gray: "#6E6E73",
+};
+
+export type SystemHue = keyof typeof SYSTEM_HUES_DARK;
+
+/** A system hue as hex for the theme. */
+export function systemHue(name: SystemHue, theme: PaletteTheme = "dark"): string {
+  return theme === "light" ? SYSTEM_HUES_LIGHT[name] : SYSTEM_HUES_DARK[name];
+}
+
+/** The hue of each code-brain category. */
+export const CATEGORY_HUE: Record<CoreCategory, SystemHue> = {
+  code: "blue",
+  docs: "green",
+  tests: "orange",
+  knowledge: "purple",
+  other: "gray",
+};
 
 /** Name of the CSS custom property a host may use for each category colour. */
 export function categoryColorVar(cat: CoreCategory): string {
   return `--os-cat-${cat}`;
 }
 
-/** Hex fallbacks used when the host does not supply a colour for a category. */
+/** Category colour for a theme (the CSS custom properties mirror these). */
+export function brainCategoryColour(cat: CoreCategory, theme: PaletteTheme = "dark"): string {
+  return systemHue(CATEGORY_HUE[cat], theme);
+}
+
+/** Hex fallbacks used when the host does not supply a colour for a category (dark theme). */
 export const DEFAULT_CATEGORY_COLORS: Record<CoreCategory, string> = {
-  code: "#5b8def",
-  docs: "#e0b341",
-  tests: "#4fbf86",
-  knowledge: "#c17be6",
-  other: "#8a93a6",
+  code: brainCategoryColour("code", "dark"),
+  docs: brainCategoryColour("docs", "dark"),
+  tests: brainCategoryColour("tests", "dark"),
+  knowledge: brainCategoryColour("knowledge", "dark"),
+  other: brainCategoryColour("other", "dark"),
 };
 
 const HEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -43,6 +108,26 @@ export function hexToRgb01(hex: string): [number, number, number] {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
+/** An rgb triple (0..1) as `#rrggbb`. */
+export function rgb01ToHex(rgb: readonly [number, number, number]): string {
+  return `#${rgb.map((c) => Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Mixes two rgb triples (0..1); t = 0 keeps `a`, t = 1 gives `b`. */
+export function mixRgb(
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number,
+): [number, number, number] {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+/** Lightens (amount > 0, toward white) or darkens (amount < 0, toward black) an rgb triple. */
+export function shadeRgb(rgb: [number, number, number], amount: number): [number, number, number] {
+  if (amount === 0) return rgb;
+  return amount > 0 ? mixRgb(rgb, [1, 1, 1], amount) : mixRgb(rgb, [0, 0, 0], -amount);
+}
+
 const ORIGIN: Vec3 = { x: 0, y: 0, z: 0 };
 
 /** Core nodes in graph order, first occurrence of each id only (matches orbitLayout). */
@@ -57,16 +142,26 @@ export function uniqueCoreNodes(graph: SystemGraph): SystemCoreNode[] {
   return out;
 }
 
-/** Core size reference: a core of this many nodes draws at the base point size. */
+/** Core size reference: a core of this many nodes draws at its full point size. */
 const CORE_REF_COUNT = 400;
 
 /**
- * Point-size multiplier for a core of `count` nodes: sqrt(REF / count), clamped. A sparse
- * core gets fewer, larger points; a dense one smaller points, so overlap stays readable.
+ * Density factor of a code-brain core of `count` nodes: 1 for a sparse core, sqrt(REF / count)
+ * for a dense one, never below 0.5. Dense graphs get smaller points so they stay readable.
  */
 export function coreSizeScale(count: number): number {
   if (!Number.isFinite(count) || count <= 0) return 1;
-  return Math.min(2, Math.max(0.4, Math.sqrt(CORE_REF_COUNT / count)));
+  return Math.min(1, Math.max(0.5, Math.sqrt(CORE_REF_COUNT / count)));
+}
+
+/**
+ * A code-brain point's diameter in CSS pixels: 6 to 9 by the node's degree (square root of its
+ * share of the largest degree), scaled down by coreSizeScale for a dense core, never below 4.
+ */
+export function codePointPx(degree: number, maxDegree: number, count: number): number {
+  const ratio = maxDegree > 0 && Number.isFinite(degree) ? Math.sqrt(Math.max(0, degree) / maxDegree) : 0;
+  const base = 6 + 3 * Math.min(1, ratio);
+  return Math.max(4, base * coreSizeScale(count));
 }
 
 /**
@@ -89,7 +184,7 @@ export interface PointBuffers {
   positions: Float32Array;
   /** r, g, b per node, 0..1. */
   colors: Float32Array;
-  /** One point size per node: 1.5 + 2.5 * sqrt(degree / maxDegree). */
+  /** One diameter per node in CSS pixels (see codePointPx). */
   sizes: Float32Array;
   /** Node ids, same order as the buffers. */
   ids: string[];
@@ -132,9 +227,7 @@ export function buildPointBuffers(
     rgb[i * 3 + 1] = g;
     rgb[i * 3 + 2] = b;
 
-    const degree = Number.isFinite(node.degree) ? Math.max(0, node.degree) : 0;
-    const ratio = maxDegree > 0 ? Math.sqrt(degree / maxDegree) : 0;
-    sizes[i] = 1.5 + 2.5 * ratio;
+    sizes[i] = codePointPx(Number.isFinite(node.degree) ? node.degree : 0, maxDegree, n);
     ids.push(node.id);
   });
   return { positions, colors: rgb, sizes, ids };
@@ -205,25 +298,33 @@ function keepEdges(
   return usable.slice(0, cap).map(({ edge }) => edge);
 }
 
-/** Number of distinct cluster colours. Cluster k uses palette slot k % CLUSTER_PALETTE_SIZE. */
-export const CLUSTER_PALETTE_SIZE = 10;
-
 /**
- * Fallback cluster palette (the dark theme's values; see --os-cluster-1..10 in os-tokens.css).
- * Ten hues that stay apart from each other and keep 3:1 against the dark surface.
+ * The cluster palette: the native app's 15 `clusterColors` (CGPalette.swift), in order. The
+ * same hex serves both themes: the native palette was chosen to hold contrast on both grounds.
  */
-export const DEFAULT_CLUSTER_COLORS: readonly string[] = [
-  "#5b8def",
-  "#e0b341",
-  "#4fbf86",
-  "#c17be6",
-  "#ef7b6b",
-  "#4cc4d4",
-  "#f2a0c6",
-  "#a4d65e",
-  "#8f9bff",
-  "#d9a878",
+export const CLUSTER_COLORS: readonly string[] = [
+  "#4F7AA6",
+  "#F28F2B",
+  "#59A14F",
+  "#E05759",
+  "#B07AA1",
+  "#75B8B3",
+  "#EDC947",
+  "#FF9EA6",
+  "#9C755E",
+  "#8C8C94",
+  "#2E87AB",
+  "#8273B3",
+  "#CCBA75",
+  "#54A887",
+  "#C44F8C",
 ];
+
+/** Number of distinct cluster colours. Cluster k uses palette slot k % CLUSTER_PALETTE_SIZE. */
+export const CLUSTER_PALETTE_SIZE = CLUSTER_COLORS.length;
+
+/** Fallback cluster palette: the native 15 cluster colours (see --os-cluster-1..15 in os-tokens.css). */
+export const DEFAULT_CLUSTER_COLORS: readonly string[] = CLUSTER_COLORS;
 
 /** Name of the CSS custom property for cluster palette slot `slot` (1-based). */
 export function clusterColorVar(slot: number): string {
@@ -297,6 +398,23 @@ export function clusterSummary(nodes: Array<{ community: number }>): Array<{ com
   return [...counts.entries()].sort((a, b) => a[0] - b[0]).map(([community, count]) => ({ community, count }));
 }
 
+/**
+ * The edge colour rule of the code brain's point outlines: each point's outline is a shade of
+ * its fill, lighter for a hub ring (hubMask[i] = 1) and darker for every other point. Returns
+ * one rgb per node, in the same order as `colors`.
+ */
+export function buildEdgeShades(colors: Float32Array, hubMask: Uint8Array | null): Float32Array {
+  const n = colors.length / 3;
+  const out = new Float32Array(colors.length);
+  for (let i = 0; i < n; i++) {
+    const c: [number, number, number] = [colors[i * 3]!, colors[i * 3 + 1]!, colors[i * 3 + 2]!];
+    const hub = hubMask ? hubMask[i] === 1 : false;
+    const s = hub ? shadeRgb(c, 0.35) : shadeRgb(c, -0.3);
+    out.set(s, i * 3);
+  }
+  return out;
+}
+
 export interface EdgeData {
   /** 6 floats per edge (x1 y1 z1 x2 y2 z2). */
   positions: Float32Array;
@@ -333,92 +451,84 @@ export function buildEdgeData(
   return { positions, ends };
 }
 
-// ---- The OS graph (VizGraph): kinds, status tints, sizes and labels ----------------
+// ---- The OS graph (VizGraph): colours by hub, status rings, sizes --------------------
 
-/**
- * Point colour per node kind. Mid-saturation hues that keep contrast on both the dark and the
- * light surface (the light theme darkens them, see vizNodeRgb). Unknown kinds use VIZ_KIND_FALLBACK.
- */
-export const VIZ_KIND_COLORS: Record<string, string> = {
-  hub: "#66b8d1",
-  codeCluster: "#5b8def",
-  sourceKind: "#c17be6",
-  memoryRepo: "#4cc4d4",
-  skill: "#e0b341",
-  skillSource: "#d9a878",
-  model: "#ef7b6b",
-  provider: "#f2a0c6",
-  caller: "#8f9bff",
-  endpoint: "#a4d65e",
-  chatTurn: "#4fbf86",
-  agentRun: "#3fa7a0",
-  liveSession: "#ff8fa3",
-  routine: "#9fd16b",
-  kit: "#d4a84a",
-  feature: "#8a93a6",
-  check: "#5ec8a8",
-  activity: "#e5e7ee",
-};
-export const VIZ_KIND_FALLBACK = "#8a93a6";
-
-/** Status tints: an ok, warn or running node takes a share of its colour from its status. */
-export const VIZ_STATUS_COLORS: Record<VizStatusName, string> = {
-  ok: "#4fbf86",
-  warn: "#e0b341",
-  off: "#8a93a6",
-  running: "#66b8d1",
-  unknown: "#8a93a6",
-};
+/** A status name the page knows. */
 export type VizStatusName = "ok" | "warn" | "off" | "running" | "unknown";
 
-/** How much of a node's colour the status takes (0 = none). Off nodes are greyed instead. */
-const STATUS_MIX = 0.35;
-const OFF_MIX = 0.6;
-/** Alpha of a node whose status is off: it is still there, just quiet. */
-export const VIZ_OFF_ALPHA = 0.4;
-/** Hubs are brighter: their colour mixes this much toward white (dark) or stays (light). */
-const HUB_LIGHTEN = 0.25;
-/** The light theme darkens every hue this much so it keeps contrast on white. */
-const LIGHT_DARKEN = 0.22;
-
-/** Pulse of a running node: alpha swings between these two values, one cycle per PULSE_MS. */
-export const VIZ_PULSE_MIN = 0.45;
-export const VIZ_PULSE_MS = 1400;
-
-/** Mixes two rgb triples (0..1); t = 0 keeps `a`, t = 1 gives `b`. */
-export function mixRgb(
-  a: [number, number, number],
-  b: [number, number, number],
-  t: number,
-): [number, number, number] {
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-}
-
-/** The colour of a kind (VIZ_KIND_FALLBACK for an unknown one), as rgb 0..1. */
-export function vizKindRgb(kind: string): [number, number, number] {
-  return hexToRgb01(VIZ_KIND_COLORS[kind] ?? VIZ_KIND_FALLBACK);
-}
-
-/** A status name the page knows, or null. */
 function statusName(status: string | null | undefined): VizStatusName | null {
   return status === "ok" || status === "warn" || status === "off" || status === "running" || status === "unknown"
     ? status
     : null;
 }
 
+/** The grey an off node is pulled toward (the status is not a colour: an off node reads as quiet). */
+const OFF_GREY: SystemHue = "gray";
+const OFF_MIX = 0.5;
+
+/** Opacity of an off node: quiet, but still there. */
+export const VIZ_OFF_ALPHA = 0.55;
+/** Pulse of a running node's ring: its alpha swings between these two values, one cycle per PULSE_MS. */
+export const VIZ_PULSE_MIN = 0.35;
+export const VIZ_PULSE_MS = 1400;
+
+/** Hub key of a viz node: a hub node's own drill key (or the level it is drawn in), else its kind's hub. */
+export function vizNodeHub(node: { kind: string; drill?: string | null }, level?: string | null): string | null {
+  if (node.kind === "hub") return node.drill ?? (level ?? null);
+  return hubOf(node.kind);
+}
+
 /**
- * The point colour of one VizGraph node, as rgb 0..1. The kind gives the hue; a status tints it
- * (ok green, warn amber, running blue, off greyed); a hub is lightened; the light theme darkens
- * the result. An unknown or missing status keeps the plain kind colour.
+ * The colour of a kind as hex: the hue of its hub (blue code, purple knowledge, ...), shaded by
+ * the kind (a feature is a little lighter than its kit, a skill source a little darker). A hub
+ * node takes its own hub's hue (`hub`, or the level). An unknown kind is the neutral grey.
  */
-export function vizNodeRgb(node: { kind: string; status: string | null }, theme: "dark" | "light"): [number, number, number] {
-  let rgb = vizKindRgb(node.kind);
-  const status = statusName(node.status);
-  if (status === "off") rgb = mixRgb(rgb, hexToRgb01(VIZ_STATUS_COLORS.off), OFF_MIX);
-  else if (status && status !== "unknown") rgb = mixRgb(rgb, hexToRgb01(VIZ_STATUS_COLORS[status]), STATUS_MIX);
-  if (node.kind === "hub") rgb = mixRgb(rgb, [1, 1, 1], HUB_LIGHTEN);
-  if (theme === "light") rgb = mixRgb(rgb, [0, 0, 0], LIGHT_DARKEN);
+export function kindColour(kind: string, theme: PaletteTheme = "dark", hub?: string | null): string {
+  const key = kind === "hub" ? hub ?? null : hubOf(kind);
+  if (!key) return systemHue(OFF_GREY, theme);
+  const hue = HUB_HUE[key];
+  if (!hue) return systemHue(OFF_GREY, theme);
+  const base = hexToRgb01(systemHue(hue, theme));
+  return rgb01ToHex(kind === "hub" ? base : shadeRgb(base, KIND_SHADE[kind] ?? 0));
+}
+
+/** The hue of each hub (the native graph's colour per part). */
+export const HUB_HUE: Record<string, SystemHue> = {
+  code: "blue",
+  knowledge: "purple",
+  memory: "indigo",
+  skills: "mint",
+  models: "orange",
+  agents: "pink",
+  routines: "green",
+  kits: "yellow",
+  activity: "cyan",
+};
+
+/** Point colour of a VizGraph node as rgb 0..1: its kind colour, greyed when off. */
+export function vizNodeRgb(
+  node: { kind: string; drill?: string | null; status: string | null },
+  theme: PaletteTheme = "dark",
+  level?: string | null,
+): [number, number, number] {
+  const hub = vizNodeHub(node, level);
+  let rgb = hexToRgb01(kindColour(node.kind, theme, hub));
+  if (statusName(node.status) === "off") rgb = mixRgb(rgb, hexToRgb01(systemHue(OFF_GREY, theme)), OFF_MIX);
   return rgb;
+}
+
+/** The status ring of a node: its hex colour and whether it pulses, or null for no ring. */
+export function statusRing(status: string | null | undefined, theme: PaletteTheme = "dark"): { hex: string; pulse: boolean } | null {
+  switch (statusName(status)) {
+    case "ok":
+      return { hex: systemHue("green", theme), pulse: false };
+    case "warn":
+      return { hex: systemHue("orange", theme), pulse: false };
+    case "running":
+      return { hex: systemHue("cyan", theme), pulse: true };
+    default:
+      return null;
+  }
 }
 
 /** Base alpha of a VizGraph node: an off node is quiet, everything else is full. */
@@ -426,38 +536,71 @@ export function vizNodeAlpha(node: { status: string | null }): number {
   return statusName(node.status) === "off" ? VIZ_OFF_ALPHA : 1;
 }
 
-/** Hubs draw this much larger than the members they hold, so each part reads as its centre. */
-export const VIZ_HUB_SCALE = 1.6;
-
-/**
- * Point size of a VizGraph node in scene units: 1.5 + 1.3 * size (log-scaled by the core), and a
- * hub at VIZ_HUB_SCALE times that. The hub's own size (4) is what makes it the largest point.
- */
-export function vizNodeSize(node: { kind: string; size: number }): number {
-  const s = Number.isFinite(node.size) ? Math.max(0, node.size) : 1;
-  const base = 1.5 + 1.3 * s;
-  return node.kind === "hub" ? base * VIZ_HUB_SCALE : base;
+/** Hub diameter in CSS pixels: 4.2% of the stage's shorter side, clamped to 28..44. */
+export function vizHubDiameterPx(stageMin: number): number {
+  const s = Number.isFinite(stageMin) ? stageMin : 0;
+  return Math.min(44, Math.max(28, s * 0.042));
 }
 
-/** Edge alpha by weight: the lightest edge keeps a third of the full alpha, the heaviest is full. */
+/** Member diameter in CSS pixels: 12 for a normal node, growing with its size to 18; never below 10. */
+export function vizMemberDiameterPx(size: number): number {
+  const s = Number.isFinite(size) ? size : 1;
+  return Math.max(10, Math.min(18, 12 + 2.5 * (s - 1)));
+}
+
+/** Diameter in CSS pixels of a VizGraph node on a stage of `stageMin` pixels (its shorter side). */
+export function vizNodePx(node: { kind: string; size: number }, stageMin: number): number {
+  return node.kind === "hub" ? vizHubDiameterPx(stageMin) : vizMemberDiameterPx(node.size);
+}
+
+/** Alpha of a hub-member edge: quiet, the hover and selection make it bright. */
+export const MEMBER_EDGE_ALPHA = 0.35;
+
+/** Edge alpha by weight: a cross-part edge sits between 0.45 (lightest) and 0.55 (heaviest); members use MEMBER_EDGE_ALPHA. */
 export function vizEdgeAlphas(weights: number[]): Float32Array {
   const out = new Float32Array(weights.length);
   let max = 0;
   for (const w of weights) if (Number.isFinite(w)) max = Math.max(max, w);
   weights.forEach((w, i) => {
     const r = max > 0 && Number.isFinite(w) ? Math.min(1, Math.max(0, w / max)) : 0.5;
-    out[i] = 0.33 + 0.67 * r;
+    out[i] = 0.45 + 0.1 * r;
   });
   return out;
 }
 
 /** Per-node rgb (0..1) of a VizGraph node list, in order, for the kind colouring. */
 export function buildVizKindColors(
-  nodes: Array<{ kind: string; status: string | null }>,
-  theme: "dark" | "light",
+  nodes: Array<{ kind: string; drill?: string | null; status: string | null }>,
+  theme: PaletteTheme = "dark",
+  level?: string | null,
 ): Float32Array {
   const out = new Float32Array(nodes.length * 3);
-  nodes.forEach((node, i) => out.set(vizNodeRgb(node, theme), i * 3));
+  nodes.forEach((node, i) => out.set(vizNodeRgb(node, theme, level), i * 3));
+  return out;
+}
+
+/**
+ * Edge colours of a VizGraph, 6 floats per edge (both ends). A member edge (`member[k]`) takes the
+ * colour of its member, the end that is not a hub (`hubMask`); any other edge is the mix of its two
+ * ends (the hub-hue mix). `rgb` is the node colour array (3 per node, in index order).
+ */
+export function buildVizEdgeColors(
+  ends: Uint32Array,
+  rgb: Float32Array,
+  hubMask: Uint8Array,
+  member: boolean[],
+): Float32Array {
+  const edges = ends.length / 2;
+  const out = new Float32Array(edges * 2 * 3);
+  const colourOf = (i: number): [number, number, number] => [rgb[i * 3]!, rgb[i * 3 + 1]!, rgb[i * 3 + 2]!];
+  for (let k = 0; k < edges; k++) {
+    const a = ends[k * 2]!;
+    const b = ends[k * 2 + 1]!;
+    let mix: [number, number, number];
+    if (member[k]) mix = colourOf(hubMask[a] === 1 ? b : a);
+    else mix = mixRgb(colourOf(a), colourOf(b), 0.5);
+    out.set([...mix, ...mix], k * 6);
+  }
   return out;
 }
 
@@ -480,22 +623,72 @@ export function vizLabelled<T extends { id: string; labelled: boolean }>(nodes: 
   return out;
 }
 
-// ---- Readable OS levels: pixel sizes, framing, labels --------------------------------
+// ---- Framing ------------------------------------------------------------------------
 
-/** A VizGraph with fewer nodes than this draws its points at a size in pixels, not in scene units. */
-export const PIXEL_SIZE_MAX_NODES = 200;
-
-/** Point size in CSS pixels of a node in a small graph: hubs 16, members 6 to 8, never below 5. */
-export function vizPixelSize(node: { kind: string; size: number }): number {
-  if (node.kind === "hub") return 16;
-  const s = Number.isFinite(node.size) ? node.size : 1;
-  return Math.min(8, Math.max(5, 6 + (s - 1)));
+/**
+ * How much of the stage's shorter side a point set fills, as seen from `eye` looking at `target`:
+ * the largest screen extent of any point, as a fraction of the half of the shorter side
+ * (1 = touches the edge). Points behind the eye make it Infinity.
+ */
+export function screenFill(
+  points: Array<{ x: number; y: number; z: number }>,
+  eye: Vec3,
+  target: Vec3,
+  tanHalfV: number,
+  aspect: number,
+): number {
+  const f0 = { x: target.x - eye.x, y: target.y - eye.y, z: target.z - eye.z };
+  const len0 = Math.hypot(f0.x, f0.y, f0.z);
+  if (len0 === 0) return 0;
+  const f = { x: f0.x / len0, y: f0.y / len0, z: f0.z / len0 };
+  // right = forward x world up, then up = right x forward: an orthonormal screen basis.
+  // f x (0,1,0) = (-f.z, 0, f.x): horizontal, so it stays well defined for any view that is not vertical.
+  const horiz = Math.hypot(f.z, f.x) || 1;
+  const r = { x: -f.z / horiz, y: 0, z: f.x / horiz };
+  const u = { x: r.y * f.z - r.z * f.y, y: r.z * f.x - r.x * f.z, z: r.x * f.y - r.y * f.x };
+  let fill = 0;
+  const shorter = Math.min(aspect, 1);
+  for (const p of points) {
+    const v = { x: p.x - eye.x, y: p.y - eye.y, z: p.z - eye.z };
+    const zc = v.x * f.x + v.y * f.y + v.z * f.z;
+    if (zc <= 1e-9) return Infinity;
+    const xc = v.x * r.x + v.y * r.y + v.z * r.z;
+    const yc = v.x * u.x + v.y * u.y + v.z * u.z;
+    const fx = Math.abs(xc) / (zc * tanHalfV * aspect); // fraction of the half width
+    const fy = Math.abs(yc) / (zc * tanHalfV); // fraction of the half height
+    fill = Math.max(fill, Math.max(fx * aspect, fy) / shorter);
+  }
+  return fill;
 }
 
 /**
- * The radius the camera frames a VizGraph on. With two or more hubs (the OS) it is the hubs'
- * bounding sphere, so the stage is filled by the parts rather than by empty space. A drill-down
- * (one hub at the origin) falls back to the 90th percentile of every node.
+ * The camera distance (from `target`, along the unit `dir`) at which `points` fill `fill` of the
+ * stage's shorter side (see screenFill). Iterates from `startDist`; a degenerate set keeps the start.
+ */
+export function fitDistance(
+  points: Array<{ x: number; y: number; z: number }>,
+  dir: Vec3,
+  target: Vec3,
+  tanHalfV: number,
+  aspect: number,
+  fill: number,
+  startDist: number,
+): number {
+  let d = Math.max(startDist, 1e-6);
+  for (let i = 0; i < 12; i++) {
+    const eye = { x: target.x + dir.x * d, y: target.y + dir.y * d, z: target.z + dir.z * d };
+    const cur = screenFill(points, eye, target, tanHalfV, aspect);
+    if (!Number.isFinite(cur) || cur <= 0) break;
+    if (Math.abs(cur - fill) < 0.002) break;
+    d *= cur / fill;
+  }
+  return d;
+}
+
+/**
+ * The radius the camera frames a VizGraph on, for the zoom bounds. With two or more hubs (the OS)
+ * it is the hubs' bounding sphere; a drill-down (one hub at the origin) uses the 90th percentile of
+ * every node.
  */
 export function vizFramingRadius(nodes: Array<{ id: string; kind: string }>, layout: OrbitLayout): number {
   const hubs = nodes.filter((n) => n.kind === "hub");
@@ -540,16 +733,22 @@ export function extraLabelIndices(nodes: Array<{ kind: string; group: number; si
   return out.sort((a, b) => a - b);
 }
 
-/** Label text metrics: the page's 12 px label, estimated (the layout does not measure the DOM). */
-export const LABEL_HEIGHT_PX = 16;
-export function labelWidth(text: string): number {
-  return Math.ceil(text.length * 6.6) + 8;
+// ---- Labels -------------------------------------------------------------------------
+
+/** Member label: 14 px text in a pill; the box height is the pill's (font line + padding). */
+export const LABEL_HEIGHT_PX = 22;
+/** Hub label: 16 px semibold, a taller pill. */
+export const HUB_LABEL_HEIGHT_PX = 24;
+
+/** Estimated width of a label pill in CSS pixels (the layout does not measure the DOM): 14 px or 16 px semibold text plus 8 px padding each side. */
+export function labelWidth(text: string, hub = false): number {
+  return Math.ceil(text.length * (hub ? 9.2 : 7.8)) + 18;
 }
 
-/** The grid cell size of the label occupancy check, in CSS pixels. */
-export const LABEL_GRID_PX = 64;
+/** The grid cell size of the label occupancy check, in CSS pixels (finer than a label: two overlapping labels always share a cell). */
+export const LABEL_GRID_PX = 32;
 
-/** One label that may be drawn: its anchor on the stage (CSS pixels), its box and its priority. */
+/** One label that may be drawn: its anchor on the stage (CSS pixels, the pill's bottom centre), its box and its priority. */
 export interface LabelCandidate {
   id: string;
   x: number;
@@ -562,9 +761,9 @@ export interface LabelCandidate {
 
 /**
  * Chooses the labels to draw, in priority order (then size, then id). A label is kept only when
- * none of the 64 px grid cells under its box is taken; a kept label takes its cells. So two kept
- * labels never overlap, and the rest are hidden. The box sits above the anchor, as the page
- * positions its labels (translate -50%, -140%).
+ * none of the 32 px grid cells under its box is taken; a kept label takes its cells. So two kept
+ * labels never overlap, and the rest are hidden. The box sits above the anchor: its bottom edge is
+ * the anchor (the page positions a label with translate(-50%, -100%)).
  */
 export function pickLabels(candidates: LabelCandidate[], cell: number = LABEL_GRID_PX): Set<string> {
   const order = [...candidates].sort((a, b) => b.priority - a.priority || b.size - a.size || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -573,8 +772,8 @@ export function pickLabels(candidates: LabelCandidate[], cell: number = LABEL_GR
   for (const c of order) {
     const left = c.x - c.w / 2;
     const right = c.x + c.w / 2;
-    const top = c.y - c.h * 1.4;
-    const bottom = c.y - c.h * 0.4;
+    const top = c.y - c.h;
+    const bottom = c.y;
     const x0 = Math.floor(left / cell);
     const x1 = Math.floor(right / cell);
     const y0 = Math.floor(top / cell);
@@ -593,3 +792,18 @@ export function pickLabels(candidates: LabelCandidate[], cell: number = LABEL_GR
   }
   return kept;
 }
+
+/** Label colours per theme: white text on a dark translucent pill, dark text on a white one. */
+export const LABEL_STYLE = {
+  dark: { color: "#ffffff", background: "rgba(10, 12, 18, 0.6)" },
+  light: { color: "#111622", background: "rgba(255, 255, 255, 0.8)" },
+} as const;
+
+// ---- Compatibility: the palettes the page used before the native palette --------------
+
+/** The kind colours (dark theme) by kind, for callers that want a flat table. */
+export const VIZ_KIND_COLORS: Record<string, string> = Object.fromEntries(
+  Object.keys(KIND_HUB).map((kind) => [kind, kindColour(kind, "dark")]),
+);
+/** The colour of a kind the table does not know (the neutral grey, dark theme). */
+export const VIZ_KIND_FALLBACK = systemHue(OFF_GREY, "dark");

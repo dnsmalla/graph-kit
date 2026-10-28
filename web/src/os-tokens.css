@@ -1,41 +1,74 @@
-/* Agentic OS category colours (the page's own tokens; not part of the host's token sheet).
- * The brain's node colours and the legend swatches. Values equal DEFAULT_CATEGORY_COLORS in
- * orbit/scene.ts for the dark and midnight themes; the light theme uses darker shades so each
- * swatch keeps 3:1 against the light surfaces. Loaded after theme.css, so a host can override them. */
+/* Agentic OS colours: the native Code graph palette (mac/.../CodeGraph/Views/CGPalette.swift),
+ * the Apple system hues on a dark ground and their darker shades on white. The brain's point
+ * colours, the status rings and the legend swatches read these. Values mirror the defaults in
+ * orbit/scene.ts (SYSTEM_HUES_DARK / SYSTEM_HUES_LIGHT, CLUSTER_COLORS); a test keeps them in step.
+ * Loaded after theme.css, so a host can override them. */
 :root {
-  --os-cat-code: rgb(36% 55% 94%);
-  --os-cat-docs: rgb(88% 70% 25%);
-  --os-cat-tests: rgb(31% 75% 53%);
-  --os-cat-knowledge: rgb(76% 48% 90%);
-  --os-cat-other: rgb(54% 58% 65%);
-  /* Cluster palette: ten hues for the "Cluster" colour mode (slot = community % 10). */
-  --os-cluster-1: rgb(36% 55% 94%);
-  --os-cluster-2: rgb(88% 70% 25%);
-  --os-cluster-3: rgb(31% 75% 53%);
-  --os-cluster-4: rgb(76% 48% 90%);
-  --os-cluster-5: rgb(94% 48% 42%);
-  --os-cluster-6: rgb(30% 77% 83%);
-  --os-cluster-7: rgb(95% 63% 78%);
-  --os-cluster-8: rgb(64% 84% 37%);
-  --os-cluster-9: rgb(56% 61% 100%);
-  --os-cluster-10: rgb(85% 66% 47%);
+  /* System hues (dark appearance). */
+  --os-hue-blue: #0A84FF;
+  --os-hue-purple: #BF5AF2;
+  --os-hue-orange: #FF9F0A;
+  --os-hue-green: #30D158;
+  --os-hue-indigo: #5E5CE6;
+  --os-hue-mint: #63E6E2;
+  --os-hue-red: #FF453A;
+  --os-hue-yellow: #FFD60A;
+  --os-hue-cyan: #64D2FF;
+  --os-hue-pink: #FF375F;
+  --os-hue-brown: #AC8E68;
+  --os-hue-gray: #8E8E93;
+
+  /* Code brain categories. */
+  --os-cat-code: #0A84FF;
+  --os-cat-docs: #30D158;
+  --os-cat-tests: #FF9F0A;
+  --os-cat-knowledge: #BF5AF2;
+  --os-cat-other: #8E8E93;
+
+  /* Cluster palette: the native 15 clusterColors (slot = community % 15). */
+  --os-cluster-1: #4F7AA6;
+  --os-cluster-2: #F28F2B;
+  --os-cluster-3: #59A14F;
+  --os-cluster-4: #E05759;
+  --os-cluster-5: #B07AA1;
+  --os-cluster-6: #75B8B3;
+  --os-cluster-7: #EDC947;
+  --os-cluster-8: #FF9EA6;
+  --os-cluster-9: #9C755E;
+  --os-cluster-10: #8C8C94;
+  --os-cluster-11: #2E87AB;
+  --os-cluster-12: #8273B3;
+  --os-cluster-13: #CCBA75;
+  --os-cluster-14: #54A887;
+  --os-cluster-15: #C44F8C;
+
+  /* Status rings: ok green, warn amber, running cyan (pulses). */
+  --os-status-ok: #30D158;
+  --os-status-warn: #FF9F0A;
+  --os-status-running: #64D2FF;
 }
 
 :root[data-theme="light"] {
-  --os-cat-code: rgb(18% 37% 77%);
-  --os-cat-docs: rgb(54% 38% 0%);
-  --os-cat-tests: rgb(12% 48% 30%);
-  --os-cat-knowledge: rgb(49% 25% 72%);
-  --os-cat-other: rgb(36% 39% 46%);
-  /* Cluster palette, darker shades: each keeps 3:1 against white. */
-  --os-cluster-1: rgb(12% 31% 71%);
-  --os-cluster-2: rgb(54% 36% 0%);
-  --os-cluster-3: rgb(9% 47% 29%);
-  --os-cluster-4: rgb(48% 25% 69%);
-  --os-cluster-5: rgb(70% 25% 18%);
-  --os-cluster-6: rgb(5% 45% 51%);
-  --os-cluster-7: rgb(64% 19% 42%);
-  --os-cluster-8: rgb(31% 48% 7%);
-  --os-cluster-9: rgb(23% 27% 71%);
-  --os-cluster-10: rgb(49% 31% 13%);
+  --os-hue-blue: #007AFF;
+  --os-hue-purple: #AF52DE;
+  --os-hue-orange: #FF9500;
+  --os-hue-green: #34C759;
+  --os-hue-indigo: #5856D6;
+  --os-hue-mint: #00A99D;
+  --os-hue-red: #FF3B30;
+  --os-hue-yellow: #B38600;
+  --os-hue-cyan: #1E9BD7;
+  --os-hue-pink: #E0234F;
+  --os-hue-brown: #8E6F4C;
+  --os-hue-gray: #6E6E73;
+
+  --os-cat-code: #007AFF;
+  --os-cat-docs: #34C759;
+  --os-cat-tests: #FF9500;
+  --os-cat-knowledge: #AF52DE;
+  --os-cat-other: #6E6E73;
+
+  --os-status-ok: #34C759;
+  --os-status-warn: #FF9500;
+  --os-status-running: #1E9BD7;
 }

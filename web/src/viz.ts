@@ -125,3 +125,62 @@ export interface DrillGuard {
 export function swallowsPick(guard: DrillGuard | null, id: string, now: number): boolean {
   return guard !== null && guard.id === id && now < guard.until;
 }
+
+// ---- Colour by part: which hub a VizGraph node kind belongs to ----------------------
+
+/**
+ * The hub a VizGraph node kind belongs to: its colour is that hub's hue (the native graph's
+ * per-part colours, see orbit/scene.ts HUB_HUE). A hub node is coloured by its own hub (its
+ * `drill` key, or the level it is drawn in) and is not in this table.
+ *
+ *   code        codeCluster
+ *   knowledge   sourceKind
+ *   memory      memoryRepo
+ *   skills      skill, skillSource
+ *   models      model, provider, caller, endpoint
+ *   agents      chatTurn, agentRun, liveSession
+ *   routines    routine
+ *   kits        kit, feature, check
+ *   activity    activity
+ *
+ * `group` rows and any kind not listed here have no hub and draw in the neutral grey.
+ */
+export const KIND_HUB: Record<string, string> = {
+  codeCluster: 'code',
+  sourceKind: 'knowledge',
+  memoryRepo: 'memory',
+  skill: 'skills',
+  skillSource: 'skills',
+  model: 'models',
+  provider: 'models',
+  caller: 'models',
+  endpoint: 'models',
+  chatTurn: 'agents',
+  agentRun: 'agents',
+  liveSession: 'agents',
+  routine: 'routines',
+  kit: 'kits',
+  feature: 'kits',
+  check: 'kits',
+  activity: 'activity',
+};
+
+/**
+ * A member's lightness within its hub's hue, by kind: positive lightens toward white, negative
+ * darkens toward black. Keeps the members of one part visibly related but not identical.
+ */
+export const KIND_SHADE: Record<string, number> = {
+  feature: 0.15,
+  check: 0.15,
+  endpoint: 0.1,
+  provider: 0.1,
+  caller: -0.1,
+  sourceKind: -0.1,
+  skillSource: -0.2,
+  memoryRepo: 0,
+};
+
+/** The hub key a node kind belongs to (see KIND_HUB), or null for a kind with no hub. */
+export function hubOf(kind: string): string | null {
+  return Object.prototype.hasOwnProperty.call(KIND_HUB, kind) ? KIND_HUB[kind]! : null;
+}

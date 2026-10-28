@@ -23,33 +23,37 @@ import {
   buildCategoryColors,
   buildClusterColors,
   buildEdgeData,
+  buildEdgeShades,
   buildPointBuffers,
+  buildVizEdgeColors,
+  buildVizKindColors,
   categoryColorVar,
-  coreFramingRadius,
-  coreSizeScale,
   clusterColorVar,
   colorToHex,
+  coreFramingRadius,
   DEFAULT_CATEGORY_COLORS,
   DEFAULT_CLUSTER_COLORS,
+  extraLabelIndices,
+  fitDistance,
+  HUB_LABEL_HEIGHT_PX,
+  hexToRgb01,
   isHexColor,
+  LABEL_HEIGHT_PX,
+  LABEL_STYLE,
+  labelWidth,
+  MEMBER_EDGE_ALPHA,
+  pickLabels,
   ringLabels,
   type RingLabel,
+  statusRing,
   uniqueCoreNodes,
-  buildVizKindColors,
-  extraLabelIndices,
-  labelWidth,
-  LABEL_HEIGHT_PX,
-  pickLabels,
-  PIXEL_SIZE_MAX_NODES,
   vizEdgeAlphas,
   vizFramingRadius,
-  vizLabelled,
   vizLevelSignature,
   vizNodeAlpha,
-  vizNodeSize,
-  vizPixelSize,
-  VIZ_PULSE_MS,
+  vizNodePx,
   VIZ_PULSE_MIN,
+  VIZ_PULSE_MS,
   type LabelCandidate,
 } from "./scene";
 import type { CameraPose, VizEdge, VizGraph, VizNode } from "../viz";
@@ -141,31 +145,41 @@ export function orbitKeyAction(key: string): OrbitKeyAction | null {
 }
 
 const FOV_DEG = 45;
-/** Converts a world-space point size to pixels (tuned by eye, see scene units). */
-const POINT_SCALE = 0.5;
-/** Core points are alpha-blended (never additive, which saturates to white) with a little transparency. */
-const CORE_OPACITY = 0.85;
-/** Points farther than the scene's middle fade towards this fraction of their alpha. */
-const DEPTH_FADE_MIN = 0.45;
+/** Core points are alpha-blended (never additive, which saturates to white). */
+const CORE_OPACITY = 0.92;
+/** Points on the far side of the scene fade towards this fraction of their alpha (gentle: far points stay readable). */
+const DEPTH_FADE_MIN = 0.7;
+/**
+ * The point sprite is HALO disc diameters wide: the disc is drawn inside it, and a hub's soft glow
+ * (and a status ring) fill the margin. The fragment shader works in the same units.
+ */
+const HALO = 1.8;
 /** Pick radius in CSS pixels: the ray's threshold grows with the camera distance, so a node is hit at any zoom. */
 const PICK_RADIUS_PX = 8;
-/** The core fills this fraction of the stage's shorter side on framing; the ring may extend past the edges. */
-const CORE_FRAME_FRACTION = 0.6;
+/** The code brain's core fills this fraction of the stage's shorter side on framing; the ring may extend past the edges. */
+const CORE_FRAME_FRACTION = 0.7;
+/**
+ * The OS graph's parts fill this fraction of the stage's shorter side (the screen extent of the
+ * hubs, measured on screen: see fitDistance). 0.82 leaves room for the hub discs and labels at the edge.
+ */
+const VIZ_FILL = 0.82;
 /** Light theme: normal blending needs a little more alpha to read on white. */
 const LIGHT_POINT_BOOST = 1.25;
-const RING_POINT_SIZE = 6;
+/** Ring points (the code brain's activity ring), in CSS pixels. */
+const RING_POINT_SIZE = 7;
 const RING_RGB: Record<OrbitTheme, [number, number, number]> = {
   dark: [0.96, 0.97, 1],
   light: [0.2, 0.24, 0.32],
 };
 const LINE_STYLE = {
   edge: {
-    dark: { color: 0x8a93a6, opacity: 0.12 },
+    dark: { color: 0x8a93a6, opacity: 0.11 },
     light: { color: 0x3d4454, opacity: 0.22 },
   },
+  /** The OS graph's edges: the colour is per vertex (the hub-hue mix), so the material is white. */
   vizEdge: {
-    dark: { color: 0xb4bccb, opacity: 0.3 },
-    light: { color: 0x3d4454, opacity: 0.32 },
+    dark: { color: 0xffffff, opacity: 1 },
+    light: { color: 0xffffff, opacity: 1 },
   },
   ring: {
     dark: { color: 0xffffff, opacity: 0.25 },
@@ -183,12 +197,10 @@ const FRAME_ELEVATION = 0.35;
  * brain's elevation it would read as a thin band, and neighbouring hubs would fall on each other.
  */
 const VIZ_FRAME_ELEVATION = 0.9;
-/** The OS level frames its hubs' sphere a little larger than the code brain frames its core. */
-const VIZ_FRAME_FRACTION = 0.7;
 /** The camera is re-framed when the core's node count moves by more than this fraction. */
 const REFRAME_CHANGE_RATIO = 0.2;
-/** Zoom limits as multiples of the layout radius. */
-const MIN_DISTANCE_RATIO = 0.3;
+/** Zoom limits as multiples of the layout radius. The near limit reaches one part's members. */
+const MIN_DISTANCE_RATIO = 0.12;
 const MAX_DISTANCE_RATIO = 6;
 /** Distance of the camera from a focused node, in layout radii. */
 const FOCUS_DISTANCE_RATIO = 1;
@@ -198,37 +210,46 @@ const AUTO_ROTATE_TURN_S = 40;
 /** Auto-rotation resumes this long after the user stops interacting. */
 const RESUME_MS = 4000;
 const ZOOM_STEP = 1.25;
-/** Selection look: the selected node and its neighbours are larger, everything else dims. */
+/** Selection look: the selected node is larger and the neighbours a little larger; everything else dims to DIM_ALPHA. */
 const DIM_ALPHA = 0.15;
-const HIGHLIGHT_SIZE = 1.8;
-const NEIGHBOUR_SIZE = 1.35;
-/** Edge alpha multipliers (the material's opacity still applies): touching the selection, and the rest. */
-const EDGE_HOT = 4;
+const HIGHLIGHT_SIZE = 1.4;
+const NEIGHBOUR_SIZE = 1.2;
+/** Edge alphas on selection/hover: the edges touching the node go to EDGE_HOT (absolute); the rest of a selection's edges are multiplied by EDGE_DIM. */
+const EDGE_HOT = 0.9;
 const EDGE_DIM = 0.25;
-/** Labels of the OS graph: a little above the node, and the label layer's text colours per theme. */
-const LABEL_STYLE = {
-  dark: { color: "#f2f4f8", shadow: "0 0 3px rgba(0, 0, 0, 0.9)" },
-  light: { color: "#1c2230", shadow: "0 0 3px rgba(255, 255, 255, 0.95)" },
-} as const;
 
 const VERTEX_SHADER = `
 attribute float aSize;
 attribute float aAlpha;
 attribute vec3 aColor;
-uniform float uScale;
-uniform float uPixel;
+attribute vec3 aEdge;
+attribute vec4 aRing;
+attribute float aGlow;
 uniform float uPixelRatio;
+uniform float uHalo;
 uniform vec2 uDepth;
 varying vec3 vColor;
+varying vec3 vEdge;
+varying vec4 vRing;
+varying float vGlow;
 varying float vAlpha;
 varying float vFade;
+varying float vRingIn;
+varying float vRingW;
 void main() {
   vColor = aColor;
+  vEdge = aEdge;
+  vRing = aRing;
+  vGlow = aGlow;
   vAlpha = aAlpha;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
-  // Small graphs draw their points at a size in pixels (no depth attenuation); larger ones in scene units.
-  gl_PointSize = uPixel > 0.5 ? clamp(aSize * uPixelRatio, 1.0, 48.0) : clamp(aSize * uScale / -mv.z, 1.0, 48.0);
+  // Sizes are CSS pixels (the disc's diameter); the sprite is HALO times wider for the glow and ring.
+  gl_PointSize = clamp(aSize * uHalo * uPixelRatio, 1.0, 256.0);
+  // The status ring sits 1.5 px outside the disc and is 1.8 px wide, whatever the disc's size (in disc radii).
+  float radius = max(aSize * uPixelRatio * 0.5, 1.0);
+  vRingIn = 1.0 + 1.5 * uPixelRatio / radius;
+  vRingW = 1.8 * uPixelRatio / radius;
   // Depth fade: the far side of the scene is dimmer, so the near side reads as the front of the cluster.
   float t = clamp((-mv.z - uDepth.x) / max(uDepth.y - uDepth.x, 1e-6), 0.0, 1.0);
   vFade = 1.0 - (1.0 - ${DEPTH_FADE_MIN.toFixed(2)}) * t;
@@ -237,14 +258,30 @@ void main() {
 
 const FRAGMENT_SHADER = `
 uniform float uOpacity;
+uniform float uHalo;
 varying vec3 vColor;
+varying vec3 vEdge;
+varying vec4 vRing;
+varying float vGlow;
 varying float vAlpha;
 varying float vFade;
+varying float vRingIn;
+varying float vRingW;
 void main() {
-  float d = length(gl_PointCoord - vec2(0.5));
-  if (d > 0.5) discard;
-  float a = 1.0 - smoothstep(0.15, 0.5, d);
-  gl_FragColor = vec4(vColor, a * uOpacity * vAlpha * vFade);
+  // 1 at the disc's edge, uHalo at the sprite's edge.
+  float t = length(gl_PointCoord - vec2(0.5)) * 2.0 * uHalo;
+  if (t > uHalo) discard;
+  float disc = 1.0 - smoothstep(0.96, 1.0, t);
+  // The outline: the disc's outer band takes the outline shade (lighter for a hub, darker otherwise).
+  float rim = smoothstep(0.82, 0.92, t) * disc;
+  vec3 fill = mix(vColor, vEdge, rim);
+  // The status ring: a band just outside the disc.
+  float ring = vRing.a * smoothstep(vRingIn - 0.04, vRingIn, t) * (1.0 - smoothstep(vRingIn + vRingW - 0.04, vRingIn + vRingW, t));
+  // A hub's soft glow: outside the disc, fading to nothing at the sprite's edge.
+  float glow = vGlow * 0.4 * step(1.0, t) * (1.0 - smoothstep(1.0, uHalo, t));
+  float a = max(disc, max(ring, glow));
+  vec3 rgb = (fill * disc + vRing.rgb * ring + vColor * glow) / max(a, 1e-4);
+  gl_FragColor = vec4(rgb, a * uOpacity * vAlpha * vFade);
 }
 `;
 
@@ -272,8 +309,6 @@ interface VizLabel {
   labelled: boolean;
 }
 
-/** Hub-member edges are quiet: they show the membership, the hover and selection make them bright. */
-const MEMBER_EDGE_ALPHA = 0.2;
 /** Extra labels a close camera adds: this many of the largest members per group, faded in by distance. */
 const EXTRA_LABELS_PER_GROUP = 3;
 /** Camera distance, as a multiple of the scene radius, at which the extra labels are full (near) or gone (far). */
@@ -383,8 +418,8 @@ export class OrbitView {
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
   private readonly pickTargets: THREE.Object3D[] = [];
-  /** Shared by every point material; updated on resize. */
-  private readonly scaleUniform = { value: 1 };
+  /** The halo factor of every point material (HALO in the shaders). */
+  private readonly haloUniform = { value: HALO };
   /** Depth range (near, far) of the scene from the camera, shared by every point material. */
   private readonly depthUniform = { value: new THREE.Vector2(1, 2) };
   private readonly pointMaterials = new Set<THREE.ShaderMaterial>();
@@ -422,8 +457,6 @@ export class OrbitView {
   private stageH = 1;
   /** The level and node ids of the drawn viz (see vizLevelSignature): the same signature keeps the camera. */
   private vizSignature: string | null = null;
-  /** Shared by every point material: 1 draws point sizes in pixels, the pixel ratio scales them. */
-  private readonly pixelUniform = { value: 0 };
   private readonly pixelRatioUniform = { value: 1 };
   /** Labelled edges of the OS graph: hover-only, found by a line raycast. */
   private labelledEdges: VizEdge[] = [];
@@ -445,6 +478,20 @@ export class OrbitView {
   private kindRgb: Float32Array = new Float32Array(0);
   private clusterRgb: Float32Array = new Float32Array(0);
   private baseSizes: Float32Array = new Float32Array(0);
+  /** Per node: 1 for a hub (a lighter outline and a glow), 0 otherwise. */
+  private hubMask: Uint8Array = new Uint8Array(0);
+  /** Per node: 1 when it has a status ring (the ring's alpha pulses for a running node). */
+  private baseRing: Float32Array = new Float32Array(0);
+  /** Per node: the status ring colour (rgb, 0..1). */
+  private ringRgb: Float32Array = new Float32Array(0);
+  private coreRingAttr: THREE.BufferAttribute | null = null;
+  private coreEdgeAttr: THREE.BufferAttribute | null = null;
+  /** Per drawn OS edge: whether it is a hub-member edge (its colour is the member's). */
+  private edgeMember: boolean[] = [];
+  /** The node positions the OS framing fits on screen. */
+  private fitPoints: Vec3[] = [];
+  /** The level of the drawn OS graph: it colours a hub node that has no drill key. */
+  private vizLevel: string | null = null;
   private ringSig: string | null = null;
   private ringRadius = 0;
   private corePoints: THREE.Points | null = null;
@@ -602,7 +649,6 @@ export class OrbitView {
     if (graph === this.graph && layout === this.layout && this.mode === "code") return;
     this.clearCore();
     this.enterMode("code");
-    this.pixelUniform.value = 0;
     this.graph = graph;
     this.layout = layout;
 
@@ -624,28 +670,17 @@ export class OrbitView {
     }
 
     const pts = buildPointBuffers(graph, layout, this.categoryColors);
-    // Fewer, larger points when the core is sparse; smaller ones when it is dense.
-    const sizeScale = coreSizeScale(pts.ids.length);
-    for (let i = 0; i < pts.sizes.length; i++) pts.sizes[i]! *= sizeScale;
     this.baseSizes = pts.sizes;
+    this.hubMask = new Uint8Array(pts.ids.length);
+    this.baseRing = new Float32Array(pts.ids.length);
+    this.ringRgb = new Float32Array(pts.ids.length * 3);
     this.coreRadius = coreFramingRadius(
       nodes.map((n) => n.id),
       layout,
     );
     this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
-    if (pts.ids.length > 0) {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.BufferAttribute(pts.positions, 3));
-      this.coreColorAttr = new THREE.BufferAttribute(new Float32Array(this.activeCoreColors()), 3);
-      geo.setAttribute("aColor", this.coreColorAttr);
-      this.coreSizeAttr = new THREE.BufferAttribute(new Float32Array(pts.sizes), 1);
-      geo.setAttribute("aSize", this.coreSizeAttr);
-      this.coreAlphaAttr = new THREE.BufferAttribute(new Float32Array(pts.ids.length).fill(1), 1);
-      geo.setAttribute("aAlpha", this.coreAlphaAttr);
-      this.corePoints = new THREE.Points(geo, this.makePointMaterial(CORE_OPACITY));
-      this.coreGroup.add(this.corePoints);
-    }
+    if (pts.ids.length > 0) this.addCorePoints(pts.positions);
 
     this.baseAlpha = new Float32Array(this.coreItems.length).fill(1);
     this.selAlpha = new Float32Array(this.coreItems.length).fill(1);
@@ -685,6 +720,7 @@ export class OrbitView {
     this.clearCore();
     this.enterMode("viz");
     this.vizGraph = viz;
+    this.vizLevel = viz.level;
     this.layout = layout;
     this.vizSignature = signature;
 
@@ -702,41 +738,33 @@ export class OrbitView {
     const n = nodes.length;
     this.adjacency = this.coreItems.map(() => []);
 
-    // Small graphs draw their points in pixels, so a hub reads as a hub at any zoom.
-    const pixels = n < PIXEL_SIZE_MAX_NODES;
-    this.pixelUniform.value = pixels ? 1 : 0;
+    const stageMin = Math.min(this.stageW, this.stageH);
     const positions = new Float32Array(n * 3);
-    const sizes = new Float32Array(n);
+    this.baseSizes = new Float32Array(n);
     this.baseAlpha = new Float32Array(n);
     this.selAlpha = new Float32Array(n).fill(1);
+    this.hubMask = new Uint8Array(n);
+    this.baseRing = new Float32Array(n);
     const pulsing: number[] = [];
     nodes.forEach((node, i) => {
       const p = layout.core.get(node.id) ?? { x: 0, y: 0, z: 0 };
       positions[i * 3] = p.x;
       positions[i * 3 + 1] = p.y;
       positions[i * 3 + 2] = p.z;
-      sizes[i] = pixels ? vizPixelSize(node) : vizNodeSize(node);
+      this.baseSizes[i] = vizNodePx(node, stageMin);
       this.baseAlpha[i] = vizNodeAlpha(node);
+      this.hubMask[i] = node.kind === "hub" ? 1 : 0;
+      this.baseRing[i] = statusRing(node.status, this.theme) ? 1 : 0;
       if (node.status === "running") pulsing.push(i);
     });
     this.pulsing = pulsing;
-    this.baseSizes = sizes;
-    this.coreRadius = vizFramingRadius(nodes, layout);
-    this.kindRgb = buildVizKindColors(nodes, this.theme);
+    this.fitPoints = nodes.map((node) => layout.core.get(node.id) ?? { x: 0, y: 0, z: 0 });
+    this.kindRgb = buildVizKindColors(nodes, this.theme, viz.level);
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
+    this.ringRgb = this.buildRingRgb();
+    this.coreRadius = vizFramingRadius(nodes, layout);
 
-    if (n > 0) {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      this.coreColorAttr = new THREE.BufferAttribute(new Float32Array(this.activeCoreColors()), 3);
-      geo.setAttribute("aColor", this.coreColorAttr);
-      this.coreSizeAttr = new THREE.BufferAttribute(new Float32Array(sizes), 1);
-      geo.setAttribute("aSize", this.coreSizeAttr);
-      this.coreAlphaAttr = new THREE.BufferAttribute(new Float32Array(n).fill(1), 1);
-      geo.setAttribute("aAlpha", this.coreAlphaAttr);
-      this.corePoints = new THREE.Points(geo, this.makePointMaterial(CORE_OPACITY));
-      this.coreGroup.add(this.corePoints);
-    }
+    if (n > 0) this.addCorePoints(positions);
 
     // Edges: both ends must be drawn nodes. Kept in graph order so each drawn edge maps to its VizEdge.
     const drawn: VizEdge[] = [];
@@ -752,6 +780,7 @@ export class OrbitView {
     const ends = new Uint32Array(drawn.length * 2);
     const edgePositions = new Float32Array(drawn.length * 6);
     const alphas = vizEdgeAlphas(drawn.map((e) => e.weight));
+    this.edgeMember = drawn.map((e) => e.kind === "member");
     drawn.forEach((edge, k) => {
       const a = this.coreIndex.get(edge.source)!;
       const b = this.coreIndex.get(edge.target)!;
@@ -767,9 +796,11 @@ export class OrbitView {
     if (drawn.length > 0) {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute("position", new THREE.BufferAttribute(edgePositions, 3));
+      // One rgba per vertex: the rgb is the hub-hue colour of the edge (writeVizEdgeRgb), the alpha the highlight and weight.
       this.edgeColorAttr = new THREE.BufferAttribute(new Float32Array(drawn.length * 2 * 4).fill(1), 4);
       geo.setAttribute("color", this.edgeColorAttr);
       this.coreGroup.add(new THREE.LineSegments(geo, this.makeLineMaterial("vizEdge")));
+      this.writeVizEdgeRgb();
     }
 
     // Labelled edges: a transparent line set for the hover raycast only (their label shows in the tooltip).
@@ -863,19 +894,15 @@ export class OrbitView {
     const layer = this.labelLayer;
     const node = nodes[index];
     if (!layer || !node) return null;
-    const style = LABEL_STYLE[this.theme];
     const el = document.createElement("div");
     el.className = "orbit-label";
     el.textContent = node.label || node.id;
+    this.styleLabel(el, node.kind === "hub");
     Object.assign(el.style, {
       position: "absolute",
       left: "0",
       top: "0",
       whiteSpace: "nowrap",
-      fontSize: "12px",
-      lineHeight: "1.2",
-      color: style.color,
-      textShadow: style.shadow,
       pointerEvents: "none",
       display: "none",
     });
@@ -965,9 +992,14 @@ export class OrbitView {
       const x = ((this.labelScratch.x + 1) / 2) * this.stageW;
       const y = ((1 - this.labelScratch.y) / 2) * this.stageH;
       if (x < -this.stageW || x > 2 * this.stageW || y < -this.stageH || y > 2 * this.stageH) continue;
-      const w = labelWidth(label.text);
-      cands.push({ id: String(label.index), x, y, w, h: LABEL_HEIGHT_PX, priority, size: label.size });
-      placed.set(label, { x, y, opacity });
+      // The label sits above its disc: its anchor is the disc's top edge, plus a gap.
+      const hub = label.kind === "hub";
+      const radius = (this.baseSizes[label.index] ?? 12) / 2;
+      const ly = y - radius - 6;
+      const w = labelWidth(label.text, hub);
+      const h = hub ? HUB_LABEL_HEIGHT_PX : LABEL_HEIGHT_PX;
+      cands.push({ id: String(label.index), x, y: ly, w, h, priority, size: label.size });
+      placed.set(label, { x, y: ly, opacity });
     }
     const kept = pickLabels(cands);
 
@@ -981,7 +1013,7 @@ export class OrbitView {
       el.style.display = "";
       el.style.visibility = kept.has(String(label.index)) ? "visible" : "hidden";
       el.style.opacity = p.opacity.toFixed(2);
-      el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, -140%)`;
+      el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, -100%)`;
     }
   }
 
@@ -995,14 +1027,14 @@ export class OrbitView {
     const dimming = sel?.kind === "core";
     const focus = dimming ? sel.index : this.mode === "viz" ? this.hoverIndex : null;
     for (let k = 0; k < ends.length / 2; k++) {
-      let a = 1;
+      const base = this.edgeBase[k] ?? 1;
+      let alpha = base;
       if (focus !== null) {
         const touching = ends[k * 2] === focus || ends[k * 2 + 1] === focus;
-        a = touching ? EDGE_HOT : dimming ? EDGE_DIM : 1;
+        alpha = touching ? EDGE_HOT : dimming ? base * EDGE_DIM : base;
       }
-      const base = this.edgeBase[k] ?? 1;
-      rgba[(k * 2) * 4 + 3] = a * base;
-      rgba[(k * 2 + 1) * 4 + 3] = a * base;
+      rgba[(k * 2) * 4 + 3] = alpha;
+      rgba[(k * 2 + 1) * 4 + 3] = alpha;
     }
     attr.needsUpdate = true;
   }
@@ -1044,6 +1076,9 @@ export class OrbitView {
       geo.setAttribute("aSize", this.ringSizeAttr);
       this.ringAlphaAttr = new THREE.BufferAttribute(new Float32Array(count).fill(1), 1);
       geo.setAttribute("aAlpha", this.ringAlphaAttr);
+      geo.setAttribute("aEdge", new THREE.BufferAttribute(rgb.slice(), 3));
+      geo.setAttribute("aRing", new THREE.BufferAttribute(new Float32Array(count * 4), 4));
+      geo.setAttribute("aGlow", new THREE.BufferAttribute(new Float32Array(count), 1));
       this.ringPoints = new THREE.Points(geo, this.makePointMaterial(1));
       this.ringGroup.add(this.ringPoints);
     }
@@ -1186,11 +1221,7 @@ export class OrbitView {
     if (!this.renderer || this.disposed) return;
     for (const mat of this.pointMaterials) this.stylePointMaterial(mat);
     for (const mat of this.lineMaterials) this.styleLineMaterial(mat);
-    const labelStyle = LABEL_STYLE[next];
-    for (const label of this.labels) {
-      label.el.style.color = labelStyle.color;
-      label.el.style.textShadow = labelStyle.shadow;
-    }
+    for (const label of this.labels) this.styleLabel(label.el, label.kind === "hub");
     if (this.ringColorAttr) {
       const [r, g, b] = RING_RGB[next];
       const arr = this.ringColorAttr.array as Float32Array;
@@ -1200,6 +1231,11 @@ export class OrbitView {
         arr[i + 2] = b;
       }
       this.ringColorAttr.needsUpdate = true;
+      const edgeAttr = this.ringPoints?.geometry.getAttribute("aEdge") as THREE.BufferAttribute | undefined;
+      if (edgeAttr) {
+        (edgeAttr.array as Float32Array).set(arr);
+        edgeAttr.needsUpdate = true;
+      }
     }
     this.refreshPalettes();
     this.requestRender();
@@ -1216,7 +1252,7 @@ export class OrbitView {
     const pr = this.renderer.getPixelRatio();
     this.pixelRatioUniform.value = pr;
     this.camera.aspect = w / h;
-    this.scaleUniform.value = ((h * pr) / (2 * Math.tan(THREE.MathUtils.degToRad(FOV_DEG) / 2))) * POINT_SCALE;
+    if (this.mode === "viz") this.applyVizSizes();
     if (this.userMoved) this.camera.updateProjectionMatrix();
     else this.fitCamera();
     this.updateLabels();
@@ -1278,8 +1314,7 @@ export class OrbitView {
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
       uniforms: {
-        uScale: this.scaleUniform,
-        uPixel: this.pixelUniform,
+        uHalo: this.haloUniform,
         uPixelRatio: this.pixelRatioUniform,
         uDepth: this.depthUniform,
         uOpacity: { value: opacity },
@@ -1327,12 +1362,16 @@ export class OrbitView {
     const half = Math.min(vHalf, hHalf);
     const framed = this.coreItems.length > 0 ? Math.max(this.coreRadius, 1) : Math.max(this.ringRadius, 1);
     const viz = this.mode === "viz";
-    const fraction = viz ? VIZ_FRAME_FRACTION : CORE_FRAME_FRACTION;
     const elevation = viz ? VIZ_FRAME_ELEVATION : FRAME_ELEVATION;
-    const dist = framed / (fraction * Math.tan(half));
     const n = Math.hypot(elevation, 1);
+    const dir = { x: 0, y: elevation / n, z: 1 / n };
+    let dist = framed / (CORE_FRAME_FRACTION * Math.tan(half));
+    // The OS graph is framed on what it draws: its parts, measured on screen, fill VIZ_FILL of the stage.
+    if (viz && this.fitPoints.length > 0) {
+      dist = fitDistance(this.fitPoints, dir, { x: 0, y: 0, z: 0 }, Math.tan(vHalf), this.camera.aspect, VIZ_FILL, dist);
+    }
     this.home = {
-      position: new THREE.Vector3(0, (dist * elevation) / n, dist / n),
+      position: new THREE.Vector3(0, dir.y * dist, dir.z * dist),
       target: new THREE.Vector3(0, 0, 0),
     };
     this.camera.position.copy(this.home.position);
@@ -1402,6 +1441,14 @@ export class OrbitView {
     this.coreSizeAttr = null;
     this.coreAlphaAttr = null;
     this.edgeColorAttr = null;
+    this.coreRingAttr = null;
+    this.coreEdgeAttr = null;
+    this.hubMask = new Uint8Array(0);
+    this.baseRing = new Float32Array(0);
+    this.ringRgb = new Float32Array(0);
+    this.edgeMember = [];
+    this.fitPoints = [];
+    this.vizLevel = null;
     this.coreItems = [];
     this.coreIndex = new Map();
     this.adjacency = [];
@@ -1427,7 +1474,8 @@ export class OrbitView {
   }
 
   private activeCoreColors(): Float32Array {
-    return this.colorMode === "cluster" ? this.clusterRgb : this.kindRgb;
+    // The OS graph is always coloured by its parts; only the code brain takes the cluster colours.
+    return this.mode === "code" && this.colorMode === "cluster" ? this.clusterRgb : this.kindRgb;
   }
 
   private writeCoreColors(): void {
@@ -1438,6 +1486,7 @@ export class OrbitView {
     if (src.length !== arr.length) return;
     arr.set(src);
     attr.needsUpdate = true;
+    this.writeEdgeShades();
   }
 
   /** Re-reads the category and cluster palettes (CSS custom properties) and recolours the core in place. */
@@ -1446,17 +1495,133 @@ export class OrbitView {
     this.clusterPalette = readClusterPalette();
     if (this.coreItems.length === 0) return;
     if (this.mode === "viz" && this.vizNodes) {
-      this.kindRgb = buildVizKindColors(this.vizNodes, this.theme);
-      const style = LABEL_STYLE[this.theme];
-      for (const label of this.labels) {
-        label.el.style.color = style.color;
-        label.el.style.textShadow = style.shadow;
-      }
+      this.kindRgb = buildVizKindColors(this.vizNodes, this.theme, this.vizLevel);
+      this.ringRgb = this.buildRingRgb();
+      for (const label of this.labels) this.styleLabel(label.el, label.kind === "hub");
     } else {
       this.kindRgb = buildCategoryColors(this.coreItems, this.categoryColors);
     }
     this.clusterRgb = buildClusterColors(this.coreItems, this.clusterPalette);
     this.writeCoreColors();
+    this.writeVizEdgeRgb();
+    this.writeRingRgb();
+  }
+
+  /**
+   * The core's point buffers from `positions` and the current per-node state (sizes, colours,
+   * hub mask, status rings): one Points object, drawn over the edges.
+   */
+  private addCorePoints(positions: Float32Array): void {
+    const n = positions.length / 3;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const colours = this.activeCoreColors();
+    this.coreColorAttr = new THREE.BufferAttribute(new Float32Array(colours), 3);
+    geo.setAttribute("aColor", this.coreColorAttr);
+    this.coreEdgeAttr = new THREE.BufferAttribute(buildEdgeShades(colours, this.hubMask), 3);
+    geo.setAttribute("aEdge", this.coreEdgeAttr);
+    this.coreSizeAttr = new THREE.BufferAttribute(new Float32Array(this.baseSizes), 1);
+    geo.setAttribute("aSize", this.coreSizeAttr);
+    this.coreAlphaAttr = new THREE.BufferAttribute(new Float32Array(n).fill(1), 1);
+    geo.setAttribute("aAlpha", this.coreAlphaAttr);
+    const ring = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      ring[i * 4] = this.ringRgb[i * 3] ?? 0;
+      ring[i * 4 + 1] = this.ringRgb[i * 3 + 1] ?? 0;
+      ring[i * 4 + 2] = this.ringRgb[i * 3 + 2] ?? 0;
+      ring[i * 4 + 3] = this.baseRing[i] ?? 0;
+    }
+    this.coreRingAttr = new THREE.BufferAttribute(ring, 4);
+    geo.setAttribute("aRing", this.coreRingAttr);
+    geo.setAttribute("aGlow", new THREE.BufferAttribute(Float32Array.from(this.hubMask), 1));
+    this.corePoints = new THREE.Points(geo, this.makePointMaterial(CORE_OPACITY));
+    this.coreGroup.add(this.corePoints);
+  }
+
+  /** Each OS node's status ring colour (rgb, 0..1) in the current theme; a node without a ring keeps black. */
+  private buildRingRgb(): Float32Array {
+    const nodes = this.vizNodes ?? [];
+    const out = new Float32Array(nodes.length * 3);
+    nodes.forEach((node, i) => {
+      const ring = statusRing(node.status, this.theme);
+      if (ring) out.set(hexToRgb01(ring.hex), i * 3);
+    });
+    return out;
+  }
+
+  /** Writes the status ring colours into the core's ring attribute (rgb only; alpha is set per frame). */
+  private writeRingRgb(): void {
+    const attr = this.coreRingAttr;
+    if (!attr) return;
+    const arr = attr.array as Float32Array;
+    for (let i = 0; i * 4 + 2 < arr.length && i * 3 + 2 < this.ringRgb.length; i++) {
+      arr[i * 4] = this.ringRgb[i * 3]!;
+      arr[i * 4 + 1] = this.ringRgb[i * 3 + 1]!;
+      arr[i * 4 + 2] = this.ringRgb[i * 3 + 2]!;
+    }
+    attr.needsUpdate = true;
+  }
+
+  /** Writes the outline shade of every core point from its fill (a hub's is lighter, the rest darker). */
+  private writeEdgeShades(): void {
+    const attr = this.coreEdgeAttr;
+    if (!attr) return;
+    const shades = buildEdgeShades(this.activeCoreColors(), this.hubMask);
+    if (shades.length !== (attr.array as Float32Array).length) return;
+    (attr.array as Float32Array).set(shades);
+    attr.needsUpdate = true;
+  }
+
+  /** Writes each drawn OS edge's rgb: a member edge takes its member's colour, a cross-part edge the mix of its ends. */
+  private writeVizEdgeRgb(): void {
+    const attr = this.edgeColorAttr;
+    if (!attr || this.mode !== "viz") return;
+    const arr = attr.array as Float32Array;
+    const edges = this.edgeEnds.length / 2;
+    if (this.kindRgb.length === 0 || arr.length !== edges * 8) return;
+    const colours = buildVizEdgeColors(this.edgeEnds, this.kindRgb, this.hubMask, this.edgeMember);
+    for (let k = 0; k < edges; k++) {
+      for (let v = 0; v < 2; v++) {
+        const o = (k * 2 + v) * 4;
+        arr[o] = colours[k * 6 + v * 3]!;
+        arr[o + 1] = colours[k * 6 + v * 3 + 1]!;
+        arr[o + 2] = colours[k * 6 + v * 3 + 2]!;
+      }
+    }
+    attr.needsUpdate = true;
+  }
+
+  /**
+   * The OS graph's point sizes for the stage: hubs and members in CSS pixels, scaled to the stage's
+   * shorter side (see vizNodePx). Written in place, so a resize does not rebuild the points.
+   */
+  private applyVizSizes(): void {
+    const nodes = this.vizNodes;
+    if (this.mode !== "viz" || !nodes || nodes.length !== this.baseSizes.length) return;
+    const stageMin = Math.min(this.stageW, this.stageH);
+    nodes.forEach((node, i) => {
+      this.baseSizes[i] = vizNodePx(node, stageMin);
+    });
+    if (this.coreSizeAttr) {
+      (this.coreSizeAttr.array as Float32Array).set(this.baseSizes);
+      this.coreSizeAttr.needsUpdate = true;
+    }
+    this.labelVersion++;
+  }
+
+  /** Label look for the theme: 16 px semibold for a hub, 14 px for a member, on a translucent pill. */
+  private styleLabel(el: HTMLElement, hub: boolean): void {
+    const style = LABEL_STYLE[this.theme];
+    Object.assign(el.style, {
+      color: style.color,
+      background: style.background,
+      borderRadius: "8px",
+      padding: "2px 8px",
+      boxSizing: "border-box",
+      fontSize: hub ? "16px" : "14px",
+      fontWeight: hub ? "600" : "400",
+      lineHeight: hub ? "20px" : "18px",
+    });
   }
 
   private resolveSelection(): SelectionRef | null {
@@ -1528,12 +1693,18 @@ export class OrbitView {
     const attr = this.coreAlphaAttr;
     if (!attr) return;
     const alpha = attr.array as Float32Array;
-    const pulse = this.pulseOn() ? VIZ_PULSE_MIN + (1 - VIZ_PULSE_MIN) * (0.5 + 0.5 * Math.sin((2 * Math.PI * now) / VIZ_PULSE_MS)) : 1;
     for (let i = 0; i < alpha.length; i++) {
       alpha[i] = (this.selAlpha[i] ?? 1) * (this.baseAlpha[i] ?? 1);
     }
-    if (this.pulseOn()) for (const i of this.pulsing) if (i < alpha.length) alpha[i] = (alpha[i] ?? 1) * pulse;
     attr.needsUpdate = true;
+    // The status ring of a running node pulses; the other rings hold their alpha.
+    const ringAttr = this.coreRingAttr;
+    if (!ringAttr) return;
+    const ring = ringAttr.array as Float32Array;
+    const pulse = this.pulseOn() ? VIZ_PULSE_MIN + (1 - VIZ_PULSE_MIN) * (0.5 + 0.5 * Math.sin((2 * Math.PI * now) / VIZ_PULSE_MS)) : 1;
+    for (let i = 0; i < this.baseRing.length; i++) ring[i * 4 + 3] = this.baseRing[i] ?? 0;
+    if (this.pulseOn()) for (const i of this.pulsing) if (i * 4 + 3 < ring.length) ring[i * 4 + 3] = (this.baseRing[i] ?? 0) * pulse;
+    ringAttr.needsUpdate = true;
   }
 
   private autoRotateWanted(): boolean {

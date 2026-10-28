@@ -5,6 +5,7 @@ import { after, afterEach, before, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { createServer } from 'vite';
@@ -82,8 +83,9 @@ describe('scene colour helpers', () => {
     assert.equal(scene.categoryColorVar('other'), '--os-cat-other');
   });
 
-  it('ships the documented fallback palette', () => {
-    assert.deepEqual(scene.DEFAULT_CATEGORY_COLORS, CATEGORY_HEX);
+  it('ships the native Code graph palette as the category defaults (dark)', () => {
+    const lower = Object.fromEntries(Object.entries(scene.DEFAULT_CATEGORY_COLORS).map(([k, v]) => [k, v.toLowerCase()]));
+    assert.deepEqual(lower, { code: '#0a84ff', docs: '#30d158', tests: '#ff9f0a', knowledge: '#bf5af2', other: '#8e8e93' });
   });
 
   it('parses 6-digit and 3-digit hex into 0..1 rgb', () => {
@@ -111,14 +113,21 @@ describe('coreFramingRadius', () => {
   });
 });
 
-describe('coreSizeScale', () => {
-  it('is 1 at the reference size, larger when sparse and smaller when dense, within clamps', () => {
+describe('coreSizeScale and codePointPx', () => {
+  it('is 1 up to the reference size, smaller when dense, never below one half', () => {
     assert.equal(scene.coreSizeScale(400), 1);
-    assert.ok(scene.coreSizeScale(100) > scene.coreSizeScale(400), 'sparse: larger points');
-    assert.ok(scene.coreSizeScale(2500) < scene.coreSizeScale(400), 'dense: smaller points');
-    assert.equal(scene.coreSizeScale(1), 2, 'clamped at 2');
-    assert.equal(scene.coreSizeScale(1e6), 0.4, 'clamped at 0.4');
+    assert.equal(scene.coreSizeScale(100), 1, 'a sparse core keeps the full size');
+    assert.ok(scene.coreSizeScale(1600) < 1, 'dense: smaller points');
+    assert.equal(scene.coreSizeScale(1e6), 0.5, 'clamped at one half');
     assert.equal(scene.coreSizeScale(0), 1);
+  });
+
+  it('a code point is 6 to 9 px by degree, smaller in a dense core, never below 4 px', () => {
+    assert.equal(scene.codePointPx(4, 4, 100), 9, 'the top degree');
+    assert.equal(scene.codePointPx(0, 4, 100), 6, 'a degree-0 node');
+    assert.equal(scene.codePointPx(0, 0, 100), 6, 'no degrees at all');
+    assert.ok(scene.codePointPx(4, 4, 2000) < 9, 'dense: smaller');
+    assert.equal(scene.codePointPx(0, 4, 1e6), 4, 'floored at 4 px');
   });
 });
 
@@ -152,23 +161,23 @@ describe('buildPointBuffers', () => {
     const layout = orbit.orbitLayout(graph);
     const buf = scene.buildPointBuffers(graph, layout, { ...CATEGORY_HEX, code: '#ffffff', docs: 'nope' });
     assert.deepEqual([buf.colors[0], buf.colors[1], buf.colors[2]], [1, 1, 1]);
-    const docs = scene.hexToRgb01(CATEGORY_HEX.docs);
+    const docs = scene.hexToRgb01(scene.DEFAULT_CATEGORY_COLORS.docs);
     assert.ok(Math.abs(buf.colors[3] - docs[0]) < 1e-6);
   });
 
-  it('sizes follow 1.5 + 2.5 * sqrt(degree / maxDegree)', () => {
+  it('sizes are code point pixels by degree (9 px for the top degree, 6 px for degree 0)', () => {
     const graph = sampleGraph();
     const buf = scene.buildPointBuffers(graph, orbit.orbitLayout(graph), CATEGORY_HEX);
-    assert.ok(Math.abs(buf.sizes[0] - 4) < 1e-6); // degree 4 = max
-    assert.ok(Math.abs(buf.sizes[1] - (1.5 + 2.5 * 0.5)) < 1e-6); // degree 1
-    assert.ok(Math.abs(buf.sizes[2] - 1.5) < 1e-6); // degree 0
-    for (const s of buf.sizes) assert.ok(s >= 1.5 && s <= 4 + 1e-6);
+    assert.ok(Math.abs(buf.sizes[0] - 9) < 1e-6); // degree 4 = max
+    assert.ok(Math.abs(buf.sizes[1] - 7.5) < 1e-6); // degree 1
+    assert.ok(Math.abs(buf.sizes[2] - 6) < 1e-6); // degree 0
+    for (const s of buf.sizes) assert.ok(s >= 6 && s <= 9 + 1e-6);
   });
 
-  it('gives zero-degree-only graphs the minimum size without NaN', () => {
+  it('gives zero-degree-only graphs the base size without NaN', () => {
     const graph = { ...sampleGraph(), core: [core('x', 'code', 0), core('y', 'other', 0)] };
     const buf = scene.buildPointBuffers(graph, orbit.orbitLayout(graph), CATEGORY_HEX);
-    assert.deepEqual(Array.from(buf.sizes), [1.5, 1.5]);
+    assert.deepEqual(Array.from(buf.sizes), [6, 6]);
   });
 });
 
@@ -551,7 +560,7 @@ describe('OrbitView (fake renderer)', () => {
     v.setGraph(sampleGraph(), orbit.orbitLayout(sampleGraph()));
     // THREE.NormalBlending = 1 (AdditiveBlending = 2 is never used for the core).
     assert.equal(v.corePoints.material.blending, 1, 'dark');
-    assert.ok(Math.abs(v.corePoints.material.uniforms.uOpacity.value - 0.85) < 1e-9, 'alpha ~0.85 on dark');
+    assert.ok(Math.abs(v.corePoints.material.uniforms.uOpacity.value - 0.92) < 1e-9, 'alpha ~0.92 on dark');
     v.setTheme('light');
     assert.equal(v.corePoints.material.blending, 1, 'light');
     assert.ok(v.corePoints.material.uniforms.uOpacity.value > 0.9);
@@ -559,14 +568,14 @@ describe('OrbitView (fake renderer)', () => {
     assert.equal(v.corePoints.material.blending, 1, 'dark again');
   });
 
-  it('core point sizes are scaled by the node count (sparse larger than dense)', () => {
+  it('core point sizes are code point pixels: a sparse core draws the full 6 to 9 px', () => {
     const small = make();
     const sg = chainGraph(40);
     small.setGraph(sg, orbit.orbitLayout(sg));
     const sparseSize = small.coreSizeAttr.array[0];
     const base = scene.buildPointBuffers(sg, orbit.orbitLayout(sg), CATEGORY_HEX).sizes[0];
-    assert.ok(Math.abs(sparseSize - base * scene.coreSizeScale(40)) < 1e-5, 'scaled by coreSizeScale');
-    assert.ok(sparseSize > base, 'a 40-node core draws larger points than the base size');
+    assert.ok(Math.abs(sparseSize - base) < 1e-5, 'the buffer is the code point size');
+    assert.equal(sparseSize, 9, 'every node of a chain has the top degree here');
   });
 
   /** A core of `n` nodes in one community, chained so the layout has edges. */
@@ -839,12 +848,11 @@ describe('OrbitView (fake renderer)', () => {
     assert.equal(alpha[0], 1, 'a neighbour stays bright');
     assert.equal(alpha[3], 1, 'a neighbour stays bright');
     assert.ok(Math.abs(alpha[1] - 0.15) < 1e-6, 'a non-neighbour dims');
-    const k = scene.coreSizeScale(4); // the size scale of a four-node core
-    assert.ok(Math.abs(sizes[2] - 1.5 * k * 1.8) < 1e-4, 'the selected node grows');
-    assert.ok(Math.abs(sizes[0] - 4 * k * 1.35) < 1e-4, 'a neighbour grows less');
+    assert.ok(Math.abs(sizes[2] - v.baseSizes[2] * 1.4) < 1e-4, 'the selected node grows');
+    assert.ok(Math.abs(sizes[0] - v.baseSizes[0] * 1.2) < 1e-4, 'a neighbour grows less');
     const edgeAlpha = Array.from({ length: edgeColors.length / 4 }, (_, i) => edgeColors[i * 4 + 3]);
-    assert.ok(edgeAlpha.includes(4), 'edges touching the selection are brighter');
-    assert.ok(edgeAlpha.includes(0.25), 'the other edges dim');
+    assert.ok(edgeAlpha.some((a) => Math.abs(a - 0.9) < 1e-6), 'edges touching the selection are brighter');
+    assert.ok(edgeAlpha.some((a) => Math.abs(a - 0.25) < 1e-6), 'the other edges dim');
     v.setSelection(null);
     assert.ok(Array.from(alpha).every((a) => a === 1), 'clearing restores every node');
     assert.ok(Array.from(sizes).every((s, i) => Math.abs(s - v.baseSizes[i]) < 1e-6), 'clearing restores the sizes');
@@ -875,7 +883,7 @@ describe('OrbitView (fake renderer)', () => {
     assert.ok(Array.from(edgeColors).filter((_, i) => i % 4 === 3).every((a) => a === 1), 'edge alphas');
   });
 
-  it('the core fills about 60% of the stage height on framing, and the ring may run past it', () => {
+  it('the core fills about 70% of the stage height on framing, and the ring may run past it', () => {
     const v = make({ reducedMotion: true });
     const graph = sampleGraph();
     const layout = orbit.orbitLayout(graph);
@@ -884,7 +892,7 @@ describe('OrbitView (fake renderer)', () => {
     const coreR = scene.coreFramingRadius(graph.core.map((n) => n.id), layout);
     const vHalf = Math.PI / 8; // half of the 45 degree field of view
     const fraction = coreR / (dist(v) * Math.tan(vHalf));
-    assert.ok(Math.abs(fraction - 0.6) < 1e-6, `core/height fraction ${fraction}`);
+    assert.ok(Math.abs(fraction - 0.7) < 1e-6, `core/height fraction ${fraction}`);
     assert.ok(v.radius > coreR, 'the ring radius is larger than the framed core');
   });
 
@@ -1110,13 +1118,13 @@ describe('colour and selection helpers', () => {
     assert.equal(scene.colorToHex('oklch(0.7 0.1 200)'), null);
   });
 
-  it('the cluster palette has ten distinct colours and clusterColor wraps every ten clusters', () => {
+  it('the cluster palette has the native 15 distinct colours and clusterColor wraps every fifteen clusters', () => {
     const pal = scene.DEFAULT_CLUSTER_COLORS;
-    assert.equal(pal.length, 10);
-    assert.equal(new Set(pal).size, 10);
+    assert.equal(pal.length, 15);
+    assert.equal(new Set(pal).size, 15);
     assert.equal(scene.clusterColor(0, pal), pal[0]);
-    assert.equal(scene.clusterColor(10, pal), pal[0]);
-    assert.equal(scene.clusterColor(13, pal), pal[3]);
+    assert.equal(scene.clusterColor(15, pal), pal[0]);
+    assert.equal(scene.clusterColor(16, pal), pal[1]);
   });
 
   it('clusterSummary counts nodes per community, largest community first', () => {
@@ -1346,8 +1354,8 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     assert.equal(geo.attributes.position.count, 4, 'four distinct nodes (the duplicate id is dropped)');
     assert.equal(geo.attributes.aSize.count, 4);
     assert.equal(geo.attributes.aAlpha.count, 4);
-    // A graph under PIXEL_SIZE_MAX_NODES draws its points in pixels: the hub 16, a member 6 to 8.
-    assert.ok(Math.abs(geo.attributes.aSize.array[0] - scene.vizPixelSize(viz.nodes[0])) < 1e-4, 'the hub is 16 px');
+    // The stage here is 400 x 300: the hub is the stage's 4.2% clamped to 28 px; a member is 12 px or more.
+    assert.equal(geo.attributes.aSize.array[0], 28, 'the hub is 28 px on a 300 px stage');
     assert.ok(geo.attributes.aSize.array[0] > geo.attributes.aSize.array[1] * 1.5, 'the hub is well above a member');
     const labels = labelsIn();
     assert.equal(labels.length, 3, 'hub, one and a are labelled; two is not');
@@ -1361,8 +1369,8 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
     const geo = v.corePoints.geometry;
     const colors = geo.attributes.aColor.array;
-    const expected = scene.vizNodeRgb(viz.nodes[1], 'dark');
-    for (let c = 0; c < 3; c++) assert.ok(Math.abs(colors[3 + c] - expected[c]) < 1e-6, 'a running model takes its kind colour with the status tint');
+    const expected = scene.vizNodeRgb(viz.nodes[1], 'dark', viz.level);
+    for (let c = 0; c < 3; c++) assert.ok(Math.abs(colors[3 + c] - expected[c]) < 1e-6, 'a model takes its hub colour (orange) whatever its status');
     const alpha = geo.attributes.aAlpha.array;
     assert.equal(alpha[0], 1);
     assert.ok(Math.abs(alpha[2] - scene.VIZ_OFF_ALPHA) < 1e-6, 'an off node is drawn quiet');
@@ -1375,13 +1383,13 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     const edges = edgeLines(v);
     assert.equal(edges.geometry.attributes.position.count, 6, 'three edges, two vertices each (the self-loop is dropped)');
     const rgba = edges.geometry.attributes.color.array;
-    // Hub-member edges are quiet (0.2) whatever their weight; the other edges keep the weight scale.
+    // Hub-member edges are quiet (0.35) whatever their weight; the other edges keep the weight scale (0.45 to 0.55).
     const memberOfOne = rgba[(0 * 2) * 4 + 3];
     const provides = rgba[(1 * 2) * 4 + 3];
     const memberOfTwo = rgba[(2 * 2) * 4 + 3];
-    assert.ok(Math.abs(memberOfOne - 0.2) < 1e-6, 'a hub-member edge is quiet');
-    assert.ok(Math.abs(memberOfTwo - 0.2) < 1e-6, 'a light hub-member edge is quiet too');
-    assert.equal(provides, 1, 'the heaviest non-member edge is full');
+    assert.ok(Math.abs(memberOfOne - 0.35) < 1e-6, 'a hub-member edge is quiet');
+    assert.ok(Math.abs(memberOfTwo - 0.35) < 1e-6, 'a light hub-member edge is quiet too');
+    assert.ok(Math.abs(provides - 0.55) < 1e-6, 'the heaviest non-member edge is the top of the cross-part range');
     assert.equal(labelEdgeLines(v).geometry.attributes.position.count, 2, 'one labelled edge is hit-tested');
   });
 
@@ -1420,22 +1428,25 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
   it('a running node pulses on frames; with reduced motion it holds still', () => {
     const viz = vizSample();
     const layout = orbit.vizLayout(viz, { seed: 1 });
+    // The pulse is the running node's status ring (ring alpha, index 4 * node + 3); its body keeps its alpha.
     const moving = make({});
     moving.setViz(viz, layout);
     runFrames(0);
-    const a0 = moving.corePoints.geometry.attributes.aAlpha.array[1];
+    const ring = (v) => v.corePoints.geometry.attributes.aRing.array;
+    const a0 = ring(moving)[1 * 4 + 3];
     runFrames(350);
-    const a1 = moving.corePoints.geometry.attributes.aAlpha.array[1];
-    assert.notEqual(a0, a1, 'the running node changes alpha over time');
-    assert.equal(moving.corePoints.geometry.attributes.aAlpha.array[0], 1, 'a node that is not running does not pulse');
+    const a1 = ring(moving)[1 * 4 + 3];
+    assert.notEqual(a0, a1, 'the running node ring changes alpha over time');
+    assert.equal(ring(moving)[0 * 4 + 3], 1, 'the ok node ring does not pulse');
+    assert.equal(moving.corePoints.geometry.attributes.aAlpha.array[1], 1, 'the body of the running node does not pulse');
     moving.dispose();
 
     const still = make({ reducedMotion: true });
     still.setViz(viz, layout);
     runFrames(0);
-    const s0 = still.corePoints.geometry.attributes.aAlpha.array[1];
+    const s0 = ring(still)[1 * 4 + 3];
     runFrames(350);
-    assert.equal(still.corePoints.geometry.attributes.aAlpha.array[1], s0, 'reduced motion: no pulse');
+    assert.equal(ring(still)[1 * 4 + 3], s0, 'reduced motion: no pulse');
   });
 
   it('switching between the OS graph and the code brain disposes the old buffers and clears the labels', () => {
@@ -1471,9 +1482,11 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     v.setViz(viz, layout);
     assert.equal(v.corePoints, first);
     v.setTheme('light');
-    assert.equal(labelsIn()[0].style.color, '#1c2230');
+    assert.equal(labelsIn()[0].style.color, '#111622');
+    assert.ok(labelsIn()[0].style.background.includes('255'), 'a white pill on the light theme');
     v.setTheme('dark');
-    assert.equal(labelsIn()[0].style.color, '#f2f4f8');
+    assert.equal(labelsIn()[0].style.color, '#ffffff');
+    assert.ok(labelsIn()[0].style.background.includes('10, 12, 18'), 'a dark pill on the dark theme');
   });
 
   it('getCamera and setCamera round-trip a pose, and a non-finite pose is ignored', () => {
@@ -1528,13 +1541,15 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     assert.deepEqual(v.getCamera(), end, 'reading again changes nothing: the flight has ended');
   });
 
-  it('small graphs draw their points in pixels and the hub-member edges are quiet', () => {
+  it('the OS graph sizes its points in pixels by the stage; the code brain by its degree', () => {
     const v = make({ reducedMotion: true });
     const viz = vizSample();
     v.setViz(viz, orbit.vizLayout(viz, { seed: 1 }));
-    assert.equal(v.pixelUniform.value, 1, 'four nodes: pixel sizes');
+    const sizes = v.corePoints.geometry.attributes.aSize.array;
+    assert.equal(sizes[0], 28, 'the hub: 28 px on a 300 px stage');
+    assert.ok(sizes[1] >= 10 && sizes[1] <= 18, 'a member: 10 to 18 px');
     v.setGraph(sampleGraph(), orbit.orbitLayout(sampleGraph()));
-    assert.equal(v.pixelUniform.value, 0, 'the code brain uses scene sizes');
+    assert.equal(v.corePoints.geometry.attributes.aSize.array[0], 9, 'the code brain: degree 4 of 4 is 9 px');
   });
 
   it('hovering a node lights its edges; leaving puts them back', () => {
@@ -1600,12 +1615,14 @@ describe('the readable OS levels: pure helpers', () => {
     assert.deepEqual(a, b);
   });
 
-  it('vizPixelSize: hubs 16 px, members 6 to 8, never below 5', () => {
-    assert.equal(scene.vizPixelSize({ kind: 'hub', size: 4 }), 16);
-    assert.equal(scene.vizPixelSize({ kind: 'model', size: 1 }), 6);
-    assert.equal(scene.vizPixelSize({ kind: 'model', size: 3 }), 8);
-    assert.equal(scene.vizPixelSize({ kind: 'model', size: 99 }), 8);
-    assert.equal(scene.vizPixelSize({ kind: 'model', size: -4 }), 5);
+  it('vizNodePx: hubs 28 to 44 px by the stage, members 12 to 18 px by size, never below 10', () => {
+    assert.equal(scene.vizNodePx({ kind: 'hub', size: 4 }, 300), 28, 'the 28 px floor');
+    assert.equal(scene.vizNodePx({ kind: 'hub', size: 4 }, 1000), 42, '4.2% of a 1000 px stage');
+    assert.equal(scene.vizNodePx({ kind: 'hub', size: 4 }, 5000), 44, 'capped at 44 px');
+    assert.equal(scene.vizNodePx({ kind: 'model', size: 1 }, 700), 12);
+    assert.equal(scene.vizNodePx({ kind: 'model', size: 3 }, 700), 17);
+    assert.equal(scene.vizNodePx({ kind: 'model', size: 99 }, 700), 18);
+    assert.equal(scene.vizNodePx({ kind: 'model', size: -4 }, 700), 10);
   });
 
   it('extraLabelIndices: the largest members of each group, never hubs, groups or labelled nodes', () => {
@@ -1639,3 +1656,234 @@ describe('the readable OS levels: pure helpers', () => {
     assert.notEqual(scene.vizLevelSignature(a), scene.vizLevelSignature({ level: 'agents', nodes: [{ id: 'a' }, { id: 'b' }] }));
   });
 });
+
+// ---- The native palette, the colour-by-part helpers, the sizes and the framing ----------
+
+const NATIVE_CGPALETTE = path.resolve(ROOT, '../../../Sources/LlmIdeMac/Features/CodeGraph/Views/CGPalette.swift');
+const TOKENS_CSS = path.join(ROOT, 'src', 'os-tokens.css');
+
+describe('the native palette', () => {
+  it('the cluster palette is the 15 clusterColors of CGPalette.swift (hex of the Swift RGB floats)', (t) => {
+    if (!existsSync(NATIVE_CGPALETTE)) {
+      t.skip(`CGPalette.swift not found at ${NATIVE_CGPALETTE} (graph-kit used standalone)`);
+      return;
+    }
+    const swift = readFileSync(NATIVE_CGPALETTE, 'utf8');
+    const from = swift.indexOf('clusterColors: [Color]');
+    const block = swift.slice(from, swift.indexOf('\n    ]', from));
+    const rows = [...block.matchAll(/Color\(red:\s*([\d.]+),\s*green:\s*([\d.]+),\s*blue:\s*([\d.]+)\)/g)];
+    assert.equal(rows.length, 15, 'fifteen Swift colours');
+    const hex = rows.map((m) => '#' + m.slice(1, 4).map((c) => Math.round(Number(c) * 255).toString(16).padStart(2, '0')).join('').toUpperCase());
+    assert.deepEqual(hex, scene.CLUSTER_COLORS.map((c) => c.toUpperCase()));
+  });
+
+  it('os-tokens.css carries the same dark and light hues, and the 15 cluster colours, as scene.ts', () => {
+    const css = readFileSync(TOKENS_CSS, 'utf8');
+    const block = (sel) => {
+      const start = css.indexOf(sel);
+      const end = css.indexOf('}', start);
+      return css.slice(start, end);
+    };
+    const dark = block(':root {');
+    const light = block(':root[data-theme="light"] {');
+    for (const [name, hex] of Object.entries(scene.SYSTEM_HUES_DARK)) {
+      assert.match(dark, new RegExp(`--os-hue-${name}: ${hex};`, 'i'), `dark ${name}`);
+    }
+    for (const [name, hex] of Object.entries(scene.SYSTEM_HUES_LIGHT)) {
+      assert.match(light, new RegExp(`--os-hue-${name}: ${hex};`, 'i'), `light ${name}`);
+    }
+    scene.CLUSTER_COLORS.forEach((hex, i) => assert.match(dark, new RegExp(`--os-cluster-${i + 1}: ${hex};`, 'i'), `cluster ${i + 1}`));
+  });
+
+  it('the brain categories are the system hues: code blue, docs green, tests orange, knowledge purple, other gray', () => {
+    assert.equal(scene.CATEGORY_HUE.code, 'blue');
+    assert.equal(scene.CATEGORY_HUE.docs, 'green');
+    assert.equal(scene.CATEGORY_HUE.tests, 'orange');
+    assert.equal(scene.CATEGORY_HUE.knowledge, 'purple');
+    assert.equal(scene.CATEGORY_HUE.other, 'gray');
+    assert.equal(scene.brainCategoryColour('code', 'light'), '#007AFF', 'the light shade on white');
+    assert.equal(scene.brainCategoryColour('code', 'dark'), '#0A84FF');
+  });
+});
+
+describe('colour by part: kindColour, statusRing, vizNodeRgb', () => {
+  const lower = (s) => s.toLowerCase();
+
+  it('each hub has its own hue: code blue, knowledge purple, memory indigo, skills mint, models orange, agents pink, routines green, kits yellow, activity cyan', () => {
+    const want = { code: 'blue', knowledge: 'purple', memory: 'indigo', skills: 'mint', models: 'orange', agents: 'pink', routines: 'green', kits: 'yellow', activity: 'cyan' };
+    for (const [hub, hue] of Object.entries(want)) {
+      assert.equal(lower(scene.kindColour('hub', 'dark', hub)), lower(scene.SYSTEM_HUES_DARK[hue]), `${hub} hub`);
+      assert.equal(lower(scene.HUB_HUE[hub]), hue, `HUB_HUE ${hub}`);
+    }
+  });
+
+  it('a member takes its hub hue, and the table in viz.ts names the hub of every kind', () => {
+    assert.equal(scene.hubOf('model'), 'models');
+    assert.equal(scene.hubOf('chatTurn'), 'agents');
+    assert.equal(scene.hubOf('activity'), 'activity');
+    assert.equal(scene.hubOf('mystery'), null);
+    assert.equal(lower(scene.kindColour('model', 'dark')), lower(scene.SYSTEM_HUES_DARK.orange), 'the models hue');
+    assert.equal(lower(scene.kindColour('routine', 'dark')), lower(scene.SYSTEM_HUES_DARK.green), 'the routines hue');
+  });
+
+  it('a kind with no hub, or a hub with no key, draws in the neutral grey', () => {
+    assert.equal(lower(scene.kindColour('mystery', 'dark')), lower(scene.SYSTEM_HUES_DARK.gray));
+    assert.equal(lower(scene.kindColour('hub', 'dark', null)), lower(scene.SYSTEM_HUES_DARK.gray));
+  });
+
+  it('the light theme uses the darker shades of the same hues', () => {
+    assert.equal(lower(scene.kindColour('model', 'light')), lower(scene.SYSTEM_HUES_LIGHT.orange));
+    assert.notEqual(scene.kindColour('model', 'light'), scene.kindColour('model', 'dark'));
+  });
+
+  it('a status is a ring, not a colour: ok green, warn amber, running cyan (pulsing), off and unknown have none', () => {
+    assert.deepEqual(scene.statusRing('ok', 'dark'), { hex: '#30D158', pulse: false });
+    assert.deepEqual(scene.statusRing('warn', 'dark'), { hex: '#FF9F0A', pulse: false });
+    assert.deepEqual(scene.statusRing('running', 'dark'), { hex: '#64D2FF', pulse: true });
+    assert.equal(scene.statusRing('off', 'dark'), null);
+    assert.equal(scene.statusRing('unknown', 'dark'), null);
+    assert.equal(scene.statusRing(null, 'dark'), null);
+    assert.equal(scene.statusRing('ok', 'light').hex, '#34C759', 'the light green');
+  });
+
+  it('a node keeps its hub colour whatever its status, except that off greys it', () => {
+    const models = scene.hexToRgb01(scene.SYSTEM_HUES_DARK.orange);
+    const ok = scene.vizNodeRgb({ kind: 'model', status: 'ok' }, 'dark', 'models');
+    const warn = scene.vizNodeRgb({ kind: 'model', status: 'warn' }, 'dark', 'models');
+    assert.deepEqual(ok, models);
+    assert.deepEqual(warn, models);
+    const off = scene.vizNodeRgb({ kind: 'model', status: 'off' }, 'dark', 'models');
+    assert.notDeepEqual(off, models, 'off is greyed');
+    assert.equal(scene.vizNodeAlpha({ status: 'off' }), scene.VIZ_OFF_ALPHA);
+  });
+
+  it('a hub node without a drill key takes the level it is drawn in', () => {
+    assert.deepEqual(scene.vizNodeRgb({ kind: 'hub', drill: null, status: null }, 'dark', 'kits'), scene.hexToRgb01(scene.SYSTEM_HUES_DARK.yellow));
+  });
+
+  it('the cluster colour is the native cluster hex, the same in both themes', () => {
+    assert.equal(scene.clusterColor(0, scene.CLUSTER_COLORS), '#4F7AA6');
+    assert.equal(scene.clusterColor(14, scene.CLUSTER_COLORS), '#C44F8C');
+  });
+
+  it('a member outline is darker and a hub outline lighter than its fill', () => {
+    const fill = new Float32Array([0.5, 0.5, 0.5]);
+    const hub = scene.buildEdgeShades(fill, new Uint8Array([1]));
+    const member = scene.buildEdgeShades(fill, new Uint8Array([0]));
+    assert.ok(hub[0] > 0.5 && member[0] < 0.5);
+  });
+});
+
+describe('point sizes and the on-screen framing', () => {
+  it('hub discs scale with the stage: 28 px at the floor, 4.2% of the shorter side, 44 px at most', () => {
+    assert.equal(scene.vizHubDiameterPx(300), 28);
+    assert.ok(Math.abs(scene.vizHubDiameterPx(700) - 29.4) < 1e-9);
+    assert.equal(scene.vizHubDiameterPx(1000), 42);
+    assert.equal(scene.vizHubDiameterPx(2000), 44);
+  });
+
+  it('members are 12 px at size 1, grow with size, and stay within 10 to 18 px', () => {
+    assert.equal(scene.vizMemberDiameterPx(1), 12);
+    assert.ok(scene.vizMemberDiameterPx(2) > 12);
+    assert.equal(scene.vizMemberDiameterPx(50), 18);
+    assert.ok(scene.vizMemberDiameterPx(-10) >= 10);
+  });
+
+  it('labels are 14 px members and 16 px hubs: the hub pill is wider per character', () => {
+    assert.ok(scene.labelWidth('Knowledge', true) > scene.labelWidth('Knowledge', false));
+    assert.equal(scene.HUB_LABEL_HEIGHT_PX > scene.LABEL_HEIGHT_PX, true);
+  });
+
+  it('fitDistance puts the parts at the requested share of the shorter side, seen from the camera', () => {
+    const pts = [
+      { x: 100, y: 0, z: 0 },
+      { x: -100, y: 0, z: 0 },
+      { x: 0, y: 0, z: 100 },
+      { x: 0, y: 0, z: -100 },
+    ];
+    const dir = { x: 0, y: 0.9 / Math.hypot(0.9, 1), z: 1 / Math.hypot(0.9, 1) };
+    const tanV = Math.tan(Math.PI / 8);
+    for (const aspect of [1.6, 0.7]) {
+      const d = scene.fitDistance(pts, dir, { x: 0, y: 0, z: 0 }, tanV, aspect, 0.82, 1000);
+      const eye = { x: dir.x * d, y: dir.y * d, z: dir.z * d };
+      const fill = scene.screenFill(pts, eye, { x: 0, y: 0, z: 0 }, tanV, aspect);
+      assert.ok(Math.abs(fill - 0.82) < 0.005, `aspect ${aspect}: fill ${fill}`);
+    }
+  });
+
+  it('the OS graph fills at least 80% of the shorter stage side on framing (fake renderer, 400 x 300)', () => {
+    const r = makeFakeFrame();
+    const v = new view.OrbitView(r.container, r.options);
+    const viz = vizSampleWide();
+    const layout = orbit.vizLayout(viz, { seed: 1 });
+    v.setViz(viz, layout);
+    const eye = v.camera.position;
+    const target = v.controls.target;
+    const fill = scene.screenFill(v.fitPoints, eye, target, Math.tan(Math.PI / 8), 400 / 300);
+    assert.ok(fill >= 0.8 && fill <= 0.86, `fill ${fill}`);
+    v.dispose();
+    r.restore();
+  });
+
+  /** A fake document, container and renderer for one view, set up as the OrbitView (fake renderer) suite does. */
+  function makeFakeFrame() {
+    const savedDoc = globalThis.document;
+    const doc = fakeElement('document');
+    doc.hidden = false;
+    doc.documentElement = fakeElement('html');
+    doc.createElement = (tag) => fakeElement(tag, tag === 'canvas' ? { width: 400, height: 300 } : {});
+    globalThis.document = doc;
+    const container = fakeElement('div', { width: 400, height: 300 });
+    const frames = new Map();
+    let next = 1;
+    return {
+      container,
+      options: {
+        rotationSpeed: 0,
+        reducedMotion: true,
+        createRenderer: (canvas) => fakeRenderer(canvas),
+        requestFrame: (cb) => {
+          const id = next++;
+          frames.set(id, cb);
+          return id;
+        },
+        cancelFrame: (id) => frames.delete(id),
+      },
+      restore: () => {
+        globalThis.document = savedDoc;
+      },
+    };
+  }
+});
+
+describe('the OS graph: a wide sample for framing', () => {
+  it('vizSampleWide has at least two hubs so the fit uses the parts', () => {
+    assert.ok(vizSampleWide().nodes.filter((n) => n.kind === 'hub').length >= 2);
+  });
+});
+
+/** Three hubs around the origin, each with members: the OS-level shape the framing test fits. */
+function vizSampleWide() {
+  const hub = (id, label) => ({ id, label, kind: 'hub', group: 0, size: 4, labelled: true, drill: id.slice(4), status: 'ok', meta: {} });
+  const member = (id, kind, group) => ({ id, label: id, kind, group, size: 1, labelled: false, drill: null, status: 'ok', meta: {} });
+  return {
+    level: 'os',
+    title: 'OS',
+    nodes: [
+      hub('hub:code', 'Code'),
+      hub('hub:models', 'Models'),
+      hub('hub:kits', 'Kits'),
+      member('model:a', 'model', 1),
+      member('model:b', 'model', 1),
+      member('kit:x', 'kit', 2),
+      member('codeCluster:y', 'codeCluster', 0),
+    ],
+    edges: [
+      { source: 'hub:models', target: 'model:a', kind: 'member', weight: 1 },
+      { source: 'hub:models', target: 'model:b', kind: 'member', weight: 1 },
+      { source: 'hub:kits', target: 'kit:x', kind: 'member', weight: 1 },
+      { source: 'hub:code', target: 'codeCluster:y', kind: 'member', weight: 1 },
+      { source: 'model:a', target: 'kit:x', kind: 'requires', weight: 2 },
+    ],
+  };
+}
