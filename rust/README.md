@@ -20,7 +20,8 @@ been removed from the Node package. Its output is frozen in `os-graph/tests/gold
 
 The page runs the crate as **embedded WASM**: `web/src/wasm/` holds the generated glue and
 the module as base64, and `web/src/systemGraph.ts` calls it. The wasm build is reproducible
-with the same rustc only, so it is committed; CI has no Rust.
+with the same rustc only, so it is committed. CI installs that rustc and runs
+`scripts/build-os-wasm.sh --check --strict`, so a stale bundle fails the build.
 
 Parity is checked by `os-graph/tests/parity.rs` against the golden files. The system graph
 must equal the golden exactly. Orbit coordinates must match within 1e-9; the remaining

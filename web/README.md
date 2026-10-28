@@ -74,7 +74,7 @@ fetch a `.wasm` file. `src/wasm/bytes.ts` holds the module as base64 and
 wraps `buildSystemGraph` and `orbitLayout` (JSON in, JSON out, a core error thrown).
 `src/wasm/pkg/` is the wasm-bindgen glue, built with `--target web
 --omit-default-module-path`, so it has no `import.meta.url` and Vite emits no
-separate asset. The generated files are committed (CI has no Rust).
+separate asset. The generated files are committed; CI checks them against a fresh build.
 
 To rebuild after a change to `rust/os-graph`, from the graph-kit root:
 
