@@ -30,6 +30,7 @@ before(async () => {
     controller: await load('/src/controller.ts'),
     host: await load('/src/host.ts'),
     flow: await load('/src/storageFlow.ts'),
+    format: await load('/src/format.ts'),
     render: await load('/test/support/render.tsx'),
     fixture: await load('/demo/fixture.ts'),
   };
@@ -158,6 +159,15 @@ describe('storage flows (pure)', () => {
     assert.equal(preview.kind, 'confirm');
     assert.equal(api.flow.confirming(preview).kind, 'clearing');
     assert.equal(api.flow.confirming(api.flow.confirming(preview)).kind, 'clearing');
+  });
+
+  it('a relative time reads a SQLite-style string as UTC, and the latest timestamp is compared as a time', () => {
+    const now = Date.parse('2026-10-28T12:00:00Z');
+    assert.equal(api.format.fmtRelative('2026-10-28 10:00:00', now), '2 hours ago');
+    assert.equal(api.format.fmtRelative('2026-10-28T10:00:00Z', now), '2 hours ago');
+    assert.equal(api.format.latestTime(['2026-10-28T09:00:00+09:00', '2026-10-28 00:30:00', null]), '2026-10-28 00:30:00');
+    assert.equal(api.format.latestTime([null, undefined]), null);
+    assert.equal(api.format.latestTime(['not a date']), null);
   });
 
   it('the count rows and their total cover every table of a clear', () => {

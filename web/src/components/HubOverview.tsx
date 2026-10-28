@@ -9,7 +9,7 @@ import type { OsActivityItem, OsAgentRun, OsCancel, OsRoutine, OsSkill, OsSnapsh
 import { clusterSummary, uniqueCoreNodes } from '../orbit/scene';
 import { countRows } from '../storageFlow';
 import { RETENTION_MAX, RETENTION_MIN } from '../storageFlow';
-import { fmtBytes, fmtDuration, fmtInt, fmtRelative, fmtTime, pct, shortSha, words } from '../format';
+import { fmtBytes, fmtDuration, fmtInt, fmtRelative, fmtTime, latestTime, pct, shortSha, words } from '../format';
 import { Bar, Empty } from './common';
 import { Recent } from './Recent';
 
@@ -802,14 +802,15 @@ export function StorageOverview({ report, storage, controller }: { report: OsSto
       </div>
     );
   }
-  const groups = report.groups;
+  const groups = Array.isArray(report.groups) ? report.groups : [];
   const max = groups.reduce((m, g) => Math.max(m, g.rows), 0);
   const agent = groups.find((g) => g.key === 'agent_history') ?? null;
   const knownBytes = groups.filter((g) => g.bytes !== null).reduce((sum, g) => sum + (g.bytes ?? 0), 0);
-  const lastCleaned = groups.reduce<string | null>((latest, g) => (g.lastCleanedAt && (!latest || g.lastCleanedAt > latest) ? g.lastCleanedAt : latest), null);
+  const lastCleaned = latestTime(groups.map((g) => g.lastCleanedAt));
   const retention = storage.retentionDays ?? agent?.retentionDays ?? null;
   const canAct = agent !== null && agent.actions.length > 0;
-  const healthy = report.agentStore.health === 'ok';
+  const health = report.agentStore?.health ?? 'down';
+  const healthy = health === 'ok';
   return (
     <div className="hub-body">
       <h3 className="sub-title">Storage</h3>
@@ -835,7 +836,7 @@ export function StorageOverview({ report, storage, controller }: { report: OsSto
       {agent?.bytesApprox ? <p className="meta">Agent history sizes are approximate.</p> : null}
       {!healthy ? (
         <p className="storage-error" role="alert">
-          The agent store is {report.agentStore.health === 'down' ? 'down' : 'degraded'}. Clear and compact may not work until it recovers.
+          The agent store is {health === 'down' ? 'down' : 'degraded'}. Clear and compact may not work until it recovers.
         </p>
       ) : null}
       {report.agentHistory?.quarantinedAt ? (

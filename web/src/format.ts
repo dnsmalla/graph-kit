@@ -60,6 +60,22 @@ export function fmtRelative(value: string | null | undefined, now: number = Date
   return fmtTime(value);
 }
 
+/** The latest of some server timestamps, compared as parsed times (SQLite strings are UTC), or null. */
+export function latestTime(values: ReadonlyArray<string | null | undefined>): string | null {
+  let best: string | null = null;
+  let bestMs = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    if (!value) continue;
+    const ms = parseServerTime(value);
+    if (Number.isNaN(ms)) continue;
+    if (ms > bestMs) {
+      bestMs = ms;
+      best = value;
+    }
+  }
+  return best;
+}
+
 /** Whether a string is a server timestamp (ISO 8601 or the SQLite form). */
 export function isTimestamp(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value);
