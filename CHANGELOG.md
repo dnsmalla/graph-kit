@@ -31,6 +31,16 @@ is also accepted by `release.yml`, but prefer the plain form. The tag must equal
   `node_modules/` nor `dist/` passes the manifest gate. Regenerate after any
   `typescript/src` change with `cd typescript && npm run bundle`.
 
+### Changed
+- **CI covers the whole repository.** `ci.yml` also runs the Rust crate (`cargo test`, both clippy
+  runs), the WASM reproducibility check (`build-os-wasm.sh --check --strict`) and the web page
+  (type-check and tests). The release workflow reuses that matrix before publishing.
+- `scripts/build-os-wasm.sh` honours `OS_WASM_TOOLCHAIN` and remaps build paths, so the committed
+  WASM no longer embeds the build machine's paths. `web/src/wasm/bytes.ts` was regenerated; the
+  glue (`pkg/`) is unchanged.
+- Release tags also accept `vX.Y.Z`; plain `X.Y.Z` is canonical.
+- README has a "Using graph-kit from another project" section.
+
 ### Fixed
 - **TypeScript code scanner skipped `.mjs`/`.cjs`.** `tsScanner`'s discovery set
   omitted both extensions while its `language()` mapping already claimed them,
