@@ -20,10 +20,12 @@ concurrency:
 jobs:
   swift:
     name: Swift (macOS)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Select latest stable Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
       - name: swift build
         run: swift build
       - name: swift test
@@ -146,9 +148,28 @@ jobs:
         if: steps.bindgen-cache.outputs.cache-hit != 'true'
         run: cargo install --locked --version "${{ steps.bindgen.outputs.version }}" wasm-bindgen-cli
       - name: build-os-wasm.sh --check --strict
+        id: check
         env:
           OS_WASM_TOOLCHAIN: ${{ steps.rustc.outputs.version }}
         run: scripts/build-os-wasm.sh --check --strict
+      # Diagnostics when the Linux build differs from the committed (macOS-built) bytes:
+      # regenerate in place and upload the result so it can be diffed against the committed files.
+      - name: Regenerate in place (diagnostics)
+        if: failure() && steps.check.outcome == 'failure'
+        env:
+          OS_WASM_TOOLCHAIN: ${{ steps.rustc.outputs.version }}
+        run: |
+          scripts/build-os-wasm.sh || true
+          sha256sum web/src/wasm/bytes.ts web/src/wasm/pkg/* || true
+      - name: Upload the Linux-built files
+        if: failure() && steps.check.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-linux-build
+          path: |
+            web/src/wasm/bytes.ts
+            web/src/wasm/pkg/
+          retention-days: 7
 
   web:
     name: Web page (Node 22)
@@ -163,7 +184,13 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            typescript/package-lock.json
+      # web/ type-checks against typescript/src (models.ts imports zod), so install those too.
+      - name: Install typescript/ dependencies (types the page imports)
+        working-directory: typescript
+        run: npm ci
       - run: npm ci
       - run: npm run type-check
       - run: npm test
