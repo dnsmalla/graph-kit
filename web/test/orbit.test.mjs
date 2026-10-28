@@ -883,17 +883,38 @@ describe('OrbitView (fake renderer)', () => {
     assert.ok(Array.from(edgeColors).filter((_, i) => i % 4 === 3).every((a) => a === 1), 'edge alphas');
   });
 
-  it('the core fills about 70% of the stage height on framing, and the ring may run past it', () => {
+  it('the code brain is centred on its core centroid; its 90th-percentile radius fills 80% of the stage height; no ring is drawn', () => {
     const v = make({ reducedMotion: true });
     const graph = sampleGraph();
     const layout = orbit.orbitLayout(graph);
     v.setGraph(graph, layout);
     v.setRing(graph.ring, layout.ring);
-    const coreR = scene.coreFramingRadius(graph.core.map((n) => n.id), layout);
-    const vHalf = Math.PI / 8; // half of the 45 degree field of view
-    const fraction = coreR / (dist(v) * Math.tan(vHalf));
-    assert.ok(Math.abs(fraction - 0.7) < 1e-6, `core/height fraction ${fraction}`);
-    assert.ok(v.radius > coreR, 'the ring radius is larger than the framed core');
+    const pts = graph.core.map((n) => layout.core.get(n.id));
+    const c = { x: 0, y: 0, z: 0 };
+    for (const p of pts) { c.x += p.x / pts.length; c.y += p.y / pts.length; c.z += p.z / pts.length; }
+    assert.ok(v.controls.target.distanceTo(new THREE.Vector3(c.x, c.y, c.z)) < 1e-6, 'target is the core centroid');
+    const dists = pts.map((p) => Math.hypot(p.x - c.x, p.y - c.y, p.z - c.z)).sort((x, y) => x - y);
+    const r90 = dists[Math.floor(0.9 * (dists.length - 1))];
+    const sphere = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+      .map(([x, y, z]) => ({ x: c.x + r90 * x, y: c.y + r90 * y, z: c.z + r90 * z }));
+    const eye = { x: v.camera.position.x, y: v.camera.position.y, z: v.camera.position.z };
+    const tgt = { x: v.controls.target.x, y: v.controls.target.y, z: v.controls.target.z };
+    const fill = scene.screenFill(sphere, eye, tgt, Math.tan(Math.PI / 8), 400 / 300);
+    assert.ok(Math.abs(fill - 0.8) < 0.01, `fill ${fill}`);
+    assert.equal(v.ringGroup.visible, false);
+  });
+
+  it('a code core with more than 2000 edges draws them fainter; a sparse one keeps the base opacity', () => {
+    const v = make({ reducedMotion: true });
+    const sparse = chainGraph(40, 'sp');
+    v.setGraph(sparse, orbit.orbitLayout(sparse));
+    const edgeOf = (view) => view.coreGroup.children.find((o) => o.isLineSegments && o.material.vertexColors);
+    const base = edgeOf(v).material.opacity;
+    const dense = chainGraph(2105, 'dn');
+    v.setGraph(dense, orbit.orbitLayout(dense));
+    const faint = edgeOf(v).material.opacity;
+    assert.ok(faint <= 0.1 && faint >= 0.05, `dense opacity ${faint}`);
+    assert.ok(base > faint, `sparse ${base} > dense ${faint}`);
   });
 
   it('zoom limits follow the layout radius on every setGraph, not only on framing', () => {
@@ -1453,7 +1474,7 @@ describe('OrbitView: the OS graph (fake renderer)', () => {
     assert.equal(labelsIn().length, 3);
     v.setGraph(graph, orbit.orbitLayout(graph));
     assert.equal(labelsIn().length, 0, 'the OS labels are removed on the way back');
-    assert.equal(v.ringGroup.visible, true, 'the ring comes back in the code brain');
+    assert.equal(v.ringGroup.visible, false, 'the code brain draws no activity ring');
     assert.equal(v.vizGraph, null);
     assert.ok(v.corePoints.geometry !== oldGeo);
   });

@@ -207,6 +207,11 @@ const FRAME_ELEVATION = 0.35;
  * brain's elevation it would read as a thin band, and neighbouring hubs would fall on each other.
  */
 const VIZ_FRAME_ELEVATION = 0.9;
+/** Above this many code edges the edges are drawn fainter, so the core's colours read through the fog. */
+const DENSE_EDGE_COUNT = 2000;
+const DENSE_EDGE_OPACITY = 0.08;
+/** The code core fills this much of the visible stage's shorter side (the 90th-percentile radius). */
+const CODE_CORE_FILL = 0.8;
 /** The camera is re-framed when the core's node count moves by more than this fraction. */
 const REFRAME_CHANGE_RATIO = 0.2;
 /** Zoom limits as multiples of the layout radius. The near limit reaches one part's members. */
@@ -434,6 +439,23 @@ function clampInset(value: number, size: number): number {
   return Math.max(0, Math.min(v, Math.max(0, size - 1)));
 }
 
+function centroidOf(points: Vec3[]): Vec3 {
+  const c = { x: 0, y: 0, z: 0 };
+  for (const p of points) {
+    c.x += p.x;
+    c.y += p.y;
+    c.z += p.z;
+  }
+  const n = Math.max(1, points.length);
+  return { x: c.x / n, y: c.y / n, z: c.z / n };
+}
+
+function quantileOf(values: number[], q: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))] ?? 0;
+}
+
 export class OrbitView {
   private readonly container: HTMLElement;
   private readonly speed: number;
@@ -552,6 +574,8 @@ export class OrbitView {
   private vizLevel: string | null = null;
   private ringSig: string | null = null;
   private ringRadius = 0;
+  /** The code core has more than DENSE_EDGE_COUNT edges: they draw at DENSE_EDGE_OPACITY. */
+  private denseEdges = false;
   private corePoints: THREE.Points | null = null;
   private coreColorAttr: THREE.BufferAttribute | null = null;
   private coreSizeAttr: THREE.BufferAttribute | null = null;
@@ -745,6 +769,7 @@ export class OrbitView {
     this.selAlpha = new Float32Array(this.coreItems.length).fill(1);
     const edges = buildEdgeData(graph, layout, this.coreIndex);
     this.edgeEnds = edges.ends;
+    this.denseEdges = edges.ends.length / 2 > DENSE_EDGE_COUNT;
     this.edgeBase = new Float32Array(edges.ends.length / 2).fill(1);
     if (edges.positions.length > 0) {
       const geo = new THREE.BufferGeometry();
@@ -925,12 +950,14 @@ export class OrbitView {
     // A switch of graph kind frames the camera again: the code graph's framing count starts over.
     if (this.mode !== mode) this.framedCoreCount = null;
     this.mode = mode;
-    this.ringGroup.visible = mode === "code";
+    // The code graph draws no ring: the recent items are the Activity hub's, not the brain's.
+    this.ringGroup.visible = false;
   }
 
   /** The radius framing and zoom use: the core, and in the code graph also the ring. */
   private recomputeRadius(): void {
-    this.radius = Math.max(this.coreRadius, this.mode === "code" ? this.ringRadius : 0, 1);
+    // The page draws no activity ring (the Activity hub shows it), so the radius is the core's.
+    this.radius = Math.max(this.coreRadius, 1);
   }
 
   /**
@@ -1412,7 +1439,7 @@ export class OrbitView {
     const kind = mat.userData.lineKind as "edge" | "vizEdge" | "ring";
     const style = LINE_STYLE[kind][this.theme];
     mat.color.setHex(style.color);
-    mat.opacity = style.opacity;
+    mat.opacity = kind === "edge" && this.denseEdges ? Math.min(style.opacity, DENSE_EDGE_OPACITY) : style.opacity;
   }
 
   /**
@@ -1438,13 +1465,29 @@ export class OrbitView {
     if (viz && this.fitPoints.length > 0) {
       dist = fitDistance(this.fitPoints, dir, { x: 0, y: 0, z: 0 }, tanV, aspect, VIZ_FILL, dist);
     }
+    // The code brain is centred on its core's centroid, and its 90th-percentile radius (as a sphere: six
+    // points on its axes) fills CODE_CORE_FILL of the visible stage's shorter side.
+    let target = { x: 0, y: 0, z: 0 };
+    if (!viz && this.coreItems.length > 0) {
+      const pts = this.corePositions();
+      if (pts.length > 0) {
+        target = centroidOf(pts);
+        const r90 = quantileOf(pts.map((p) => Math.hypot(p.x - target.x, p.y - target.y, p.z - target.z)), 0.9);
+        const sphere = [
+          { x: target.x + r90, y: target.y, z: target.z }, { x: target.x - r90, y: target.y, z: target.z },
+          { x: target.x, y: target.y + r90, z: target.z }, { x: target.x, y: target.y - r90, z: target.z },
+          { x: target.x, y: target.y, z: target.z + r90 }, { x: target.x, y: target.y, z: target.z - r90 },
+        ];
+        if (r90 > 0) dist = fitDistance(sphere, dir, target, tanV, aspect, CODE_CORE_FILL, dist);
+      }
+    }
     this.home = {
-      position: new THREE.Vector3(0, dir.y * dist, dir.z * dist),
-      target: new THREE.Vector3(0, 0, 0),
+      position: new THREE.Vector3(target.x, target.y + dir.y * dist, target.z + dir.z * dist),
+      target: new THREE.Vector3(target.x, target.y, target.z),
     };
     this.camera.position.copy(this.home.position);
     this.controls.target.copy(this.home.target);
-    this.camera.lookAt(0, 0, 0);
+    this.camera.lookAt(this.home.target);
     this.applyZoomLimits();
     this.camera.near = Math.max(1e-3, this.radius * 0.01);
     this.camera.far = Math.max(dist * 5, this.radius * 20);
@@ -1452,6 +1495,18 @@ export class OrbitView {
     this.camera.updateMatrixWorld();
     this.userMoved = false;
     this.cancelTween();
+  }
+
+  /** The layout positions of the core nodes (drawn ones only), in core order. */
+  private corePositions(): Vec3[] {
+    const core = this.layout?.core;
+    if (!core) return [];
+    const out: Vec3[] = [];
+    for (const item of this.coreItems) {
+      const p = core.get(item.id);
+      if (p) out.push(p);
+    }
+    return out;
   }
 
   /** Zoom bounds as multiples of the scene radius (core and ring). Recomputed whenever the radius changes. */

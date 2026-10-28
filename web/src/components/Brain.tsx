@@ -118,7 +118,7 @@ export function Brain({
   const ready = inCode && drawing && status === 'ready' && graph.core.length > 0;
   const truncated = graph.truncated.totalNodes > graph.truncated.keptNodes;
   const codeCaption = ready
-    ? `${fmtInt(graph.core.length)} nodes · ${fmtInt(ring.items.length)} recent${
+    ? `${fmtInt(graph.core.length)} nodes${
         truncated ? ` · showing ${fmtInt(graph.truncated.keptNodes)} of ${fmtInt(graph.truncated.totalNodes)}` : ''
       }`
     : null;
@@ -329,7 +329,8 @@ export function Brain({
           <OrbitPanel
             ref={brainRef}
             core={inCode && drawing ? core : null}
-            ring={drawing ? ring : null}
+            // The Code level draws no activity ring: the Activity hub (and its drill-down) shows the recent items.
+            ring={null}
             viz={!inCode && drawing && viz ? viz : null}
             showEmpty={settled && drawing}
             selectedId={state.selected?.id ?? null}
@@ -477,10 +478,6 @@ export function Brain({
                 </li>
               ))}
               {clusters.length > CLUSTER_LEGEND_LIMIT ? <li>and {fmtInt(clusters.length - CLUSTER_LEGEND_LIMIT)} more</li> : null}
-              <li>
-                <span className="os-swatch os-swatch-ring" aria-hidden="true" />
-                Recent activity
-              </li>
             </ul>
           ) : inCode && colorBy === 'kind' && codeKinds.length > 0 ? (
             <ul className="os-legend" aria-label="Kind legend">
@@ -491,10 +488,6 @@ export function Brain({
                 </li>
               ))}
               {codeKinds.length > KIND_LEGEND_LIMIT ? <li>and {fmtInt(codeKinds.length - KIND_LEGEND_LIMIT)} more</li> : null}
-              <li>
-                <span className="os-swatch os-swatch-ring" aria-hidden="true" />
-                Recent activity
-              </li>
             </ul>
           ) : inCode ? (
             <ul className="os-legend" aria-label="Colour legend">
@@ -504,10 +497,6 @@ export function Brain({
                   {label}
                 </li>
               ))}
-              <li>
-                <span className="os-swatch os-swatch-ring" aria-hidden="true" />
-                Recent activity
-              </li>
             </ul>
           ) : vizGraph ? (
             <ul className="os-legend" aria-label="Kind legend">
