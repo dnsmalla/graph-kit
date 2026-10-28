@@ -215,7 +215,7 @@ h1 {
   background: var(--tok-color-body);
 }
 
-.os-brain-drawer {
+.os-centre-drawer {
   --os-inset-right: 396px;
   --os-inset-bottom: 0px;
 }
@@ -250,6 +250,24 @@ h1 {
 }
 
 /* Breadcrumb and Back: the top-left pill. */
+.os-top-left .os-crumbs {
+  min-height: 26px;
+  padding: 2px var(--tok-space-sm);
+  background: var(--tok-color-surface2);
+  border: 1px solid var(--tok-color-border);
+  border-radius: 999px;
+}
+
+/* Script focus (the heading takes focus on a level change) draws no ring; keyboard focus still does. */
+[tabindex='-1']:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.os-top-chips .chip {
+  background: var(--tok-color-surface2);
+  color: var(--tok-color-text);
+}
+
 .os-top-left {
   position: absolute;
   top: var(--tok-space-sm);
@@ -265,9 +283,11 @@ h1 {
 .os-top-centre {
   position: absolute;
   top: var(--tok-space-sm);
-  left: 50%;
+  /* Centred on the graph area: the drawer's inset is taken off the stage's width. */
+  left: calc((100% - var(--os-inset-right, 0px)) / 2);
   transform: translateX(-50%);
   z-index: 4;
+  transition: left 180ms ease;
 }
 
 .os-top-centre .os-search-input {
@@ -1231,7 +1251,7 @@ select:focus-visible {
 
 /* ---- narrow stage: the drawer becomes a bottom sheet over the lower 46%; the search takes a row ---- */
 @media (max-width: 760px) {
-  .os-brain-drawer {
+  .os-centre-drawer {
     --os-inset-right: 0px;
     --os-inset-bottom: 46%;
   }

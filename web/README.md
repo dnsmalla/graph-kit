@@ -31,20 +31,56 @@ Wire types (`OsSnapshot`, `OsCancel`, ...) come from graph-kit's core
 
 ## Layout
 
-The page is an "Agentic OS" stage. A header (title, project, Day/Week, live
-status) sits above three columns, and the brain is the centre:
+The page is the graph. A slim top bar (title, project, Day|Week, live status, the update time,
+and two chips: server health, which opens Kits, and "N running", which opens Agents and is hidden
+at zero) sits above a stage that fills the rest of the viewport. The stage holds the brain and
+its overlays:
 
-- **Left:** System map, Running now, Skills (a card deck, count in the header).
-- **Centre:** the project brain (`OrbitPanel`, a three.js view). The selected
-  item is overlaid bottom-left. Below the brain are a colour legend and a
-  "Recent" list of the latest five activity items (each row selects its ring
-  item, so the list works without WebGL).
-- **Right:** Token flow, Memory and knowledge, Routines (the Open Loop and Open
-  Auto Tasks buttons sit in its header).
+- **Top left:** the breadcrumb (`OS › <part>`) with Back, and the 3D | Structure switch on the
+  code level.
+- **Top centre:** the node search (`/` focuses it). It widens on focus and centres on the graph area.
+- **Top right:** the brain toolbar (zoom, reset, pause, colour by Kind or Cluster).
+- **Bottom left:** a "Legend" chip (collapsed by default), the node and link counts, and on the OS
+  level an "Activity" chip that opens the recent-activity timeline in the drawer.
+- **Right:** the details drawer (380 px). Under 760 px wide it is a bottom sheet over the lower 46%.
 
-Below 1100px the columns stack: the brain first, then the left and right
-panels. Category colours are the `--os-cat-*` tokens in `src/os-tokens.css`; the
-light theme uses darker shades so each swatch keeps 3:1 against its surface.
+The drawer shows what is selected, or the level's overview when nothing is:
+
+- A **node** selected in the brain (or from search or the code tree) shows its details: the
+  `Selection` card (status, meta table, actions) or, on the code level, the code-node card (path,
+  links, Open in Explorer, Preview code).
+- A **hub** selected on the OS (one click) shows that hub's overview, with Explore to drill in. A
+  drilled-in hub shows its overview by default.
+- The **activity** chip shows the timeline. An unknown or empty level shows nothing.
+
+Each drawer can be hidden with Hide; the state is remembered per level, and a selection re-opens
+it. Escape hides the drawer first, then goes back a level.
+
+The canvas makes room for the drawer (its right inset, or its bottom inset on a narrow stage), so
+nothing the brain draws sits under it and the selected node stays in view.
+
+### Hub overviews
+
+`src/components/HubOverview.tsx` renders one overview per hub from the snapshot and the optional
+data sets the controller already holds. Nothing in it fetches.
+
+| Hub | Overview | Sourced from |
+|---|---|---|
+| Models | Token flow: window, totals, cache share, by model / source / endpoint, per-turn composition | `snapshot.tokens` |
+| Kits | System map: server health, Database / Claude CLI / Skills checks, kit cards (click selects the kit's node) | `snapshot.system` |
+| Knowledge | Memory and knowledge: Sources, Meetings, Pending reviews, Outcomes, sources by kind, code-graph freshness, Open Library | `snapshot.knowledge` |
+| Memory | Project memory: per repo, facts, active, superseded, last confirmed | `snapshot.knowledge.projectMemory` |
+| Skills | Searchable skill list with source chip and description (click selects the node) | `loadSkills` |
+| Routines | Table (enabled, title, schedule, next and last run); Open Loop, Open Auto Tasks | `loadRoutines` |
+| Agents | Running now: chat turns, meeting agents, live captures; Stop wired to `controller.stopItem` | `snapshot.running` |
+| Activity | Timeline: kind, title, time ago; a row selects its ring item | `snapshot.activity` |
+| Code | Node, community and repo counts, largest clusters, how to explore | the project graph |
+
+The old side cards (System map, Running now, Skills, Token flow, Memory and knowledge, Routines) are
+gone; their figures and actions are reached through the hub that owns them.
+
+Category colours are the `--os-cat-*` tokens in `src/os-tokens.css`; the light theme uses darker
+shades so each swatch keeps 3:1 against its surface.
 
 ### Brain controls
 
@@ -97,7 +133,7 @@ Agents, Routines, Kits) with that part's members around it. The core builds it
 (`computeOsView`, keyed on the core's identity and the content of the snapshot parts the view
 reads, so an activity-only refresh keeps it) and each graph's layout (`computeVizLayout`).
 
-- **Click a hub** to select it (its details card, with an Explore button). **Double-click** a
+- **Click a hub** to select it (its overview in the drawer, with an Explore button). **Double-click** a
   hub, press Enter, or press Explore to open its part. The breadcrumb reads `OS › <part>`; `OS`
   and Back return, and Escape returns from a part (not while typing in a field). The OS returns
   with that hub selected. Code is the part whose graph is the project's own (the code brain).
@@ -113,12 +149,12 @@ reads, so an activity-only refresh keeps it) and each graph's layout (`computeVi
 - **Each level remembers its camera**: leaving a level records its pose, and returning puts the
   camera back. The brain registers how to read its camera with the controller
   (`setCameraSource`), so every navigation records the level it leaves.
-- **Select a node** for its details card: a status chip, a meta table (numbers with separators,
-  dates relative, arrays as counts, nested objects as key: value lines) and the actions its kind
-  offers: Explore on a hub, Open Auto Tasks (routines), Open Settings (kits, features, checks),
-  Open Library (source kinds), and Stop for a running chat turn or meeting agent.
-- **Side panels** open their node: a kit card, a routine row, a skill card, or a knowledge row
-  opens its part and selects the node there.
+- **Select a node** for its details in the drawer: a status chip, a meta table (numbers with
+  separators, dates relative, arrays as counts, nested objects as key: value lines) and the actions
+  its kind offers: Explore on a hub, Open Auto Tasks (routines), Open Settings (kits, features,
+  checks), Open Library (source kinds), and Stop for a running chat turn or meeting agent.
+- **Overview rows** open their node: a kit, routine, skill, knowledge row or memory repo opens its
+  part and selects the node there.
 - **Colour**: a point takes its kind's colour; a status tints it (ok green, warn amber, running
   blue with a pulse, off greyed, unknown neutral); hubs are larger and brighter. Labels are HTML
   over the canvas for the labelled nodes only. A labelled edge shows its label on hover.
@@ -128,7 +164,7 @@ in `src/viz.ts` (not in `typescript/src/system/types.ts`).
 
 ### Code node details
 
-In the code level, selecting a node opens a drawer on the right of the stage:
+In the code level, selecting a node opens the details drawer on the right of the stage:
 
 - kind, category, cluster, degree and the file path (with Copy);
 - **Depends on** / **Used by** from the project graph's dependency edges (imports, calls,
