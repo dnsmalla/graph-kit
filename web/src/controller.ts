@@ -4,8 +4,23 @@
 import type { CGData } from '../../typescript/src/models';
 import { copyToClipboard } from './clipboard';
 import { isRepoPath } from './fileTree';
-import { OsAuthError, type OsFileContent, type OsHost, type OsOpenTarget, type OsRange } from './host';
-import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot } from './types';
+import { OsAuthError, OsStorageError, type OsClearRequest, type OsFileContent, type OsHost, type OsOpenTarget, type OsRange } from './host';
+import {
+  cleared,
+  clearFailure,
+  compactDone,
+  compactFailed,
+  compactStarted,
+  confirming,
+  failed as clearFailed,
+  previewed,
+  previewing,
+  retentionError,
+  type ClearFlow,
+  type ClearScope,
+  type CompactFlow,
+} from './storageFlow';
+import type { OsCancel, OsLiveStatus, OsRoutine, OsSkill, OsSnapshot, OsStorageSettings } from './types';
 import { HUB_TITLES, isHubKey, levelKey, type CameraPose, type OsView, type ViewLevel } from './viz';
 
 export const REFRESH_DEBOUNCE_MS = 300;
@@ -52,6 +67,21 @@ export type ExtraStatus = 'idle' | 'loading' | 'ready' | 'none' | 'error';
  */
 export type OsSelection = { type: 'core' | 'ring' | 'viz'; id: string; label: string; detail: string };
 
+/**
+ * The Storage hub's controls and flows. `canClear`, `canCompact` and `canSetRetention` say what the
+ * host supplies (the buttons are hidden or disabled without them). `retentionDays` is the host's
+ * setting once loaded, null before or when the host has none.
+ */
+export type StorageView = {
+  canClear: boolean;
+  canCompact: boolean;
+  canSetRetention: boolean;
+  retentionDays: number | null;
+  clear: ClearFlow;
+  compact: CompactFlow;
+  retention: { status: 'idle' | 'saving' | 'saved' | 'error'; message: string | null };
+};
+
 export type ViewState = {
   projectName: string | null;
   range: OsRange;
@@ -89,6 +119,8 @@ export type ViewState = {
   drawerClosed: Record<string, boolean>;
   /** The OS level's side panel when nothing is selected: the recent activity list, or none. */
   osPanel: 'activity' | null;
+  /** The Storage hub's flows (clear, compact, retention). */
+  storage: StorageView;
 };
 
 export type ControllerDeps = {
@@ -251,6 +283,7 @@ export class OsController {
   private graphSeq = 0;
   private skillsSeq = 0;
   private routinesSeq = 0;
+  private storageSeq = 0;
   /** The latest code-preview request; an older response is dropped. */
   private fileSeq = 0;
   /** The camera each level was left at, by levelKey: returning to a level puts the camera back. */
@@ -287,6 +320,15 @@ export class OsController {
       codeTab: 'brain',
       drawerClosed: {},
       osPanel: null,
+      storage: {
+        canClear: typeof deps.host.storageClear === 'function',
+        canCompact: typeof deps.host.storageCompact === 'function',
+        canSetRetention: typeof deps.host.setStorageRetention === 'function',
+        retentionDays: null,
+        clear: { kind: 'idle' },
+        compact: { kind: 'idle' },
+        retention: { status: 'idle', message: null },
+      },
     };
   }
 
@@ -347,6 +389,7 @@ export class OsController {
       skillsStatus: 'idle',
       routines: null,
       routinesStatus: 'idle',
+      storage: { ...this.state.storage, retentionDays: null, clear: { kind: 'idle' }, compact: { kind: 'idle' }, retention: { status: 'idle', message: null } },
       filePreview: null,
       drawerClosed: {},
       osPanel: null,
@@ -574,6 +617,7 @@ export class OsController {
     void this.loadProjectGraph();
     void this.loadSkills();
     void this.loadRoutines();
+    void this.loadStorageSettings();
   }
 
   /** Asks the host to navigate to one of its screens. */
@@ -759,6 +803,152 @@ export class OsController {
       }
       if (seq !== this.routinesSeq) return;
       this.set({ routines: null, routinesStatus: 'error' });
+    }
+  }
+
+  /** Loads the retention setting (host.storageSettings) for the editor. A failure leaves it unset. */
+  private async loadStorageSettings(): Promise<void> {
+    const host = this.deps.host;
+    const load = host.storageSettings;
+    const seq = ++this.storageSeq;
+    if (typeof load !== 'function') return;
+    try {
+      const settings: OsStorageSettings = await load.call(host);
+      if (this.disposed || seq !== this.storageSeq) return;
+      if (settings && typeof settings.retentionDays === 'number') this.setStorage({ retentionDays: settings.retentionDays });
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) this.handleAuthError();
+    }
+  }
+
+  private setStorage(patch: Partial<StorageView>): void {
+    this.set({ storage: { ...this.state.storage, ...patch } });
+  }
+
+  /** Dry run for a clear: shows the counts and the previewId. Needs host.storageClear. */
+  async storageClearPreview(scope: ClearScope, beforeDays: number | null): Promise<void> {
+    if (this.disposed || !this.state.storage.canClear) return;
+    this.setStorage({ clear: previewing(scope, beforeDays) });
+    await this.runPreview(scope, beforeDays, null);
+  }
+
+  /**
+   * Sends the real clear for the preview on screen (its previewId). Only a shown preview can be
+   * confirmed. A stale preview (expired, invalid or changed rows) re-previews once with a notice; the
+   * user must confirm the fresh counts. Any other failure shows its message.
+   */
+  async storageClearConfirm(): Promise<void> {
+    const flow = this.state.storage.clear;
+    const host = this.deps.host;
+    if (this.disposed || flow.kind !== 'confirm' || typeof host.storageClear !== 'function') return;
+    const { scope, beforeDays, preview } = flow;
+    this.setStorage({ clear: confirming(flow) });
+    const req: OsClearRequest = { scope, dryRun: false, previewId: preview.previewId };
+    if (beforeDays !== null) req.beforeDays = beforeDays;
+    try {
+      const result = await host.storageClear(req);
+      if (this.disposed) return;
+      if (result.dryRun !== false) {
+        this.setStorage({ clear: clearFailed(scope, beforeDays, 'The host did not clear the history.') });
+        return;
+      }
+      this.setStorage({ clear: cleared(this.state.storage.clear, result) });
+      await this.refresh();
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      const code = err instanceof OsStorageError ? err.code : '';
+      const action = clearFailure(code, describe(err));
+      if (action.action === 'repreview') {
+        await this.runPreview(scope, beforeDays, action.notice);
+        return;
+      }
+      this.setStorage({ clear: clearFailed(scope, beforeDays, action.message) });
+    }
+  }
+
+  /** Puts the Clear flow back to idle (the user closed the preview or the result). */
+  storageClearCancel(): void {
+    this.setStorage({ clear: { kind: 'idle' } });
+  }
+
+  /** The dry run shared by a fresh preview and a re-preview after a stale one. Sets confirm or failed. */
+  private async runPreview(scope: ClearScope, beforeDays: number | null, notice: string | null): Promise<void> {
+    const host = this.deps.host;
+    if (typeof host.storageClear !== 'function') return;
+    const req: OsClearRequest = { scope, dryRun: true };
+    if (beforeDays !== null) req.beforeDays = beforeDays;
+    try {
+      const result = await host.storageClear(req);
+      if (this.disposed) return;
+      if (result.dryRun !== true) {
+        this.setStorage({ clear: clearFailed(scope, beforeDays, 'The host did not return a preview.') });
+        return;
+      }
+      this.setStorage({ clear: previewed(scope, beforeDays, result, notice) });
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      const code = err instanceof OsStorageError ? err.code : '';
+      // A preview that fails again is not retried: the user sees why and starts the clear over.
+      const action = clearFailure(code, describe(err));
+      this.setStorage({ clear: clearFailed(scope, beforeDays, action.action === 'fail' ? action.message : 'Could not preview the clear.') });
+    }
+  }
+
+  /** Compacts the agent store. Needs host.storageCompact; busy, disk_space and store_down are typed. */
+  async storageCompact(): Promise<void> {
+    const host = this.deps.host;
+    if (this.disposed || typeof host.storageCompact !== 'function' || this.state.storage.compact.kind === 'running') return;
+    this.setStorage({ compact: compactStarted() });
+    try {
+      const result = await host.storageCompact();
+      if (this.disposed) return;
+      this.setStorage({ compact: compactDone(result) });
+      await this.refresh();
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      const code = err instanceof OsStorageError ? err.code : 'failed';
+      this.setStorage({ compact: compactFailed(code, describe(err)) });
+    }
+  }
+
+  /** Saves the retention (7 to 365 days). A value out of range is refused here, before the host is asked. */
+  async setStorageRetention(days: number): Promise<void> {
+    const host = this.deps.host;
+    if (this.disposed || typeof host.setStorageRetention !== 'function') return;
+    const error = retentionError(days);
+    if (error !== null) {
+      this.setStorage({ retention: { status: 'error', message: error } });
+      return;
+    }
+    this.setStorage({ retention: { status: 'saving', message: null } });
+    try {
+      const saved = await host.setStorageRetention(days);
+      if (this.disposed) return;
+      this.setStorage({
+        retentionDays: typeof saved?.retentionDays === 'number' ? saved.retentionDays : days,
+        retention: { status: 'saved', message: null },
+      });
+      await this.refresh();
+    } catch (err) {
+      if (this.disposed) return;
+      if (isAuthError(err)) {
+        this.handleAuthError();
+        return;
+      }
+      this.setStorage({ retention: { status: 'error', message: `Could not save the retention: ${describe(err)}` } });
     }
   }
 
