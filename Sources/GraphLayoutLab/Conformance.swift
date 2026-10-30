@@ -4,7 +4,7 @@ import GraphCore
 
 /// Cross-implementation conformance for the shared Rust layout kernel (`rust/graph-layout`).
 ///
-/// `--emit-conformance <dir> [--large]` writes, per case, the kernel's binary input
+/// `--emit-conformance <dir> [--large] [--runs N]` writes, per case, the kernel's binary input
 /// (`<name>.in.bin`) and Swift's own result in the kernel's binary OUTPUT format
 /// (`<name>.swift.bin`). Any implementation that writes `<name>.<suffix>.bin` in that format
 /// can then be checked with `--verify-conformance <dir> <suffix>`: structure must match
@@ -49,6 +49,8 @@ enum Conformance {
             out += [
                 Case(name: "code-large-8100",
                      data: SyntheticGraph.codebase(modules: 30, filesPerModule: 30, symbolsPerFile: 8)),
+                Case(name: "code-30k",
+                     data: SyntheticGraph.codebase(modules: 65, filesPerModule: 65, symbolsPerFile: 6)),
                 Case(name: "code-45k",
                      data: SyntheticGraph.codebase(modules: 80, filesPerModule: 80, symbolsPerFile: 6)),
             ]
@@ -132,12 +134,24 @@ enum Conformance {
 
     // MARK: Modes
 
-    static func emit(dir: String, schemaDir: String, large: Bool) {
+    static func emit(dir: String, schemaDir: String, large: Bool, runs: Int = 1) {
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         for c in cases(schemaDir: schemaDir, large: large) {
             var options = GraphLayoutOptions.automatic(nodeCount: c.data.nodes.count)
             options.measureQuality = false
-            let layout = GraphLayoutEngine.layout(c.data, options: options)
+            var layout = GraphLayoutEngine.layout(c.data, options: options)
+            if runs > 1 {
+                // Timing: median wall ms of `runs` further layouts, written next to the result.
+                var ms: [Double] = []
+                for _ in 0..<runs {
+                    let t0 = DispatchTime.now().uptimeNanoseconds
+                    layout = GraphLayoutEngine.layout(c.data, options: options)
+                    ms.append(Double(DispatchTime.now().uptimeNanoseconds - t0) / 1e6)
+                }
+                ms.sort()
+                try! String(format: "%.1f", ms[ms.count / 2])
+                    .write(toFile: "\(dir)/\(c.name).swift.ms", atomically: true, encoding: .utf8)
+            }
             let topology = GraphTopology(c.data, minWeight: options.minWeight)
             let ids = topology.idByIndex
             let out = encodeOutput(positions: ids.map { layout.positions[$0]! },

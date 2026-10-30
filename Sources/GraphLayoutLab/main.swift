@@ -53,7 +53,8 @@ let wantsCompare = arguments.contains("--compare") || svgDirectory != nil
 // Shared-kernel conformance (rust/graph-layout); see Conformance.swift.
 let conformanceSchemaDir = flagValue("--schema-dir") ?? "schema/fixtures"
 if let dir = flagValue("--emit-conformance") {
-    Conformance.emit(dir: dir, schemaDir: conformanceSchemaDir, large: arguments.contains("--large"))
+    Conformance.emit(dir: dir, schemaDir: conformanceSchemaDir, large: arguments.contains("--large"),
+                     runs: flagValue("--runs").flatMap(Int.init) ?? 1)
     exit(0)
 }
 if let dir = flagValue("--verify-conformance") {
