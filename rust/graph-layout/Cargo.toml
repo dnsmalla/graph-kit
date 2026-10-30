@@ -1,0 +1,16 @@
+[package]
+name = "graph-layout"
+version = "0.1.0"
+edition = "2021"
+description = "Shared 2D graph layout kernel: same algorithm and contract as GraphCore's Swift GraphLayoutEngine (weighted edges, no pruning, deterministic seeds)"
+publish = false
+
+[lib]
+name = "graph_layout"
+path = "src/lib.rs"
+# cdylib: the wasm32 module and a C-ABI shared library. rlib: cargo test and Rust callers.
+crate-type = ["cdylib", "rlib"]
+
+# No dependencies on purpose: the plain wasm32 C ABI below needs no wasm-bindgen glue,
+# so the .wasm is loadable from any host (Node, a webview, a native WASM runtime).
+[dependencies]

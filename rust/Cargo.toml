@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["os-graph"]
+members = ["os-graph", "graph-layout"]
 
 # The wasm bundle ships embedded in web/ (base64 in JS), so size matters more than speed.
 # Native tests and the parity gate are unaffected: they check output, not timing, at this profile.
@@ -10,3 +10,8 @@ lto = true
 codegen-units = 1
 strip = true
 panic = "abort"
+
+# The layout kernel is compute-bound: the spike measured opt-level 3 at 0.86-0.91 s vs 1.0-1.4 s
+# for "s" at 8.1k nodes. Size is 93 KB either way, so speed wins for this package only.
+[profile.release.package.graph-layout]
+opt-level = 3
