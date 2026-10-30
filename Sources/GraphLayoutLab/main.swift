@@ -50,6 +50,17 @@ let svgDirectory = flagValue("--svg")
 let jsonPath = flagValue("--json")
 let wantsCompare = arguments.contains("--compare") || svgDirectory != nil
 
+// Shared-kernel conformance (rust/graph-layout); see Conformance.swift.
+let conformanceSchemaDir = flagValue("--schema-dir") ?? "schema/fixtures"
+if let dir = flagValue("--emit-conformance") {
+    Conformance.emit(dir: dir, schemaDir: conformanceSchemaDir, large: arguments.contains("--large"))
+    exit(0)
+}
+if let dir = flagValue("--verify-conformance") {
+    let suffix = arguments.firstIndex(of: "--verify-conformance").flatMap { $0 + 2 < arguments.count ? arguments[$0 + 2] : nil } ?? "rust"
+    exit(Conformance.verify(dir: dir, suffix: suffix, schemaDir: conformanceSchemaDir) == 0 ? 0 : 1)
+}
+
 // MARK: - Cases
 
 var cases: [Case] = []
