@@ -1,7 +1,7 @@
 //! Kernel contract tests. Cross-implementation conformance against Swift lives in
 //! `scripts/layout-conformance.sh`; these pin the contract the Swift engine states.
 
-use graph_layout::{base_weight, layout, parse, run_bytes, Input, Topology};
+use graph_layout::{base_weight, layout, pair_key, parse, run_bytes, Input, Topology};
 
 /// Every `CGEdgeKind` raw value in `Sources/GraphCore/Model/CodeGraphModels.swift`.
 const ALL_KINDS: [&str; 37] = [
@@ -115,6 +115,19 @@ fn parse_rejects_truncated_and_unknown_kind() {
     assert!(parse(&bytes[..bytes.len() - 3]).is_err());
     let bad = input(2, &[(0, 1, "bogusKind", 0)]);
     assert!(parse(&encode(&bad)).is_err());
+    // A kind index past the kind table is an input error (return code 1), not a panic.
+    let mut bad_index = input(2, &[(0, 1, "calls", 0)]);
+    bad_index.edges[0].2 = 5;
+    assert!(run_bytes(&encode(&bad_index)).is_err());
+}
+
+#[test]
+fn pair_keys_do_not_collide_past_32_bit_products() {
+    // At n=70,000, (1,14104) and (61357,61400) share the old `s*n+t` key once it wraps to 32 bits
+    // (wasm32 usize): 84,104 both. The packed key keeps them apart and stays order-independent.
+    assert_ne!(pair_key(1, 14_104), pair_key(61_357, 61_400));
+    assert_eq!(pair_key(61_400, 61_357), pair_key(61_357, 61_400));
+    assert_ne!(pair_key(0, 1), pair_key(1, 2));
 }
 
 #[test]

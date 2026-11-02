@@ -98,6 +98,9 @@ pub fn parse(bytes: &[u8]) -> Result<Input, String> {
     let mut edges = Vec::with_capacity(m);
     for _ in 0..m {
         let rec = take(&mut at, 10)?;
+        if rec[8] as usize >= kind_count {
+            return Err("edge kind index out of range".into());
+        }
         let f = u32::from_le_bytes(rec[0..4].try_into().unwrap());
         let t = u32::from_le_bytes(rec[4..8].try_into().unwrap());
         edges.push((f, t, rec[8], rec[9]));
@@ -112,6 +115,13 @@ pub struct Link {
     pub target: usize,
     pub weight: f64,
     pub hierarchical: bool,
+}
+
+/// Unordered-pair key for parallel-edge collapse. Packed in u64 so it never depends on the width of
+/// `usize`: `s * n + t` in usize wrapped on wasm32 above ~65k nodes and merged unrelated pairs.
+pub fn pair_key(a: u32, b: u32) -> u64 {
+    let (lo, hi) = if a < b { (a, b) } else { (b, a) };
+    (lo as u64) << 32 | hi as u64
 }
 
 pub struct Topology {
@@ -147,7 +157,7 @@ impl Topology {
                 continue;
             }
             in_deg[tg] += 1;
-            let key = if s < tg { (s * n + tg) as u64 } else { (tg * n + s) as u64 };
+            let key = pair_key(f, t);
             let h = is_hierarchical(&input.kinds[k as usize]);
             if let Some(&existing) = index_by_pair.get(&key) {
                 if weight > peak[existing] {
