@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { OsController, ViewState } from './controller';
 import type { OsRange } from './host';
 import type { OsLiveStatus } from './types';
-import { fmtClock, fmtInt } from './format';
+import { fmtClock, fmtDuration, fmtInt, fmtRelative } from './format';
 import { drawOs, drawViews, osGraphStatus, vizForLevel, whenOsGraphReady, type OsGraphStatus, type VizView } from './systemGraph';
 import { Brain } from './components/Brain';
 
@@ -120,6 +120,67 @@ function SummaryBar({ state, controller }: { state: ViewState; controller: OsCon
   );
 }
 
+
+/** The LLM data rail: models, recent agent runs and the newest activity, always on screen. */
+function LlmRail({ state, controller }: { state: ViewState; controller: OsController }) {
+  const data = state.data;
+  if (!data) return null;
+  const models = [...data.tokens.byModel].sort((a, b) => b.billable - a.billable).slice(0, 4);
+  const max = Math.max(1, ...models.map((m) => m.billable));
+  const runs = data.agents.recentRuns.slice(0, 4);
+  const activity = data.activity.items.slice(0, 4);
+  const windowLabel = data.tokens.window === 'day' ? 'today' : '7 days';
+  return (
+    <aside className="os-rail" aria-label="LLM data">
+      <section className="os-rail-card">
+        <p className="os-rail-kicker">LLM usage · {windowLabel}</p>
+        <div className="os-rail-stats">
+          <span><strong>{fmtInt(data.tokens.totals.calls)}</strong><small>calls</small></span>
+          <span><strong>{fmtInt(data.tokens.totals.billable)}</strong><small>billable</small></span>
+          <span><strong>{fmtInt(data.tokens.totals.cacheRead)}</strong><small>cache read</small></span>
+        </div>
+        <ul className="os-rail-bars">
+          {models.map((m) => (
+            <li key={`${m.provider}/${m.model}`}>
+              <div><span>{m.model}</span><span className="os-rail-muted">{fmtInt(m.billable)}</span></div>
+              <span className="os-rail-bar"><i style={{ width: `${Math.max(2, (m.billable / max) * 100)}%` }} /></span>
+            </li>
+          ))}
+          {models.length === 0 ? <li className="os-rail-muted">No model calls in this window.</li> : null}
+        </ul>
+        <button type="button" className="os-rail-link" onClick={() => controller.drill('models')}>Open model details</button>
+      </section>
+      <section className="os-rail-card">
+        <p className="os-rail-kicker">Recent agent runs</p>
+        <ul className="os-rail-list">
+          {runs.map((r) => (
+            <li key={r.id}>
+              <span className="os-rail-dot" data-status={r.status} aria-hidden="true" />
+              <span className="os-rail-grow">{r.source} · {r.model ?? 'model n/a'}</span>
+              <span className="os-rail-muted">{r.durationMs ? fmtDuration(r.durationMs) : fmtRelative(r.startedAt)}</span>
+            </li>
+          ))}
+          {runs.length === 0 ? <li className="os-rail-muted">No agent runs yet.</li> : null}
+        </ul>
+        <button type="button" className="os-rail-link" onClick={() => controller.drill('agents')}>Open agents</button>
+      </section>
+      <section className="os-rail-card">
+        <p className="os-rail-kicker">Latest activity</p>
+        <ul className="os-rail-list">
+          {activity.map((a) => (
+            <li key={a.id}>
+              <span className="os-rail-grow">{a.title}</span>
+              <span className="os-rail-muted">{fmtRelative(a.createdAt)}</span>
+            </li>
+          ))}
+          {activity.length === 0 ? <li className="os-rail-muted">Nothing new.</li> : null}
+        </ul>
+        <button type="button" className="os-rail-link" onClick={() => controller.drill('activity')}>Open activity</button>
+      </section>
+    </aside>
+  );
+}
+
 export function App({ controller }: { controller: OsController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const data = state.data;
@@ -150,6 +211,7 @@ export function App({ controller }: { controller: OsController }) {
     <div className="os">
       <TopBar state={state} controller={controller} />
       <SummaryBar state={state} controller={controller} />
+      <div className="os-content">
       <div className="os-stage">
         {state.signedOut ? (
           <p className="banner banner-warn os-stage-banner" role="status">
@@ -178,6 +240,8 @@ export function App({ controller }: { controller: OsController }) {
             running={data.running}
           />
         ) : null}
+      </div>
+      <LlmRail state={state} controller={controller} />
       </div>
     </div>
   );
