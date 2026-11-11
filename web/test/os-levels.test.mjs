@@ -494,3 +494,17 @@ describe('navigation after a refresh and the drill guard', () => {
     assert.equal(api.viz.DRILL_GUARD_MS, 350);
   });
 });
+
+describe('radial hub layout', () => {
+  it('keeps the hub at the centre and members on a ring instead of a long tail', () => {
+    const nodes = [
+      { id: 'agents', label: 'Agents', kind: 'hub', group: 0, size: 4, labelled: true, drill: 'agents', status: null, meta: {} },
+      ...Array.from({ length: 8 }, (_, i) => ({ id: `run${i}`, label: `Loop run ${i}`, kind: 'agentRun', group: 1, size: 1, labelled: true, drill: null, status: 'ok', meta: {} })),
+    ];
+    const layout = api.systemGraph.radialHubLayout({ level: 'agents', title: 'Agents', nodes, edges: [] });
+    assert.deepEqual(layout.core.get('agents'), { x: 0, y: 0, z: 0 });
+    const radii = nodes.slice(1).map((n) => Math.hypot(layout.core.get(n.id).x, layout.core.get(n.id).y));
+    assert.ok(Math.max(...radii) - Math.min(...radii) < 0.001, 'members share one ring');
+    assert.ok(radii[0] > 2, 'the ring clears the hub');
+  });
+});

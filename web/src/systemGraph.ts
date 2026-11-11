@@ -239,9 +239,39 @@ let vizLayoutSlot: { key: string; layout: OrbitLayout } | null = null;
 export function computeVizLayout(viz: VizGraph): OrbitLayout {
   const key = vizLayoutKey(viz);
   if (vizLayoutSlot && vizLayoutSlot.key === key) return vizLayoutSlot.layout;
-  const layout = vizLayout(viz, { seed: LAYOUT_SEED });
+  // A hub is a star: keep the hub in the middle and arrange its members in a tidy circle. The force layout
+  // is right for the whole OS, but pulls one hub's handful of nodes into a long tail (hard to scan).
+  const layout = viz.level === 'os' ? vizLayout(viz, { seed: LAYOUT_SEED }) : radialHubLayout(viz);
   vizLayoutSlot = { key, layout };
   return layout;
+}
+
+/** Hub graph layout: hub at the origin, groups in equal sectors on concentric rings. */
+export function radialHubLayout(viz: VizGraph): OrbitLayout {
+  const core = new Map<string, { x: number; y: number; z: number }>();
+  const hub = viz.nodes.find((n) => n.kind === 'hub' || n.id === viz.level) ?? viz.nodes.reduce((a, b) => (b.size > a.size ? b : a), viz.nodes[0]);
+  if (!hub) return { core, ring: new Map(), communityCenters: [], bounds: { radius: 0 } };
+  core.set(hub.id, { x: 0, y: 0, z: 0 });
+  const rest = viz.nodes.filter((n) => n.id !== hub.id);
+  const byGroup = new Map<number, typeof rest>();
+  for (const n of rest) {
+    const list = byGroup.get(n.group) ?? [];
+    list.push(n);
+    byGroup.set(n.group, list);
+  }
+  const groups = [...byGroup.entries()].sort((a, b) => a[0] - b[0]);
+  let radius = 0;
+  groups.forEach(([, members], gi) => {
+    const sector = (Math.PI * 2) / Math.max(1, groups.length);
+    const start = gi * sector - Math.PI / 2;
+    const ring = 2.8 + (gi % 3) * 0.65;
+    radius = Math.max(radius, ring);
+    members.forEach((n, j) => {
+      const angle = start + ((j + 0.5) / Math.max(1, members.length)) * sector;
+      core.set(n.id, { x: Math.cos(angle) * ring, y: Math.sin(angle) * ring, z: (j % 2 === 0 ? 1 : -1) * 0.08 });
+    });
+  });
+  return { core, ring: new Map(), communityCenters: [], bounds: { radius: radius + 1 } };
 }
 
 /** What the OS brain draws: the OS view, or the empty state with a flag saying why. */
