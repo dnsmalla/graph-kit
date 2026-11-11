@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { OsController, ViewState } from './controller';
 import type { OsRange } from './host';
 import type { OsLiveStatus } from './types';
-import { fmtClock } from './format';
+import { fmtClock, fmtInt } from './format';
 import { drawOs, drawViews, osGraphStatus, vizForLevel, whenOsGraphReady, type OsGraphStatus, type VizView } from './systemGraph';
 import { Brain } from './components/Brain';
 
@@ -86,6 +86,40 @@ function TopBar({ state, controller }: { state: ViewState; controller: OsControl
   );
 }
 
+
+/** The OS at a glance: the four figures a beginner needs before opening any hub. */
+function SummaryBar({ state, controller }: { state: ViewState; controller: OsController }) {
+  const data = state.data;
+  if (!data) return null;
+  const healthy = data.system.status === 'ok';
+  const running = data.running.chatTurns.length + data.running.meetingAgentRuns.length + data.running.liveSessions.length;
+  const windowLabel = data.tokens.window === 'day' ? 'today' : 'last 7 days';
+  return (
+    <section className="os-summary" aria-label="System at a glance">
+      <button type="button" className="os-card os-card-health" data-health={healthy ? 'ok' : 'bad'} onClick={() => controller.drill('kits')}>
+        <span className="os-card-label">System</span>
+        <strong>{healthy ? 'Healthy' : 'Degraded'}</strong>
+        <span className="os-card-meta">API {data.apiVersion} · {fmtClock(data.generatedAt)}</span>
+      </button>
+      <button type="button" className="os-card" onClick={() => controller.drill('agents')}>
+        <span className="os-card-label">Running now</span>
+        <strong>{fmtInt(running)}</strong>
+        <span className="os-card-meta">{data.running.chatTurns.length} chat · {data.running.meetingAgentRuns.length} agent · {data.running.liveSessions.length} live</span>
+      </button>
+      <button type="button" className="os-card os-card-tokens" onClick={() => controller.drill('models')}>
+        <span className="os-card-label">Model flow</span>
+        <strong>{fmtInt(data.tokens.totals.billable)} <small>billable</small></strong>
+        <span className="os-card-meta">{fmtInt(data.tokens.totals.calls)} calls · {windowLabel}</span>
+      </button>
+      <button type="button" className="os-card" onClick={() => controller.drill('activity')}>
+        <span className="os-card-label">Activity</span>
+        <strong>{fmtInt(data.activity.unread)} <small>unread</small></strong>
+        <span className="os-card-meta">{fmtInt(data.agents.recentRuns.length)} recent agent runs</span>
+      </button>
+    </section>
+  );
+}
+
 export function App({ controller }: { controller: OsController }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
   const data = state.data;
@@ -115,6 +149,7 @@ export function App({ controller }: { controller: OsController }) {
   return (
     <div className="os">
       <TopBar state={state} controller={controller} />
+      <SummaryBar state={state} controller={controller} />
       <div className="os-stage">
         {state.signedOut ? (
           <p className="banner banner-warn os-stage-banner" role="status">

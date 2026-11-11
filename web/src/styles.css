@@ -1511,3 +1511,130 @@ select:focus-visible {
 .storage-notice {
   color: var(--os-status-warn);
 }
+
+/* ---- OS at a glance: four cards between the top bar and the brain ---- */
+.os-summary {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--tok-space-sm);
+  padding: var(--tok-space-sm) var(--tok-space-md);
+  border-bottom: 1px solid var(--tok-color-border);
+  background: color-mix(in srgb, var(--tok-color-surface) 72%, var(--tok-color-body));
+}
+
+.os-card {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--tok-space-sm) var(--tok-space-md);
+  color: var(--tok-color-text);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--tok-color-surface2) 92%, transparent),
+    var(--tok-color-surface)
+  );
+  border: 1px solid var(--tok-color-border);
+  border-radius: var(--tok-radius-md);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.os-card:hover,
+.os-card:focus-visible {
+  border-color: color-mix(in srgb, var(--tok-color-accent) 48%, var(--tok-color-border));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--tok-color-body) 55%, transparent);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.os-card-label {
+  font-size: var(--tok-type-caption-size);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--os-muted);
+}
+
+.os-card strong {
+  font-size: 20px;
+  font-weight: var(--tok-type-title-weight);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.os-card strong small {
+  font-size: var(--tok-type-caption-size);
+  font-weight: var(--tok-type-body-weight);
+  color: var(--os-muted);
+}
+
+.os-card-meta {
+  font-size: var(--tok-type-caption-size);
+  color: var(--os-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.os-card-health[data-health='ok'] {
+  border-color: color-mix(in srgb, var(--os-status-ok) 42%, var(--tok-color-border));
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--os-status-ok) 12%, var(--tok-color-surface2)),
+    var(--tok-color-surface)
+  );
+}
+
+.os-card-health[data-health='ok'] strong {
+  color: var(--os-status-ok);
+}
+
+.os-card-health[data-health='bad'] strong {
+  color: var(--os-status-warn);
+}
+
+.os-card-tokens strong {
+  color: var(--tok-color-accent2);
+}
+
+/* The top bar reads as a real header, not a strip of controls. */
+.os-top {
+  min-height: 60px;
+  padding: 10px var(--tok-space-md);
+  background: linear-gradient(180deg, var(--tok-color-surface2), var(--tok-color-surface));
+}
+
+.os-top-title h1 {
+  font-size: 21px;
+  letter-spacing: -0.02em;
+}
+
+.os-top-project {
+  color: var(--os-muted);
+}
+
+.os-drawer {
+  border-radius: var(--tok-radius-lg);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--tok-color-body) 70%, transparent);
+}
+
+@media (max-width: 900px) {
+  .os-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .os-summary {
+    grid-template-columns: 1fr;
+  }
+}
