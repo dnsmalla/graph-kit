@@ -141,6 +141,11 @@ export async function scanCode(
   }
 
   // ---- Line-scanned languages (Swift / Kotlin / Python) -------------------
+  // Python resolves its imports and calls inside the tree, so it needs the scanned file set and its own name table
+  // (a Python call must never resolve to a TypeScript symbol of the same name).
+  const scannedPy = new Set(lineFiles.filter((f) => extname(f) === ".py").map((f) => relative(rootAbs, f)));
+  const pySymbolIdsByName = new Map<string, string[]>();
+  const pyCallSites: Array<{ fromId: string; name: string }> = [];
   for (const file of lineFiles) {
     const structure = scanFileByLines(file);
     if (!structure) continue;
@@ -163,11 +168,20 @@ export async function scanCode(
       })) continue;
       addEdge(fileId, id, "contains", "EXTRACTED");
       addSymbolName(symbol.name, id);
+      if (structure.language === "python") {
+        (pySymbolIdsByName.get(symbol.name) ?? pySymbolIdsByName.set(symbol.name, []).get(symbol.name)!).push(id);
+      }
     }
+    for (const call of structure.calls) pyCallSites.push({ fromId: `symbol:${rel}#${call.from}`, name: call.name });
     for (const module of structure.imports) {
-      // Module specifiers here are package/module names, not resolvable file
-      // paths, so the edge points at a synthetic module node — the same shape
-      // an unresolved TS/JS import takes.
+      // A Python import of a module in the scanned tree points at that file, so import cycles and unused files are
+      // visible in the graph. Anything else (the standard library, packages, Swift/Kotlin modules) is a name, not a
+      // path: the edge points at a synthetic module node, the same shape an unresolved TS/JS import takes.
+      const local = structure.language === "python" ? resolvePythonImport(file, module, rootAbs, scannedPy) : null;
+      if (local) {
+        addEdge(fileId, `file:${local}`, "imports", "EXTRACTED");
+        continue;
+      }
       const moduleId = `module:${module}`;
       pushNode({ id: moduleId, title: module, kind: "other",
                  metadata: { module, language: structure.language } });
@@ -175,7 +189,41 @@ export async function scanCode(
     }
   }
 
+  // Python calls, resolved like the TypeScript ones: a unique name → INFERRED, several → AMBIGUOUS, none → dropped.
+  for (const c of pyCallSites) {
+    const targets = pySymbolIdsByName.get(c.name);
+    if (!targets || !nodeIds.has(c.fromId)) continue;
+    const confidence = targets.length === 1 ? "INFERRED" : "AMBIGUOUS";
+    for (const id of targets) addEdge(c.fromId, id, "calls", confidence);
+  }
+
   return { nodes, edges, layers: [], tour: [] };
+}
+
+/**
+ * The scanned file a Python import names, repo-relative, or null. `from .m import x` / `from .. import y` resolve from
+ * the importing file's package; `import a.b` is tried beside the importing file first (a script's own folder is first on
+ * `sys.path`), then from the scan root. `a/b.py` wins over the package `a/b/__init__.py`, as in Python.
+ */
+export function resolvePythonImport(fromFile: string, module: string, rootAbs: string, scanned: ReadonlySet<string>): string | null {
+  const dots = /^\.*/.exec(module)![0].length;
+  const parts = module.slice(dots).split(".").filter(Boolean);
+  let bases: string[];
+  if (dots > 0) {
+    let dir = dirname(fromFile);
+    for (let i = 1; i < dots; i++) dir = dirname(dir);
+    bases = [dir];
+  } else {
+    bases = [dirname(fromFile), rootAbs];
+  }
+  for (const base of bases) {
+    const stem = join(base, ...parts);
+    for (const candidate of parts.length > 0 ? [`${stem}.py`, join(stem, "__init__.py")] : [join(stem, "__init__.py")]) {
+      const rel = relative(rootAbs, candidate);
+      if (!rel.startsWith("..") && scanned.has(rel)) return rel;
+    }
+  }
+  return null;
 }
 
 function emitDeclaration(

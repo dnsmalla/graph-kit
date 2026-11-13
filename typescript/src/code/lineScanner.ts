@@ -51,6 +51,13 @@ export interface LineFileStructure {
   language: string;
   imports: string[];
   symbols: LineSymbol[];
+  /** Python only: each call made inside a `def` body, as (enclosing def name, called name). */
+  calls: LineCall[];
+}
+
+export interface LineCall {
+  from: string;
+  name: string;
 }
 
 /** First identifier following `keyword `, or null. */
@@ -179,5 +186,52 @@ export function scanFileByLines(absPath: string): LineFileStructure | null {
     const symbol = symbolFromLine(line, language);
     if (symbol) symbols.push({ ...symbol, line: i + 1 });
   }
-  return { language, imports, symbols };
+  return { language, imports, symbols, calls: language === "python" ? pythonCalls(lines) : [] };
+}
+
+const PY_KEYWORDS = new Set([
+  "if", "elif", "while", "for", "return", "and", "or", "not", "in", "is", "with", "assert",
+  "yield", "await", "lambda", "del", "raise", "except", "print",
+]);
+
+/** A Python line with its string literals and trailing comment removed, so `"f(x)"` and `# g()` are not calls. */
+function pythonCode(line: string): string {
+  return line.replace(/(['"])(?:\\.|(?!\1).)*\1/g, '""').split("#")[0]!;
+}
+
+/**
+ * Calls inside each `def` body, by indentation: a line belongs to the innermost `def` whose header is less indented.
+ * Name-based like the TypeScript scanner's call graph: `f(`, `obj.f(` and `mod.f(` all record `f`, and the graph builder
+ * keeps only names that are symbols in the scanned tree. Module-level calls have no enclosing symbol and are skipped.
+ * Line-based limits: a call inside a multi-line string, or a string spanning lines, can be misread.
+ */
+export function pythonCalls(lines: readonly string[]): LineCall[] {
+  const out: LineCall[] = [];
+  const seen = new Set<string>();
+  const stack: Array<{ indent: number; name: string }> = [];
+  for (const raw of lines) {
+    const code = pythonCode(raw);
+    if (code.trim() === "") continue;
+    const indent = code.length - code.trimStart().length;
+    while (stack.length > 0 && indent <= stack[stack.length - 1]!.indent) stack.pop();
+    const header = /^(?:async\s+)?def\s+([\p{L}\p{N}_]+)/u.exec(code.trimStart());
+    if (header) {
+      stack.push({ indent, name: header[1]! });
+      continue;
+    }
+    if (/^class\s/.test(code.trimStart())) {
+      stack.push({ indent, name: "" }); // a class body is not a call site of its own
+      continue;
+    }
+    const enclosing = [...stack].reverse().find((f) => f.name !== "")?.name;
+    if (!enclosing) continue;
+    for (const m of code.matchAll(/([\p{L}_][\p{L}\p{N}_]*)\s*\(/gu)) {
+      const name = m[1]!;
+      const key = `${enclosing}\u0000${name}`;
+      if (PY_KEYWORDS.has(name) || name === enclosing || seen.has(key)) continue;
+      seen.add(key);
+      out.push({ from: enclosing, name });
+    }
+  }
+  return out;
 }

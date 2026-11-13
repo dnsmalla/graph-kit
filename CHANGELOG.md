@@ -11,6 +11,13 @@ is also accepted by `release.yml`, but prefer the plain form. The tag must equal
 ## [Unreleased]
 
 ### Added
+- **Python imports reach files, and Python calls are edges** (TypeScript CLI, `code` scan). An import of a
+  module in the scanned tree (`import utils`, `from pkg.mod import x`, `from .helpers import y`) now points at
+  that file instead of a `module:<name>` node, so a Python import cycle is a cycle in the graph and an unused
+  file has no incoming import. The standard library and packages stay module nodes. Calls inside a `def`
+  become `calls` edges, matched by name among Python symbols only (unique → INFERRED, several → AMBIGUOUS),
+  like the TypeScript call graph; calls in strings and comments are ignored. Line-based: a call inside a
+  multi-line string can be misread, and `from . import m` points at the package's `__init__.py`.
 - **OS view: Storage hub (10th) and agent runs.** Rust `rust/os-graph`: `storage` joins `HUB_KEYS`
   (one member per data group, sized by rows, status from the agent store health; a null report is
   the hub alone, off) and the Agents hub lists the newest runs that are not running now (status ring,

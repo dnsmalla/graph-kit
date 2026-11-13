@@ -1,16 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { symbolFromLine, importFromLine, scanFileByLines } from "../src/code/lineScanner.js";
+import { dirname, join } from "node:path";
+import { symbolFromLine, importFromLine, scanFileByLines, pythonCalls } from "../src/code/lineScanner.js";
 import { scanCode } from "../src/code/tsScanner.js";
 import { mergeCodeAndDoc } from "../src/build/graphMerger.js";
 
 function withTree(files: Record<string, string>, fn: (dir: string) => void | Promise<void>) {
   const dir = mkdtempSync(join(tmpdir(), "gk-line-"));
   try {
-    for (const [name, body] of Object.entries(files)) writeFileSync(join(dir, name), body);
+    for (const [name, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, name)), { recursive: true });
+      writeFileSync(join(dir, name), body);
+    }
     return fn(dir);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -189,4 +192,93 @@ test("a merge chunk missing optional wire fields does not throw", () => {
   const code = { nodes: [], edges: [], layers: [], tour: [] };
   const bare = { id: "chunk:1" } as { id: string };
   assert.doesNotThrow(() => mergeCodeAndDoc(code, code, [bare]));
+});
+
+// --------------------------------------------------------------------------
+// Python imports and calls inside the scanned tree.
+//
+// Imports used to stop at a `module:<name>` node, so `a.py` importing `b`
+// never reached `b.py`: an import cycle was not a cycle in the graph, and an
+// unused file looked like every other file (no file had incoming imports).
+// --------------------------------------------------------------------------
+
+const has = (g: { edges: Array<{ fromId: string; toId: string; kind: string }> }, kind: string, from: string, to: string) =>
+  g.edges.some((e) => e.kind === kind && e.fromId === from && e.toId === to);
+
+test("a python import of a scanned module points at its file; the standard library stays a module node", async () => {
+  await withTree(
+    {
+      "shop.py": "import os\nimport utils\nfrom pkg.prices import tax\n\ndef main():\n    pass\n",
+      "utils.py": "import shop\n",
+      "pkg/__init__.py": "",
+      "pkg/prices.py": "from . import helpers\nfrom .helpers import round2\n",
+      "pkg/helpers.py": "def round2(x):\n    return x\n",
+      "tests/test_shop.py": "import shop\n",
+      "legacy.py": "def old():\n    pass\n",
+    },
+    async (dir) => {
+      const g = await scanCode(dir);
+      assert.ok(has(g, "imports", "file:shop.py", "file:utils.py"), "sibling module");
+      assert.ok(has(g, "imports", "file:utils.py", "file:shop.py"), "the cycle back is visible");
+      assert.ok(has(g, "imports", "file:shop.py", "file:pkg/prices.py"), "dotted module from the root");
+      assert.ok(has(g, "imports", "file:pkg/prices.py", "file:pkg/helpers.py"), "relative from .helpers");
+      assert.ok(has(g, "imports", "file:pkg/prices.py", "file:pkg/__init__.py"), "from . names the package");
+      assert.ok(has(g, "imports", "file:tests/test_shop.py", "file:shop.py"), "a test reaches the root module");
+      assert.ok(has(g, "imports", "file:shop.py", "module:os"), "stdlib stays a module node");
+      assert.ok(!g.nodes.some((n) => n.id === "module:utils"), "no module node for a resolved import");
+      assert.ok(!g.edges.some((e) => e.kind === "imports" && e.toId === "file:legacy.py"), "an unused file has no incoming import");
+      const ids = new Set(g.nodes.map((n) => n.id));
+      for (const e of g.edges) assert.ok(ids.has(e.fromId) && ids.has(e.toId), `dangling ${e.fromId} -> ${e.toId}`);
+    },
+  );
+});
+
+test("python calls inside a def link to the called symbols; builtins, strings and comments do not", async () => {
+  await withTree(
+    {
+      "shop.py":
+        "import utils\n\n" +
+        "def check_row(row):\n    return True\n\n" +
+        "def process(rows):\n" +
+        "    for r in rows:\n" +
+        "        if not check_row(r):\n" +
+        "            print(\"skip(r)\")  # helper()\n" +
+        "    return utils.money(len(rows))\n\n" +
+        "class Report:\n" +
+        "    def render(self):\n" +
+        "        return process([])\n\n" +
+        "def helper():\n    pass\n\n" +
+        "process([])\n",
+      "utils.py": "def money(x):\n    return str(x)\n",
+      "ui.ts": "export function money(): void {}\n",
+    },
+    async (dir) => {
+      const g = await scanCode(dir);
+      assert.ok(has(g, "calls", "symbol:shop.py#process", "symbol:shop.py#check_row"));
+      assert.ok(has(g, "calls", "symbol:shop.py#process", "symbol:utils.py#money"), "a module-qualified call");
+      assert.ok(has(g, "calls", "symbol:shop.py#render", "symbol:shop.py#process"), "a method calls a function");
+      assert.ok(!g.edges.some((e) => e.kind === "calls" && e.toId === "symbol:shop.py#helper"), "a call in a string or comment is not a call");
+      assert.ok(!g.edges.some((e) => e.kind === "calls" && e.toId === "symbol:ui.ts#money"), "python never links to a TypeScript symbol");
+      assert.equal(g.edges.find((e) => e.kind === "calls" && e.toId === "symbol:utils.py#money")?.confidence, "INFERRED");
+    },
+  );
+});
+
+test("pythonCalls follows indentation: nested defs, class bodies and module level", () => {
+  const calls = pythonCalls([
+    "def outer():",
+    "    a()",
+    "    def inner():",
+    "        b()",
+    "    c()",
+    "class K:",
+    "    d()",
+    "    def m(self):",
+    "        e(1, f(2))",
+    "g()",
+  ]);
+  assert.deepEqual(calls, [
+    { from: "outer", name: "a" }, { from: "inner", name: "b" }, { from: "outer", name: "c" },
+    { from: "m", name: "e" }, { from: "m", name: "f" },
+  ]);
 });
