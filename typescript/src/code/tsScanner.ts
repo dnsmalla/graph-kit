@@ -31,6 +31,15 @@ interface Heritage {
   implementsNames: string[];
 }
 
+export interface CodeScanStats {
+  /** Code files the walk collected (at most `limit`). */
+  files: number;
+  /** The file limit in force for this scan. */
+  limit: number;
+  /** True when the walk stopped at `limit` with more eligible files left. */
+  truncated: boolean;
+}
+
 /**
  * Scan `root` into a code graph. When `opts.scipIndex` is set, prefer the
  * higher-fidelity SCIP index (parsed via `parseScipJson`/`loadScipIndex`) over the
@@ -38,18 +47,29 @@ interface Heritage {
  */
 export async function scanCode(
   root: string,
-  opts: { maxFiles?: number; maxFileBytes?: number; scipIndex?: string } = {},
+  opts: { maxFiles?: number; maxFileBytes?: number; scipIndex?: string; calls?: boolean } = {},
 ): Promise<CGData> {
+  return (await scanCodeWithStats(root, opts)).graph;
+}
+
+/** `scanCode`, plus whether the file limit cut the walk short. */
+export async function scanCodeWithStats(
+  root: string,
+  opts: { maxFiles?: number; maxFileBytes?: number; scipIndex?: string; calls?: boolean } = {},
+): Promise<{ graph: CGData; stats: CodeScanStats }> {
+  const maxFiles = opts.maxFiles ?? 20000;
+  // `calls: false` leaves out every `calls` edge (the largest kind by far); the other edges are unchanged.
+  const includeCalls = opts.calls !== false;
   if (opts.scipIndex) {
     const json = await loadScipIndex(opts.scipIndex);
-    return parseScipJson(json);
+    // The SCIP path does not walk the tree, so no file limit applies to it.
+    return { graph: parseScipJson(json), stats: { files: 0, limit: maxFiles, truncated: false } };
   }
 
-  const maxFiles = opts.maxFiles ?? 2000;
   const maxFileBytes = opts.maxFileBytes ?? 1_000_000;
   const rootAbs = resolve(root);
 
-  const collected = collectCodeFiles(rootAbs, maxFiles, maxFileBytes);
+  const { files: collected, truncated } = collectCodeFiles(rootAbs, maxFiles, maxFileBytes);
   // Split by who can parse them: the compiler API only understands the TS/JS
   // family, so Swift/Kotlin/Python go to the line scanner instead of being
   // handed to `ts.createProgram` (which would silently produce nothing).
@@ -117,7 +137,7 @@ export async function scanCode(
       }
       emitDeclaration(stmt, fileId, rel, pushNode, addEdge, addSymbolName, heritages);
     }
-    collectCalls(sf, rel, callSites);
+    if (includeCalls) collectCalls(sf, rel, callSites);
   }
 
   // Resolve call sites against collected symbol names (name-based, no type info):
@@ -172,7 +192,7 @@ export async function scanCode(
         (pySymbolIdsByName.get(symbol.name) ?? pySymbolIdsByName.set(symbol.name, []).get(symbol.name)!).push(id);
       }
     }
-    for (const call of structure.calls) pyCallSites.push({ fromId: `symbol:${rel}#${call.from}`, name: call.name });
+    if (includeCalls) for (const call of structure.calls) pyCallSites.push({ fromId: `symbol:${rel}#${call.from}`, name: call.name });
     for (const module of structure.imports) {
       // A Python import of a module in the scanned tree points at that file, so import cycles and unused files are
       // visible in the graph. Anything else (the standard library, packages, Swift/Kotlin modules) is a name, not a
@@ -197,7 +217,10 @@ export async function scanCode(
     for (const id of targets) addEdge(c.fromId, id, "calls", confidence);
   }
 
-  return { nodes, edges, layers: [], tour: [] };
+  return {
+    graph: { nodes, edges, layers: [], tour: [] },
+    stats: { files: collected.length, limit: maxFiles, truncated },
+  };
 }
 
 /**
@@ -352,10 +375,17 @@ function resolveImport(fromFile: string, spec: string, rootAbs: string): string 
   return null;
 }
 
-function collectCodeFiles(root: string, maxFiles: number, maxFileBytes: number): string[] {
+function collectCodeFiles(
+  root: string,
+  maxFiles: number,
+  maxFileBytes: number,
+): { files: string[]; truncated: boolean } {
   const out: string[] = [];
+  // Set when an eligible file is found beyond `maxFiles`: that is the only
+  // signal that files were left out, so the walk keeps going until it sees one.
+  let truncated = false;
   const walk = (dir: string) => {
-    if (out.length >= maxFiles) return;
+    if (truncated) return;
     let entries: string[];
     try {
       entries = readdirSync(dir).sort();
@@ -363,7 +393,7 @@ function collectCodeFiles(root: string, maxFiles: number, maxFileBytes: number):
       return;
     }
     for (const name of entries) {
-      if (out.length >= maxFiles) return;
+      if (truncated) return;
       if (name.startsWith(".") || SKIP_DIRS.has(name)) continue;
       const full = join(dir, name);
       let st;
@@ -375,10 +405,14 @@ function collectCodeFiles(root: string, maxFiles: number, maxFileBytes: number):
       if (st.isDirectory()) walk(full);
       else if (st.isFile() && (CODE_EXTS.has(extname(full)) || LINE_SCANNED_EXTS.has(extname(full).toLowerCase()))
                && st.size <= maxFileBytes && !name.endsWith(".d.ts")) {
+        if (out.length >= maxFiles) {
+          truncated = true;
+          return;
+        }
         out.push(full);
       }
     }
   };
   walk(root);
-  return out.sort();
+  return { files: out.sort(), truncated };
 }

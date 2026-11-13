@@ -18,7 +18,7 @@ import { generateFromDir } from "./text/memoryGenerator.js";
 import { generateIndex } from "./indexGenerator.js";
 import { parseDocumentString, serializeDocument, toDocument, toGraph } from "./models.js";
 import { updateMemory, type UpdateReport } from "./incremental.js";
-import { scanCode } from "./code/tsScanner.js";
+import { scanCodeWithStats } from "./code/tsScanner.js";
 import { mergeCodeAndDoc, type MergeChunk } from "./build/graphMerger.js";
 
 function fail(msg: string): never {
@@ -92,12 +92,27 @@ function updateOpts(args: string[]): {
 
 async function cmdCode(args: string[]): Promise<void> {
   const dir = args[0];
-  if (!dir || dir.startsWith("--")) fail("usage: graph-kit code <dir> [--out <graph.json>]");
-  const doc = toDocument(await scanCode(dir));
+  if (!dir || dir.startsWith("--")) {
+    fail("usage: graph-kit code <dir> [--out <graph.json>] [--max-files <n>] [--no-calls]");
+  }
+  let maxFiles: number | undefined;
+  const i = args.indexOf("--max-files");
+  if (i >= 0) {
+    const v = args[i + 1];
+    if (v === undefined || !/^[1-9]\d*$/.test(v)) fail("--max-files must be a positive integer");
+    maxFiles = Number(v);
+  }
+  const { graph, stats } = await scanCodeWithStats(dir, { maxFiles, calls: !args.includes("--no-calls") });
+  const doc = toDocument(graph);
   const out = optValue(args, "--out");
   const json = serializeDocument(doc);
   if (out) writeFileSync(out, json);
   else process.stdout.write(json);
+  if (stats.truncated) {
+    process.stderr.write(
+      `graph-kit: warning: scanned ${stats.limit} code files and stopped at the limit; more files exist (raise it with --max-files)\n`,
+    );
+  }
   process.stderr.write(`graph-kit: ${doc.nodes.length} nodes, ${doc.edges.length} edges\n`);
 }
 

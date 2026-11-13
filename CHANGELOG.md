@@ -47,6 +47,15 @@ is also accepted by `release.yml`, but prefer the plain form. The tag must equal
   `typescript/src` change with `cd typescript && npm run bundle`.
 
 ### Changed
+- **TypeScript code scan limit raised to 20,000 files, and truncation is reported.** The `code` scan
+  used to stop silently at 2,000 files, so a 2,398-file repo lost ~400 files with no signal. The default is
+  now 20,000. `scanCodeWithStats` returns `{ graph, stats: { files, limit, truncated } }` (`scanCode` is
+  unchanged), and `graph-kit code` gains `--max-files <n>`. When the limit cuts the walk short, the CLI warns on
+  stderr; the canonical graph document is unchanged. The summary line is still printed.
+- **`graph-kit code --no-calls` leaves out `calls` edges.** They are most of a large graph (141k of 166k
+  edges on the llm-ide tree, 42 MB total), and the Loop never reads them. Without the flag nothing changes;
+  `scanCode`/`scanCodeWithStats` take `calls: false` for the same effect. The llm-ide Loop graph run passes it,
+  bringing that graph to about 12 MB, under the desktop's 32 MB read limit.
 - **CI covers the whole repository.** `ci.yml` also runs the Rust crate (`cargo test`, both clippy
   runs), the WASM glue reproducibility check (`build-os-wasm.sh --check --strict --glue-only`) and the web page
   (type-check and tests). The release workflow reuses that matrix before publishing.
