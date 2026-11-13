@@ -202,8 +202,9 @@ export async function scanCode(
 
 /**
  * The scanned file a Python import names, repo-relative, or null. `from .m import x` / `from .. import y` resolve from
- * the importing file's package; `import a.b` is tried beside the importing file first (a script's own folder is first on
- * `sys.path`), then from the scan root. `a/b.py` wins over the package `a/b/__init__.py`, as in Python.
+ * the importing file's package; `import a.b` is absolute (Python 3 has no implicit relative imports), so it is tried from
+ * the scan root first, then beside the importing file (a script run directly has its own folder on `sys.path`).
+ * `a/b.py` wins over the package `a/b/__init__.py`, as in Python.
  */
 export function resolvePythonImport(fromFile: string, module: string, rootAbs: string, scanned: ReadonlySet<string>): string | null {
   const dots = /^\.*/.exec(module)![0].length;
@@ -214,7 +215,7 @@ export function resolvePythonImport(fromFile: string, module: string, rootAbs: s
     for (let i = 1; i < dots; i++) dir = dirname(dir);
     bases = [dir];
   } else {
-    bases = [dirname(fromFile), rootAbs];
+    bases = [rootAbs, dirname(fromFile)];
   }
   for (const base of bases) {
     const stem = join(base, ...parts);

@@ -233,6 +233,25 @@ test("a python import of a scanned module points at its file; the standard libra
   );
 });
 
+test("an absolute python import prefers the top-level module, then a sibling script", async () => {
+  await withTree(
+    {
+      "utils.py": "",
+      "pkg/__init__.py": "",
+      "pkg/utils.py": "",
+      "pkg/user.py": "import utils\n",
+      "tools/run.py": "import helper\n",
+      "tools/helper.py": "",
+    },
+    async (dir) => {
+      const g = await scanCode(dir);
+      assert.ok(has(g, "imports", "file:pkg/user.py", "file:utils.py"), "Python 3: `import utils` is the top-level module");
+      assert.ok(!has(g, "imports", "file:pkg/user.py", "file:pkg/utils.py"));
+      assert.ok(has(g, "imports", "file:tools/run.py", "file:tools/helper.py"), "a script finds its sibling");
+    },
+  );
+});
+
 test("python calls inside a def link to the called symbols; builtins, strings and comments do not", async () => {
   await withTree(
     {
